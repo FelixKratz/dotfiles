@@ -1,0 +1,190 @@
+:: default
+:: finder
+
+## Navigation
+# Space Navigation: lalt + {1, 2, 3, 4}
+default , finder < lalt - 1 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m space --focus 1; else yabai -m space --focus 5; fi
+default , finder < lalt - 2 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m space --focus 2; else yabai -m space --focus 6; fi
+default , finder < lalt - 3 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m space --focus 3; else yabai -m space --focus 7; fi
+default , finder < lalt - 4 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m space --focus 4; else yabai -m space --focus 8; fi
+
+# Window Navigation: lalt + {j, k, l, ö}
+default , finder < lalt - j    : yabai -m window --focus west  || yabai -m display --focus west
+default , finder < lalt - k    : yabai -m window --focus south || yabai -m display --focus south
+default , finder < lalt - l    : yabai -m window --focus north || yabai -m display --focus north
+default , finder < lalt - 0x29 : yabai -m window --focus east  || yabai -m display --focus east
+
+# Extended Window Navigation: lalt + {h, ä}
+default , finder < lalt -    h : yabai -m window --focus first
+default , finder < lalt - 0x27 : yabai -m window --focus  last
+
+# Float / Unfloat window: shift + lalt + space
+default , finder < lalt - space : yabai -m window --toggle float; sketchybar --trigger window_focus
+
+# Make window zoom-fullscreen
+default , finder < shift + lalt - f : yabai -m window --toggle zoom-fullscreen; sketchybar --trigger monocle
+
+# Make window zoom-parent
+default , finder < lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger monocle
+
+## Window Movement
+# Moving windows in spaces: shift + lalt + {j, k, l, ö}
+default , finder < shift + lalt - j : yabai -m window --warp west || $(yabai -m window --display west; yabai -m display --focus west; yabai -m window --warp last) || yabai -m window --move rel:-10:0
+default , finder < shift + lalt - k : yabai -m window --warp south || $(yabai -m window --display south; yabai -m display --focus south) || yabai -m window --move rel:0:10
+default , finder < shift + lalt - l : yabai -m window --warp north || $(yabai -m window --display north; yabai -m display --focus north) || yabai -m window --move rel:0:-10
+default , finder < shift + lalt - 0x29 : yabai -m window --warp east || $(yabai -m window --display east; yabai -m display --focus east; yabai -m window --warp first) || yabai -m window --move rel:10:0
+
+# Moving windows between spaces: shift + lalt + {1, 2, 3, 4, p, n } (Assumes 4 Spaces Max per Display)
+default , finder < shift + lalt - 1 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m window --space 1; else yabai -m window --space 5; fi
+default , finder < shift + lalt - 2 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m window --space 2; else yabai -m window --space 6; fi
+default , finder < shift + lalt - 3 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m window --space 3; else yabai -m window --space 7; fi
+default , finder < shift + lalt - 4 : if [ "$(yabai -m query --displays --display | jq '.index')" -eq "1" ]; then yabai -m window --space 4; else yabai -m window --space 8; fi
+default , finder < shift + lalt - p : yabai -m window --space prev; yabai -m space --focus prev
+default , finder < shift + lalt - n : yabai -m window --space next; yabai -m space --focus next
+
+# Mirror Space on X and Y Axis: shift + lalt + {x, y}
+default , finder < shift + lalt - x : yabai -m space --mirror x-axis
+default , finder < shift + lalt - y : yabai -m space --mirror y-axis
+
+# Rotate windows clockwise and anticlockwise: (shift +) lalt + r
+default , finder < lalt         - r : yabai -m space --rotate 270
+default , finder < shift + lalt - r : yabai -m space --rotate  90
+
+## Stacks
+# Add the active window to the window or stack to the {direction}: shift + lalt + {left, right, up, down}
+default , finder < shift + ctrl - j    : yabai -m window  west --stack $(yabai -m query --windows --window | jq -r '.id'); sketchybar -m --trigger window_focus
+default , finder < shift + ctrl - k    : yabai -m window south --stack $(yabai -m query --windows --window | jq -r '.id'); sketchybar -m --trigger window_focus
+default , finder < shift + ctrl - l    : yabai -m window north --stack $(yabai -m query --windows --window | jq -r '.id'); sketchybar -m --trigger window_focus
+default , finder < shift + ctrl - 0x29 : yabai -m window  east --stack $(yabai -m query --windows --window | jq -r '.id'); sketchybar -m --trigger window_focus
+
+# Stack Navigation: ctrl + {n, p}
+default , finder < shift + ctrl - n : yabai -m window --focus stack.next
+default , finder < shift + ctrl - p : yabai -m window --focus stack.prev
+
+## Resize
+# Resize windows: ctrl + lalt + {j, k, l, ö}
+default , finder < ctrl + lalt - j    : yabai -m window --resize left:-50:0;  yabai -m window --resize right:-50:0
+default , finder < ctrl + lalt - k    : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
+default , finder < ctrl + lalt - l    : yabai -m window --resize top:0:-50;   yabai -m window --resize bottom:0:-50
+default , finder < ctrl + lalt - 0x29 : yabai -m window --resize right:50:0;  yabai -m window --resize left:50:0
+
+# Equalize size of windows: ctrl + lalt + e
+default , finder < ctrl + lalt - e : yabai -m space --balance
+
+# Enable / Disable gaps in current workspace: ctrl + lalt + g
+default , finder < ctrl + lalt - g : yabai -m space --toggle padding; yabai -m space --toggle gap
+
+## Insertion
+# Set insertion point for focused container: shift + ctrl + lalt + {j, k, l, ö, s}
+default , finder < shift + ctrl + lalt - j : yabai -m window --insert west
+default , finder < shift + ctrl + lalt - k : yabai -m window --insert south
+default , finder < shift + ctrl + lalt - l : yabai -m window --insert north
+default , finder < shift + ctrl + lalt - 0x29 : yabai -m window --insert east
+default , finder < shift + ctrl + lalt - s : yabai -m window --insert stack
+
+
+# Open new Alacritty window
+default , finder < lalt - t : alacritty msg create-window
+
+# New window in hor./ vert. splits for all applications with yabai
+default , finder < lalt - s : yabai -m window --insert east;  skhd -k "cmd - n"
+default , finder < lalt - v : yabai -m window --insert south; skhd -k "cmd - n"
+default , finder < shift + lalt - s : yabai -m window --insert west;  skhd -k "cmd - n"
+default , finder < shift + lalt - v : yabai -m window --insert north; skhd -k "cmd - n"
+
+# Toggle sketchybar
+default , finder < shift + lalt - space : sketchybar -m --bar hidden=toggle current
+
+
+### Nice Finder Navigation
+
+# Escape always goes back to finder insert mode
+finder < escape -> ; default
+# Alfred hotkey also leads to finder insert mode, because we can not
+# blacklist alfred itself
+default < cmd - space -> ; finder
+
+# iTerm hotkey leads to finder insert mode, because iTerms hotkey window
+# should not be blacklisted and will not change focus with
+# "floating window" option set
+default < lalt - space -> ; finder
+
+# Somewhat hacky mode switching in finder because skhd proc_maps do not support
+# mode switching currently, so we simulate a crazy key press and capture it
+# globaly to achive the equivalent behaviour
+default < escape -> [
+                      "finder" : skhd -k "hyper - f20"
+                      "mail" : skhd -k "hyper - f20"
+                      "preview" : skhd -k "hyper - f20"
+                      "skim" : skhd -k "hyper - f20"
+                    ]
+
+default < return -> [
+                      "finder" : skhd -k "hyper - f20"
+                      "mail" : skhd -k "hyper - f20"
+                    ]
+hyper - f20 ; finder
+
+# Vi style navigation in finder/mail/preview and skim
+default < k [
+              "finder" : skhd -k "down"
+              "mail" : skhd -k "down"
+              "preview" : skhd -k "down"
+              "skim" : skhd -k "down"
+            ]
+default < l [
+              "finder" : skhd -k "up"
+              "mail" : skhd -k "up"
+              "preview" : skhd -k "up"
+              "skim" : skhd -k "up"
+            ]
+# Go to window -> finder insert mode
+default < shift - 7 [
+                      "finder" : skhd -k "shift + cmd - g"; skhd -k "hyper - f20"
+                      "preview" : skhd -k "lalt + cmd - g"
+                      "skim" : skhd -k "lalt + cmd - g"
+                    ]
+default < g [
+                      "finder" : skhd -k "shift + cmd - g"; skhd -k "hyper - f20"
+                      "preview" : skhd -k "lalt + cmd - g"
+                      "skim" : skhd -k "lalt + cmd - g"
+            ]
+
+# Nerdtree like folder tree navigation in Finder
+# Close Tree
+default < x [
+              "finder" : skhd -k "cmd - left"
+            ]
+# Open File in hor. split
+default < s [
+              "finder" : yabai -m window --insert east; skhd -k "cmd - o"
+            ]
+# Open File in vert. split
+default < v [
+              "finder" : yabai -m window --insert south; skhd -k "cmd - o"
+            ]
+
+# Open file with default placement
+default < i [
+              "finder" : skhd -k "cmd - o"
+            ]
+# Open Tree
+default < o [
+              "finder" : skhd -k "cmd - right"
+            ]
+# Up one level
+default < u [
+              "finder" : skhd -k "cmd - up"
+            ]
+# New Folder
+default < n [
+              "finder" : skhd -k "shift + cmd - n"
+            ] 
+# Yank files and folders to * register
+default < y [
+              "finder" : skhd -k "cmd - c"
+            ]
+# Paste files and folders from * register
+default < p [
+              "finder" : skhd -k "cmd - v"
+            ]

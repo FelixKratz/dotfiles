@@ -1,0 +1,72 @@
+#!/usr/bin/env sh
+
+sudo yabai --load-sa
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
+yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
+
+yabai -m config external_bar               all:32:0
+yabai -m config window_border              on
+yabai -m config mouse_follows_focus        on
+yabai -m config focus_follows_mouse        off
+yabai -m config window_placement           second_child
+yabai -m config window_topmost             off
+yabai -m config window_shadow              float
+yabai -m config window_opacity             on
+yabai -m config window_opacity_duration    0.0
+yabai -m config active_window_opacity      1.0
+yabai -m config normal_window_opacity      0.95
+yabai -m config window_border_width        5
+yabai -m config active_window_border_color 0xff9dd274
+yabai -m config normal_window_border_color 0xff555555
+yabai -m config insert_feedback_color      0xff9dd274
+yabai -m config split_ratio                0.50
+yabai -m config auto_balance               off
+yabai -m config mouse_modifier             fn
+yabai -m config mouse_action1              move
+yabai -m config mouse_action2              resize
+yabai -m config mouse_drop_action          swap
+
+
+yabai -m config layout                     bsp
+yabai -m config top_padding                7
+yabai -m config bottom_padding             7
+yabai -m config left_padding               7
+yabai -m config right_padding              7
+yabai -m config window_gap                 7
+# Do not manage some apps which are not resizable
+yabai -m rule --add app="^(LuLu|Vimac|Calculator|VLC|System Preferences|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice)$" manage=off
+
+# ===== Rules ==================================
+
+yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
+yabai -m rule --add label="Alfred" app="^Alfred$" manage=off
+yabai -m rule --add label="Safari" app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off
+yabai -m rule --add label="System Preferences" app="^System Preferences$" title=".*" manage=off
+yabai -m rule --add label="App Store" app="^App Store$" manage=off
+yabai -m rule --add label="Activity Monitor" app="^Activity Monitor$" manage=off
+yabai -m rule --add label="Calculator" app="^Calculator$" manage=off
+yabai -m rule --add label="Dictionary" app="^Dictionary$" manage=off
+yabai -m rule --add label="Software Update" title="Software Update" manage=off
+yabai -m rule --add label="About This Mac" app="System Information" title="About This Mac" manage=off
+yabai -m rule --add label="Select file to save to" app="^Inkscape$" title="Select file to save to" manage=off
+
+yabai -m space 1 --label code
+yabai -m space 2 --label tex
+yabai -m space 3 --label web
+yabai -m space 4 --label idle
+yabai -m space 5 --label misc
+yabai -m space 6 --label doc
+yabai -m space 7 --label help
+yabai -m space 8 --label music
+
+# pkill -x yb
+# yb &
+#
+# yabai -m signal --add event=window_created action="echo \"create \$YABAI_WINDOW_ID\" | nc -U /tmp/yb_$USER.socket"
+# yabai -m signal --add event=window_destroyed action="echo \"destroy \$YABAI_WINDOW_ID\" | nc -U /tmp/yb_$USER.socket"
+# yabai -m signal --add event=space_changed action="echo \"query\" | nc -U /tmp/yb_$USER.socket"
+# yabai -m signal --add event=display_changed action="echo \"query\" | nc -U /tmp/yb_$USER.socket"
+# yabai -m signal --add event=mission_control_enter action="echo \"mission_control_enter\" | nc -U /tmp/yb_$USER.socket"
+# yabai -m signal --add event=mission_control_exit action="echo \"mission_control_exit\" | nc -U /tmp/yb_$USER.socket"
+#
+echo "yabai configuration loaded.."
