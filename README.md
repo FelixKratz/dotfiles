@@ -1,7 +1,10 @@
 # dotfiles
-My macOS configuration files. jklö centric navigation and vim moves for my german keyboard.
-<img width="1512" alt="Screen Shot 2022-02-13 at 17 27 51" src="https://user-images.githubusercontent.com/22680421/153762886-f0b0ed4d-b06c-40ab-933d-588ad8bb06aa.png">
+My macOS configuration files.
+![Screen Shot 2022-03-30 at 16 44 37](https://user-images.githubusercontent.com/22680421/160863687-d7ba7ef5-4001-452d-810d-36e99a75d372.png)
 
+jklö centric navigation and vim moves for my german keyboard.
+nvim as a capable C/C++ debugging environment.
+color scheme consistency across all configurations.
 
 * Alacritty
 * Vimari
