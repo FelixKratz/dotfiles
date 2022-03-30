@@ -71,6 +71,10 @@ ctrl + lalt - e : yabai -m space --balance
 # Enable / Disable gaps in current workspace: ctrl + lalt + g
 ctrl + lalt - g : yabai -m space --toggle padding; yabai -m space --toggle gap
 
+# Enable / Disable gaps in current workspace: ctrl + lalt + g
+ctrl + lalt - b : yabai -m config window_border off 
+shift + ctrl + lalt - b : yabai -m config window_border on
+
 ## Insertion
 # Set insertion point for focused container: shift + ctrl + lalt + {j, k, l, ö, s}
 shift + ctrl + lalt - j : yabai -m window --insert west
@@ -91,4 +95,3 @@ shift + lalt - v : yabai -m window --insert north; skhd -k "cmd - n"
 
 # Toggle sketchybar
 shift + lalt - space : sketchybar -m --bar hidden=toggle current
-

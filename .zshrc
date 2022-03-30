@@ -26,8 +26,6 @@ alias vdiff="git difftool HEAD"
 alias log="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
 alias cfg="git --git-dir=$HOME/dotfiles/ --work-tree=$HOME"
 
-# Only load conda into path but dont actually use the bloat that comes with it
-export PATH="/usr/local/miniconda/base/bin:/opt/homebrew/Caskroom/miniconda/base/bin:$PATH"
 
 eval "$(starship init zsh)"
 
@@ -52,3 +50,6 @@ function push() {
   command git push
   sketchybar --trigger git_push
 }
+
+# Only load conda into path but dont actually use the bloat that comes with it
+export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"

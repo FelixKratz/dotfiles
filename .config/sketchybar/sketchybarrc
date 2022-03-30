@@ -45,11 +45,11 @@ sketchybar --bar                height=32                                       
                                 font_smoothing=off                                                \
                                 y_offset=0                                                        \
                                 shadow=on                                                         \
+                                notch_width=0                                                     \
                                                                                                   \
            --default            drawing=on                                                        \
                                 lazy=off                                                          \
                                 updates=when_shown                                                \
-                                cache_scripts=on                                                  \
                                 label.font="$FONT:Semibold:13.0"                                  \
                                 icon.font="$FONT:Bold:14.0"                                       \
                                 icon.color=$ICON_COLOR                                            \
@@ -86,7 +86,7 @@ sketchybar --bar                height=32                                       
                                 alias.shadow.drawing=$SHADOW                                      \
                                 icon.shadow.color=$SHADOW_COLOR                                   \
                                 label.shadow.color=$SHADOW_COLOR                                  \
-                                alias.shadow.color=$SHADOW_COLOR                                  \
+                                alias.shadow.color=0xff000000                                     \
                                 icon.shadow.distance=$SHADOW_DISTANCE                             \
                                 label.shadow.distance=$SHADOW_DISTANCE                            \
                                 alias.shadow.distance=$SHADOW_DISTANCE                            \
@@ -108,7 +108,6 @@ sketchybar --bar                height=32                                       
                                 drawing=off
 
 source "$ITEM_DIR/apple.sh"
-source "$ITEM_DIR/system.sh"
 source "$ITEM_DIR/spaces.sh"
 source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/network.sh"
@@ -116,9 +115,10 @@ source "$ITEM_DIR/memory.sh"
 
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
+source "$ITEM_DIR/svim.sh"
+source "$ITEM_DIR/system.sh"
 source "$ITEM_DIR/spotify.sh"
 
-source "$ITEM_DIR/svim.sh"
 ############## FINALIZING THE SETUP ##############
 sketchybar --update
 

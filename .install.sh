@@ -23,14 +23,13 @@ brew install boost
 brew install libomp
 brew install armadillo
 brew install mas
-brew install miniconda
-brew install jupyterlab
 brew install neovim
 brew install tree
 brew install wget
 brew install jq
 brew install gh
 brew install ripgrep
+brew install bear
 brew install neofetch
 brew install wireguard-go
 brew install lulu
@@ -60,6 +59,7 @@ brew install --cask zoom
 brew install --cask skim
 brew install --cask meetingbar
 brew install --cask machoview
+brew install --cask hex-fiend
 brew install --cask font-hack-nerd-font
 brew install --cask vlc
 
@@ -126,21 +126,14 @@ cfg config --local status.showUntrackedFiles no
 
 # Python Packages
 echo "Installing Python Packages..."
-python -m ensurepip
-pip3 install numpy
-pip3 install pandas
-pip3 install scipy
-pip3 install sklearn
-pip3 install tensorflow
-pip3 install matplotlib
-pip3 install tqdm
-pip3 install tables
-pip3 install python-language-server
-pip3 install pylint
-pip3 install pynvim
-pip3 install proselint
-pip3 install latex
-pip3 install opencv-python
+curl https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh | sh
+source $HOME/.zshrc
+conda install -c apple tensorflow-deps
+python -m pip install tensorflow-macos
+python -m pip install tensorflow-metal
+conda install matplotlib
+conda install jupyterlab
+conda install seaborn
 
 # Start Services
 echo "Starting Services (grant permissions)..."

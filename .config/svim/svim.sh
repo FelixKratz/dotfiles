@@ -3,12 +3,19 @@
 # This script is executed when either the mode changes,
 # or the commandline changes
 
-sketchybar --set svim.mode icon="[$MODE]" \
-           --set svim.cmdline label="$CMDLINE"
-
-if [ "$CMDLINE" != "" ]; then
-  sketchybar --set svim.mode popup.drawing=on
-else
-  sketchybar --set svim.mode popup.drawing=off
+COLOR=0xff9dd274
+if [ "$MODE" = "" ]; then
+  COLOR=0xffe1e3e4
+  MODE="-"
 fi
 
+DRAW_CMD="off"
+if [ "$CMDLINE" != "" ]; then
+  DRAW_CMD="on"
+fi
+
+sketchybar --set svim.mode label="[$MODE]" \
+                           label.drawing=$(if [ "$MODE" = "" ]; then echo "off"; else echo "on"; fi) \
+                           icon.color=$COLOR \
+                           popup.drawing=$DRAW_CMD \
+           --set svim.cmdline label="$CMDLINE"

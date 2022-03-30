@@ -15,18 +15,18 @@ update() {
     case "$(echo "$WINDOW" | jq '.["is-floating"]')" in
       "false")
         if [ "$(echo "$WINDOW" | jq '.["has-fullscreen-zoom"]')" = "true" ]; then
-          args+=(--set $NAME icon="􀏜")
+          args+=(--set $NAME icon="􀏜" icon.color=0xffeacb64)
           yabai -m config active_window_border_color 0xffeacb64
         elif [ "$(echo "$WINDOW" | jq '.["has-parent-zoom"]')" = "true" ]; then
-          args+=(--set $NAME icon="􀥃")
+          args+=(--set $NAME icon="􀥃" icon.color=0xffff6578)
           yabai -m config active_window_border_color 0xffff6578
         else
-          args+=(--set $NAME icon="􀏝")
+          args+=(--set $NAME icon="􀧍" icon.color=0xff9dd274)
           yabai -m config active_window_border_color 0xff9dd274
         fi
         ;;
       "true")
-        args+=(--set $NAME icon="􀢌")
+        args+=(--set $NAME icon="􀢌" icon.color=0xffba9cf3)
         yabai -m config active_window_border_color 0xffba9cf3
         ;;
     esac

@@ -12,10 +12,10 @@ sketchybar --add       item               mailIndicator right                   
            --add       alias              MeetingBar right                              \
            --set       MeetingBar         background.padding_right=-8                   \
                                           background.padding_left=-6                    \
-                                          update_freq=60                                \
+                                          update_freq=10                                \
                                                                                         \
            --add       item               calendar.time right                           \
-           --set       calendar.time      update_freq=2                                 \
+           --set       calendar.time      update_freq=15                                \
                                           icon.drawing=off                              \
                                           script="$PLUGIN_DIR/time.sh"                  \
                                                                                         \
@@ -30,7 +30,6 @@ sketchybar --add       item               mailIndicator right                   
            --add       bracket            calendar                                      \
                                           mailIndicator                                 \
                                           MeetingBar                                    \
-                                          calendar.time                                 \
                                           calendar.date                                 \
                                                                                         \
            --set       calendar           background.drawing=on
