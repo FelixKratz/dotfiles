@@ -53,3 +53,5 @@ function push() {
 
 # Only load conda into path but dont actually use the bloat that comes with it
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
+export EDITOR="alacritty msg create-window -e $(which nvim)"
+export VISUAL="alacritty msg create-window -e $(which nvim)"

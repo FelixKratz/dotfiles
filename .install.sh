@@ -40,8 +40,10 @@ brew install starship
 brew install zsh-autosuggestions
 brew install zsh-syntax-highlighting
 brew install skhd
-brew install fyabai
+brew install fyabai --head
+brew install fnnn --head
 brew install sketchybar
+brew install svim
 brew install sf-symbols
 
 # Brew Casks
@@ -134,6 +136,8 @@ python -m pip install tensorflow-metal
 conda install matplotlib
 conda install jupyterlab
 conda install seaborn
+conda install opencv
+conda install joblib
 
 # Start Services
 echo "Starting Services (grant permissions)..."

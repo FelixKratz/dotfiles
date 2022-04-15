@@ -11,6 +11,7 @@ color scheme consistency across all configurations.
 * neovim
 * starship
 * skhd
+* nnn (personal fork)
 * yabai (personal fork)
 * sketchybar
 * sketchyvim

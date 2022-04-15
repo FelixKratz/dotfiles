@@ -26,7 +26,7 @@ return {
       "karb94/neoscroll.nvim",
        opt = true,
        config = function()
-          require("neoscroll").setup()
+         require("neoscroll").setup()
        end,
 
        -- lazy loading
@@ -37,14 +37,20 @@ return {
   {
       "mfussenegger/nvim-dap",
       config = function()
-          require "custom.plugins.dap"
+        require "custom.plugins.dap"
       end,
   },
   {
       "rcarriga/nvim-dap-ui",
       after = "nvim-dap",
       config = function()
-          require "custom.plugins.dapui"
+        require "custom.plugins.dapui"
       end,
+  },
+  {
+      "luukvbaal/nnn.nvim",
+      config = function()
+        require("nnn").setup()
+      end
   },
 }
