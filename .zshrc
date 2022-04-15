@@ -51,7 +51,17 @@ function push() {
   sketchybar --trigger git_push
 }
 
+alias n="nnn"
+function nnn () {
+    command nnn "$@"
+
+    if [ -f "$NNN_TMPFILE" ]; then
+            . "$NNN_TMPFILE"
+    fi
+}
+
 # Only load conda into path but dont actually use the bloat that comes with it
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
+export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export EDITOR="$(which nvim)"
 export VISUAL="$(which nvim)"
