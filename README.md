@@ -64,10 +64,12 @@ function push() {
 
 neovim setup
 ---------------
-* Download NVChad
+* Download NVChad and checkout the last supported commit in the repo(*)
 ```bash
-git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1
+git clone https://github.com/NvChad/NvChad ~/.config/nvim
+cd ~/.config/nvim && git checkout 1c8a677024179b966ba2ab420e6edbe8dfda146b
 ```
+(*): This is only temporary till I fix the configuration for the newest upstream version
 * Paste my .confg/nvim/lua/custom folder
 * Run PackerSync
 ```bash
