@@ -9,6 +9,9 @@ M.options = {
 }
 
 M.ui = {
+  hl_override = {
+    Comment = { italic = true },
+  },
   theme = "penokai", -- default theme
   transparency = true,
 }
