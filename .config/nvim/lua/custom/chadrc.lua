@@ -44,6 +44,9 @@ M.plugins = {
     statusline = {
       separator_style = "round", -- default/round/slant/block/arrow
     },
+    lspconfig = {
+      setup_lspconf = "custom.plugins.lspconfig"
+    }
   },
 
   -- add, modify, remove plugins
