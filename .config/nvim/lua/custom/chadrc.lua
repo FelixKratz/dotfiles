@@ -33,6 +33,11 @@ M.plugins = {
         show_trailing_blankline_indent = true,
         show_first_indent_level = true,
     },
+    ["akinsho/bufferline.nvim"] = {
+       options = {
+          custom_areas = false,
+       },
+    },
   },
   remove = {},
 
