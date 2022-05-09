@@ -4,7 +4,8 @@ M.setup_lsp = function(attach, capabilities)
    local lspconfig = require "lspconfig"
 
    -- lspservers with default config
-   local servers = { "ccls", "bashls", "pyright", "texlab" }
+   local servers = { "ccls", "bashls", "pyright",
+                     "texlab", "sumneko_lua", "asm_lsp"}
 
    for _, lsp in ipairs(servers) do
       lspconfig[lsp].setup {

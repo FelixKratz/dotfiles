@@ -34,12 +34,15 @@ M.plugins = {
         show_first_indent_level = true,
     },
     ["akinsho/bufferline.nvim"] = {
-       options = {
-          custom_areas = false,
-       },
+        options = {
+           custom_areas = false,
+           max_name_length = 20,
+        },
     },
   },
-  remove = {},
+  remove = {
+    "feline-nvim/feline.nvim",
+  },
 
   options = {
     packer = {
@@ -47,7 +50,7 @@ M.plugins = {
       snapshot = nil,
     },
     statusline = {
-      separator_style = "round", -- default/round/slant/block/arrow
+      separator_style = "default", -- default/round/slant/block/arrow
     },
     lspconfig = {
       setup_lspconf = "custom.plugins.lspconfig"

@@ -11,33 +11,38 @@ return {
   ["tpope/vim-fugitive"] = {},
 
   ["karb94/neoscroll.nvim"] = {
-       opt = true,
-       config = function()
-         require("neoscroll").setup()
-       end,
+    opt = true,
+    config = function()
+      require("neoscroll").setup()
+    end,
 
-       -- lazy loading
-       setup = function()
-         require("core.utils").packer_lazy_load "neoscroll.nvim"
-       end,
+    -- lazy loading
+    setup = function()
+      require("core.utils").packer_lazy_load "neoscroll.nvim"
+    end,
   },
 
   ["mfussenegger/nvim-dap"] = {
-      config = function()
-        require "custom.plugins.dap"
-      end,
+    config = function()
+      require "custom.plugins.dap"
+    end,
   },
 
   ["rcarriga/nvim-dap-ui"] = {
-      after = "nvim-dap",
-      config = function()
-        require "custom.plugins.dapui"
-      end,
+    after = "nvim-dap",
+    config = function()
+      require "custom.plugins.dapui"
+    end,
   },
 
   ["luukvbaal/nnn.nvim"] = {
-      config = function()
-        require("nnn").setup()
-      end
+    config = function()
+      require("nnn").setup()
+    end
   },
+  ["feline-nvim/feline.nvim"] = {
+    config = function()
+      require "custom.plugins.feline"
+    end
+  }
 }

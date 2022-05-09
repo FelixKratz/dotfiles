@@ -50,6 +50,7 @@ vim.cmd("set foldmethod=indent")
 vim.cmd("set foldnestmax=1")
 
 vim.cmd("set colorcolumn=80")
+vim.cmd("set noshowmode")
 
 vim.cmd("hi link DapUIVariable Normal")
 vim.cmd("hi DapUIScope guifg=#6dc7e3")
@@ -71,3 +72,32 @@ vim.cmd("hi DapUIBreakpointsInfo guifg=#9dd274")
 vim.cmd("hi DapUIBreakpointsCurrentLine guifg=#9dd274 gui=bold")
 vim.cmd("hi link DapUIBreakpointsLine DapUILineNumber")
 vim.cmd("hi DapUIBreakpointsDisabledLine guifg=#424242")
+
+local autocmd = vim.api.nvim_create_autocmd
+
+-- Use relative & absolute line numbers in 'n' & 'i' modes respectively
+autocmd("InsertEnter", {
+   callback = function()
+      vim.opt.relativenumber = true
+   end,
+})
+autocmd("InsertLeave", {
+   callback = function()
+      vim.opt.relativenumber = false
+   end,
+})
+
+-- Highlight yanked text
+autocmd("TextYankPost", {
+   callback = function()
+      vim.highlight.on_yank { higroup = "Visual", timeout = 100 }
+   end,
+})
+
+-- Enable spellchecking in markdown, text and gitcommit files
+autocmd("FileType", {
+   pattern = { "gitcommit", "markdown", "text", "tex" },
+   callback = function()
+      vim.opt_local.spell = true
+   end,
+})
