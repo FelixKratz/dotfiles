@@ -73,6 +73,7 @@ vim.cmd("hi DapUIBreakpointsCurrentLine guifg=#9dd274 gui=bold")
 vim.cmd("hi link DapUIBreakpointsLine DapUILineNumber")
 vim.cmd("hi DapUIBreakpointsDisabledLine guifg=#424242")
 
+vim.cmd("hi IndentBlanklineContextChar guifg=#83c092 gui=nocombine")
 local autocmd = vim.api.nvim_create_autocmd
 
 -- Use relative & absolute line numbers in 'n' & 'i' modes respectively

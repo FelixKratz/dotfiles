@@ -3,9 +3,9 @@ local M = {}
 local userPlugins = require "custom.plugins"
 
 M.options = {
-   user = function()
-      vim.opt.clipboard = "unnamed"
-   end,
+  user = function()
+    vim.opt.clipboard = "unnamed"
+  end,
 }
 
 M.ui = {
@@ -30,18 +30,20 @@ M.plugins = {
     },
 
     ["lukas-reineke/indent-blankline.nvim"] = {
-        show_trailing_blankline_indent = true,
-        show_first_indent_level = true,
+      show_trailing_blankline_indent = true,
+      show_first_indent_level = true,
+      show_current_context = true,
+      char = "│",
     },
     ["akinsho/bufferline.nvim"] = {
-        options = {
-           custom_areas = false,
-           max_name_length = 20,
-        },
+      options = {
+        custom_areas = false,
+        max_name_length = 20,
+      },
     },
   },
   remove = {
-    "feline-nvim/feline.nvim",
+    -- "feline-nvim/feline.nvim",
   },
 
   options = {
