@@ -18,7 +18,7 @@ return {
 
     -- lazy loading
     setup = function()
-      require("core.utils").packer_lazy_load "neoscroll.nvim"
+      nvchad.packer_lazy_load "neoscroll.nvim"
     end,
   },
 

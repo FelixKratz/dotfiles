@@ -75,7 +75,7 @@ options.mode_colors = {
 }
 
 options.separator_style =
-   options.icon_styles[require("core.utils").load_config().plugins.options.statusline.separator_style]
+   options.icon_styles[nvchad.load_config().plugins.options.statusline.separator_style]
 
 options.main_icon = {
    provider = function()
@@ -280,7 +280,7 @@ options.current_line = {
    },
 }
 
-options = require("core.utils").load_override(options, "feline-nvim/feline.nvim")
+options = nvchad.load_override(options, "feline-nvim/feline.nvim")
 
 local function add_table(tbl, inject)
    if inject then

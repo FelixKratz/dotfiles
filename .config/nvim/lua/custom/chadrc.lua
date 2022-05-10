@@ -5,6 +5,8 @@ local userPlugins = require "custom.plugins"
 M.options = {
   user = function()
     vim.opt.clipboard = "unnamed"
+    vim.opt.cul = false
+    vim.opt.mouse = "nv"
   end,
 }
 
