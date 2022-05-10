@@ -42,7 +42,12 @@ M.plugins = {
       },
     },
   },
-  remove = {"feline-nvim/feline.nvim"},
+  remove = {
+    "feline-nvim/feline.nvim",
+    "kyazdani42/nvim-tree.lua",
+    "goolord/alpha-nvim",
+    "NvChad/nvterm",
+  },
 
   options = {
     packer = {
