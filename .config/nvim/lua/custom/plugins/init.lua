@@ -40,9 +40,9 @@ return {
       require("nnn").setup()
     end
   },
-  -- ["feline-nvim/feline.nvim"] = {
-  --   config = function()
-  --     require "custom.plugins.feline"
-  --   end
-  -- }
+  ["feline-nvim/feline.nvim"] = {
+    config = function()
+      require "custom.plugins.feline"
+    end
+  }
 }
