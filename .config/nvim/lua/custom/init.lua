@@ -24,7 +24,6 @@ map("n", "<C-Down>", "<C-w>j")
 map("n", "<C-Up>", "<C-w>k")
 map("n", "<C-Right>", "<C-w>l")
 map("n", "<Leader>e", ':lua require("dapui").eval()<CR>')
-map("n", "<Leader>n", ':NnnPicker<CR>')
 map("n", "q", ':q<CR>')
 map("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle_current_linewise()<CR>")
 
@@ -47,7 +46,7 @@ vim.cmd("set foldcolumn=1")
 vim.cmd("set foldenable")
 vim.cmd("set foldlevel=99")
 vim.cmd("set foldmethod=indent")
-vim.cmd("set foldnestmax=1")
+vim.cmd("set foldnestmax=99")
 
 vim.cmd("set colorcolumn=80")
 vim.cmd("set noshowmode")
@@ -73,7 +72,7 @@ vim.cmd("hi DapUIBreakpointsCurrentLine guifg=#9dd274 gui=bold")
 vim.cmd("hi link DapUIBreakpointsLine DapUILineNumber")
 vim.cmd("hi DapUIBreakpointsDisabledLine guifg=#424242")
 
-vim.cmd("hi IndentBlanklineContextChar guifg=#83c092 gui=nocombine")
+vim.cmd("hi IndentBlanklineContextChar guifg=#e1e3e4 gui=nocombine")
 local autocmd = vim.api.nvim_create_autocmd
 
 -- Use relative & absolute line numbers in 'n' & 'i' modes respectively

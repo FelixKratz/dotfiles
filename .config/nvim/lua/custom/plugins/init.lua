@@ -35,11 +35,6 @@ return {
     end,
   },
 
-  ["luukvbaal/nnn.nvim"] = {
-    config = function()
-      require("nnn").setup()
-    end
-  },
   ["feline-nvim/feline.nvim"] = {
     config = function()
       require "custom.plugins.feline"
