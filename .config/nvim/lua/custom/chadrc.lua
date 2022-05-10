@@ -42,7 +42,7 @@ M.plugins = {
       },
     },
   },
-  remove = {},
+  remove = {"feline-nvim/feline.nvim"},
 
   options = {
     packer = {
