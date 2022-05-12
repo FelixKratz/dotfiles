@@ -73,7 +73,7 @@ git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1
 ```bash
 nvim +PackerSync
 ```
-* My remappings are in .config/nvim/lua/custom/init.lua and .config/nvim/lua/custom/chadrc.lua, you can change them freely.
+* My remappings are in .config/nvim/lua/custom/mappings.lua, you can change or remove them freely.
 * (optional) Install font and set it as the terminal font:
 ```bash
 git clone git@github.com:shaunsingh/SFMono-Nerd-Font-Ligaturized.git /tmp/SFMono_Nerd_Font
