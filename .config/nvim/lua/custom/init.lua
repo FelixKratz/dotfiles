@@ -1,47 +1,3 @@
-local map = nvchad.map
-
-map("n", "j", "h")
-map("n", "k", "j")
-map("n", "l", "k")
-map("n", "ö", "l")
-map("n", "h", "%")
-map("n", "ß", "$")
-map("n", "Y", "y$")
-map("n", "ä", "za")
-map("n", "Ä", "zM")
-map("n", "<C-k>", "<Esc>:m .+1<CR>")
-map("n", "<C-l>", "<Esc>:m .-2<CR>")
-map("n", "<leader>t", ":TodoTelescope<CR>")
-map("n", "s", ":w<CR>")
-map("n", "<Leader>q", ':lua require"dap".close()<CR>')
-map("n", "<Leader>d", ':lua require"dapui".toggle()<CR>')
-map("n", "<Leader>b", ':lua require"dap".toggle_breakpoint()<CR>')
-map("n", "<Leader>B", ':lua require"dap".set_breakpoint(vim.fn.input("Breakpoint condition: "))<CR>')
-map("n", "<C-c>", ':lua require"dap".continue()<CR>')
-map("n", "<C-s>", ':lua require"dap".step_into()<CR>')
-map("n", "<C-Left>", "<C-w>h")
-map("n", "<C-Down>", "<C-w>j")
-map("n", "<C-Up>", "<C-w>k")
-map("n", "<C-Right>", "<C-w>l")
-map("n", "<Leader>e", ':lua require("dapui").eval()<CR>')
-map("n", "q", ':q<CR>')
-map("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle_current_linewise()<CR>")
-
-map("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<CR>")
-map("v", "j", "h")
-map("v", "k", "j")
-map("v", "l", "k")
-map("v", "ö", "l")
-map("v", "h", "%")
-map("v", "ß", "$")
-map("v", "Y", "y$")
-map("v", "<leader>a", ":LiveEasyAlign<CR>")
-map("v", "<C-k>", ":m '>+1<CR>==gv")
-map("v", "<C-l>", ":m '<-2<CR>==gv")
-
-map("i", "<C-k>", "<Esc>:m .+1<CR>==gi")
-map("i", "<C-l>", "<Esc>:m .-2<CR>==gi")
-
 vim.cmd("set foldcolumn=1")
 vim.cmd("set foldenable")
 vim.cmd("set foldlevel=99")
@@ -77,27 +33,27 @@ local autocmd = vim.api.nvim_create_autocmd
 
 -- Use relative & absolute line numbers in 'n' & 'i' modes respectively
 autocmd("InsertEnter", {
-   callback = function()
-      vim.opt.relativenumber = true
-   end,
+  callback = function()
+    vim.opt.relativenumber = true
+  end,
 })
 autocmd("InsertLeave", {
-   callback = function()
-      vim.opt.relativenumber = false
-   end,
+  callback = function()
+    vim.opt.relativenumber = false
+  end,
 })
 
 -- Highlight yanked text
 autocmd("TextYankPost", {
-   callback = function()
-      vim.highlight.on_yank { higroup = "Visual", timeout = 100 }
-   end,
+  callback = function()
+    vim.highlight.on_yank { higroup = "Visual", timeout = 100 }
+  end,
 })
 
 -- Enable spellchecking in markdown, text and gitcommit files
 autocmd("FileType", {
-   pattern = { "gitcommit", "markdown", "text", "tex" },
-   callback = function()
-      vim.opt_local.spell = true
-   end,
+  pattern = { "gitcommit", "markdown", "text", "tex" },
+  callback = function()
+    vim.opt_local.spell = true
+  end,
 })
