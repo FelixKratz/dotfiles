@@ -81,9 +81,6 @@ sketchybar --bar                height=32                                       
                                 popup.background.border_color=$POPUP_BORDER_COLOR                 \
                                 popup.background.color=$POPUP_BACKGROUND_COLOR                    \
                                 popup.background.shadow.drawing=$SHADOW                           \
-                                icon.shadow.drawing=$SHADOW                                       \
-                                label.shadow.drawing=$SHADOW                                      \
-                                alias.shadow.drawing=$SHADOW                                      \
                                 icon.shadow.color=$SHADOW_COLOR                                   \
                                 label.shadow.color=$SHADOW_COLOR                                  \
                                 alias.shadow.color=0xff000000                                     \
@@ -93,6 +90,9 @@ sketchybar --bar                height=32                                       
                                 icon.shadow.angle=$SHADOW_ANGLE                                   \
                                 label.shadow.angle=$SHADOW_ANGLE                                  \
                                 alias.shadow.angle=$SHADOW_ANGLE                                  \
+                                icon.shadow.drawing=$SHADOW                                       \
+                                label.shadow.drawing=$SHADOW                                      \
+                                alias.shadow.drawing=$SHADOW                                      \
                                 alias.color=$ICON_COLOR                                           \
                                                                                                   \
            --add item           label_template left                                               \
