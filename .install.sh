@@ -62,6 +62,7 @@ brew install --cask skim
 brew install --cask meetingbar
 brew install --cask machoview
 brew install --cask hex-fiend
+brew install --cask cutter
 brew install --cask font-hack-nerd-font
 brew install --cask vlc
 
@@ -138,6 +139,7 @@ conda install jupyterlab
 conda install seaborn
 conda install opencv
 conda install joblib
+pip3 install debugpy
 
 # Start Services
 echo "Starting Services (grant permissions)..."
@@ -155,3 +157,4 @@ open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 echo "Manual Install Needed: Alfred"
 echo "Installation complete...\nRun nvim +PackerSync and Restart..."
+

@@ -1,10 +1,5 @@
 local M = {}
 
-M.general = {
-  ["<C-s>"] = nil,
-  ["<C-c>"] = nil,
-}
-
 M.movement = {
   n = {
     ["j"] = { "h", "Move Left" },

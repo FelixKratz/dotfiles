@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
 
-update() {
-  args=()
-  if [ "$NAME" != "space_template" ]; then
-    args+=(--set $NAME label=$NAME icon.highlight=$SELECTED icon.background.drawing=$SELECTED)
-  fi
-  if [ "$SELECTED" = "true" ]; then
-    args+=(--set spaces_$DID.label label=$NAME)
-  fi
+args=()
+if [ "$NAME" != "space_template" ]; then
+  args+=(--set $NAME label=$NAME \
+                     icon.highlight=$SELECTED)
+fi
 
-  sketchybar -m "${args[@]}" 
-}
+if [ "$SELECTED" = "true" ]; then
+  args+=(--set spaces_$DID.label label=${NAME#"spaces_$DID."})
+  args+=(--set $NAME icon.background.y_offset=-12)
+else
+  args+=(--set $NAME icon.background.y_offset=-20)
+fi
 
-case "$SENDER" in
-  "mouse.entered") sketchybar --set $NAME background.drawing=on #Inactive
-  ;;
-  "mouse.exited") sketchybar --set $NAME background.drawing=off #Inactive
-  ;;
-  *) update
-  ;;
-esac
+sketchybar -m --animate tanh 20 "${args[@]}"

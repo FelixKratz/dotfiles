@@ -7,18 +7,11 @@ return {
   },
 
   ["junegunn/vim-easy-align"] = {},
-  ["tpope/vim-surround"] = {},
-  ["tpope/vim-fugitive"] = {},
 
   ["karb94/neoscroll.nvim"] = {
     opt = true,
     config = function()
       require("neoscroll").setup()
-    end,
-
-    -- lazy loading
-    setup = function()
-      nvchad.packer_lazy_load "neoscroll.nvim"
     end,
   },
 
@@ -35,9 +28,16 @@ return {
     end,
   },
 
+  ['mfussenegger/nvim-dap-python'] = {
+    after = "nvim-dap",
+    config = function()
+      require('dap-python').setup('python')
+    end,
+  },
+
   ["feline-nvim/feline.nvim"] = {
     config = function()
       require "custom.plugins.feline"
-    end
+    end,
   }
 }

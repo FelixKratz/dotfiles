@@ -38,14 +38,14 @@ sketchybar --bar                height=32                                       
                                 margin=0                                                          \
                                 blur_radius=0                                                     \
                                 position=top                                                      \
-                                padding_left=5                                                    \
-                                padding_right=5                                                   \
+                                padding_left=4                                                    \
+                                padding_right=4                                                   \
                                 color=$BAR_COLOR                                                  \
                                 topmost=off                                                       \
                                 font_smoothing=off                                                \
-                                y_offset=0                                                        \
-                                shadow=on                                                         \
-                                notch_width=0                                                     \
+                                y_offset=-32                                                      \
+                                shadow=off                                                        \
+                                notch_width=200                                                   \
                                                                                                   \
            --default            drawing=on                                                        \
                                 lazy=off                                                          \
@@ -121,5 +121,9 @@ source "$ITEM_DIR/spotify.sh"
 
 ############## FINALIZING THE SETUP ##############
 sketchybar --update
+
+
+############## Animation ########################
+sketchybar --animate tanh 30 --bar shadow=on y_offset=0
 
 echo "sketchybar configuration loaded.."
