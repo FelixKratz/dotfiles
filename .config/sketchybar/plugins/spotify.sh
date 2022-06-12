@@ -1,22 +1,18 @@
 #!/usr/bin/env sh
 
-next ()
-{
+next () {
   osascript -e 'tell application "Spotify" to play next track'
 }
 
-back () 
-{
+back () {
   osascript -e 'tell application "Spotify" to play previous track'
 }
 
-play_pause () 
-{
+play_pause () {
   osascript -e 'tell application "Spotify" to playpause'
 }
 
-repeat () 
-{
+repeat () {
   REPEAT=$(osascript -e 'tell application "Spotify" to get repeating')
   if [ "$REPEAT" = "false" ]; then
     sketchybar -m --set spotify.repeat icon.highlight=on
@@ -27,8 +23,7 @@ repeat ()
   fi
 }
 
-shuffle () 
-{
+shuffle () {
   SHUFFLE=$(osascript -e 'tell application "Spotify" to get shuffling')
   if [ "$SHUFFLE" = "false" ]; then
     sketchybar -m --set spotify.shuffle icon.highlight=on
@@ -39,8 +34,7 @@ shuffle ()
   fi
 }
 
-update ()
-{
+update () {
   PLAYING=1
   if [ "$(echo "$INFO" | jq -r '.["Player State"]')" = "Playing" ]; then
     PLAYING=0
@@ -49,13 +43,16 @@ update ()
     ALBUM="$(echo "$INFO" | jq -r .Album | cut -c1-20)"
     SHUFFLE=$(osascript -e 'tell application "Spotify" to get shuffling')
     REPEAT=$(osascript -e 'tell application "Spotify" to get repeating')
+    COVER=$(osascript -e 'tell application "Spotify" to get artwork url of current track')
   fi
 
   args=()
   if [ $PLAYING -eq 0 ]; then
+    curl "$COVER" -o /tmp/cover.jpg
     args+=(--set spotify.play_pause icon=􀊆 \
            --set spotify.shuffle icon.highlight=$SHUFFLE \
-           --set spotify.repeat icon.highlight=$REPEAT)
+           --set spotify.repeat icon.highlight=$REPEAT \
+           --set "Control Center,Sound" popup.background.image="/tmp/cover.jpg")
   else
     args+=(--set "Control Center,Sound" popup.drawing=off \
            --set spotify.play_pause icon=􀊄)

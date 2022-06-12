@@ -1,33 +1,36 @@
 #!/usr/bin/env sh
 
 update() {
+  source "$HOME/.config/sketchybar/colors.sh"
+  source "$HOME/.config/sketchybar/icons.sh"
+
   WINDOW=$(yabai -m query --windows --window)
   CURRENT=$(echo "$WINDOW" | jq '.["stack-index"]')
 
   args=()
   if [[ $CURRENT -gt 0 ]]; then
     LAST=$(yabai -m query --windows --window stack.last | jq '.["stack-index"]')
-    args+=(--set $NAME icon=􀏭 label.drawing=on label=$(printf "[%s/%s]" "$CURRENT" "$LAST"))
-    yabai -m config active_window_border_color 0xff72cce8
+    args+=(--set $NAME icon=$YABAI_STACK icon.color=$BLUE label.drawing=on label=$(printf "[%s/%s]" "$CURRENT" "$LAST"))
+    yabai -m config active_window_border_color $BLUE
 
   else 
     args+=(--set $NAME label.drawing=off)
     case "$(echo "$WINDOW" | jq '.["is-floating"]')" in
       "false")
         if [ "$(echo "$WINDOW" | jq '.["has-fullscreen-zoom"]')" = "true" ]; then
-          args+=(--set $NAME icon="􀏜" icon.color=0xffeacb64)
-          yabai -m config active_window_border_color 0xffeacb64
+          args+=(--set $NAME icon=$YABAI_FULLSCREEN_ZOOM icon.color=$YELLOW)
+          yabai -m config active_window_border_color $YELLOW
         elif [ "$(echo "$WINDOW" | jq '.["has-parent-zoom"]')" = "true" ]; then
-          args+=(--set $NAME icon="􀥃" icon.color=0xffff6578)
-          yabai -m config active_window_border_color 0xffff6578
+          args+=(--set $NAME icon=$YABAI_PARENT_ZOOM icon.color=$RED)
+          yabai -m config active_window_border_color $RED
         else
-          args+=(--set $NAME icon="􀧍" icon.color=0xff9dd274)
-          yabai -m config active_window_border_color 0xff9dd274
+          args+=(--set $NAME icon=$YABAI_GRID icon.color=$GREEN)
+          yabai -m config active_window_border_color $GREEN
         fi
         ;;
       "true")
-        args+=(--set $NAME icon="􀢌" icon.color=0xffba9cf3)
-        yabai -m config active_window_border_color 0xffba9cf3
+        args+=(--set $NAME icon=$YABAI_FLOAT icon.color=$MAGENTA)
+        yabai -m config active_window_border_color $MAGENTA
         ;;
     esac
   fi

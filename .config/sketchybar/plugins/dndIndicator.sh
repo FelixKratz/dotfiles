@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Thanks to reddit:rudypaul
 BIN_DIR="/usr/bin"

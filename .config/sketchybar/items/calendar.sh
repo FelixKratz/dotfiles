@@ -4,7 +4,7 @@ sketchybar --add   item          mailIndicator right                   \
            --set   mailIndicator update_freq=30                        \
                                  script="$PLUGIN_DIR/mailIndicator.sh" \
                                  icon.font="$FONT:Bold:16.0"           \
-                                 icon=􀍜                                \
+                                 icon=$MAIL                            \
                                  label.padding_right=8                 \
                                  background.padding_right=0            \
                                  label=!                               \
@@ -30,6 +30,5 @@ sketchybar --add   item          mailIndicator right                   \
            --add   bracket       calendar                              \
                                  mailIndicator                         \
                                  MeetingBar                            \
-                                 calendar.date                         \
-                                                                       \
-           --set   calendar      background.drawing=on
+                                 calendar.time                         \
+                                 calendar.date

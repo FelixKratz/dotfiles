@@ -1,8 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 update() {
   # This is called for all other events
-
 }
 
 mouse_entered() {

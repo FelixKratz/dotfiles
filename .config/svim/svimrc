@@ -3,6 +3,6 @@ noremap k j
 noremap l k
 noremap ö l
 noremap ß $
-nmap <C-k> <Esc>:m .+1<CR>==gn
-nmap <C-l> <Esc>:m .-2<CR>==gn
+nmap <C-k> <Esc>:m .+1<CR>
+nmap <C-l> <Esc>:m .-2<CR>
 

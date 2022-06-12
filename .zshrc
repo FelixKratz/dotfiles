@@ -64,4 +64,4 @@ function nnn () {
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export EDITOR="$(which nvim)"
-export VISUAL="$(which nvim)"
+export VISUAL="$HOME/.config/nnn/plugins/selnew.sh"

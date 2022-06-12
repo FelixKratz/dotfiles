@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 update() {
   if [ "$(pgrep -x "caffeinate")" = "" ]; then

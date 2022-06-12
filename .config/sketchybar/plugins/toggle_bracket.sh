@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 BRACKET_NAME="$(echo $NAME | tr '.' ' ' | awk "{ print \$1 }")"
 ITEMS="$(sketchybar --query $BRACKET_NAME | jq -r ".bracket[]")"

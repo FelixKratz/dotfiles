@@ -1,129 +1,93 @@
 #!/usr/bin/env sh
 
+source "$HOME/.config/sketchybar/colors.sh" # Loads all defined colors
+source "$HOME/.config/sketchybar/icons.sh" # Loads all defined icons
+
 ITEM_DIR="$HOME/.config/sketchybar/items" # Directory where the items are configured
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins" # Directory where all the plugin scripts are stored
 
-LOADING=􀖇 # Icon displayed while an item is still initializing
-PADDINGS=3 # All paddings use this value (icon, label, background and bar paddings)
 FONT="SF Pro" # Needs to have Regular, Bold, Semibold, Heavy and Black variants
-BAR_COLOR=0xff2a2f38 # Black bar
-ICON_COLOR=0xffe1e3e4 # Color of all icons
-LABEL_COLOR=0xffe1e3e4 # Color of all labels
-CONTRAST_COLOR=$ICON_COLOR #0xff2a2f38 # The color of elements in front of a background
 SPACE_CLICK_SCRIPT="yabai -m space --focus \$SID" # The script that is run for clicking on space components
+POPUP_CLICK_SCRIPT="sketchybar -m --set \"\$NAME\" popup.drawing=toggle" # The script that toggles the popup windows
 
-SEGMENT_HEIGHT=28 # The height of the segments
-SEGMENT_SPACING=13 # The spacing between the segments
-SEGMENT_BORDER_WIDTH=0 # Width of the borders for segments
-SEGMENT_BACKGROUND_COLOR=0x00000000 # The background color for segments
-SEGMENT_BACKGROUND_HIGHLIGHT_COLOR=$SEGMENT_BACKGROUND_COLOR # 0xffe1e3e4 # The background highlight color for segments (borders, etc)
-CORNER_RADIUS=4 # Roundness of the segments
+PADDINGS=3 # All paddings use this value (icon, label, background and bar paddings)
+SEGMENT_SPACING=13 # The spacing between segments
 
-POPUP_BACKGROUND_COLOR=0xdd2a2f38 #$BAR_COLOR
-POPUP_BORDER_COLOR=0xff9dd274
 POPUP_BORDER_WIDTH=2
-POPUP_CORNER_RADIUS=4
+POPUP_CORNER_RADIUS=3
 
 SHADOW=on
-SHADOW_COLOR=0xff1a1f28
 SHADOW_DISTANCE=3
 SHADOW_ANGLE=35
 
-HAS_BATTERY=$(if [ "$(pmset -g batt | grep "Battery")" = "" ]; then echo "false"; else echo "true"; fi)
+# Setting up the general bar appearance and default values
+sketchybar --bar     height=32                                           \
+                     corner_radius=0                                     \
+                     border_width=0                                      \
+                     margin=-200                                         \
+                     blur_radius=0                                       \
+                     position=top                                        \
+                     padding_left=4                                      \
+                     padding_right=4                                     \
+                     color=$BAR_COLOR                                    \
+                     topmost=off                                         \
+                     font_smoothing=off                                  \
+                     y_offset=-32                                        \
+                     shadow=off                                          \
+                     notch_width=0                                       \
+                                                                         \
+           --default drawing=on                                          \
+                     updates=when_shown                                  \
+                     label.font="$FONT:Semibold:13.0"                    \
+                     icon.font="$FONT:Bold:14.0"                         \
+                     icon.color=$ICON_COLOR                              \
+                     label.color=$LABEL_COLOR                            \
+                     icon.padding_left=$PADDINGS                         \
+                     icon.padding_right=$PADDINGS                        \
+                     label.padding_left=$PADDINGS                        \
+                     label.padding_right=$PADDINGS                       \
+                     background.padding_right=$PADDINGS                  \
+                     background.padding_left=$PADDINGS                   \
+                     popup.background.border_width=$POPUP_BORDER_WIDTH   \
+                     popup.background.corner_radius=$POPUP_CORNER_RADIUS \
+                     popup.background.border_color=$POPUP_BORDER_COLOR   \
+                     popup.background.color=$POPUP_BACKGROUND_COLOR      \
+                     popup.background.shadow.drawing=$SHADOW             \
+                     icon.shadow.color=$SHADOW_COLOR                     \
+                     icon.shadow.distance=$SHADOW_DISTANCE               \
+                     icon.shadow.angle=$SHADOW_ANGLE                     \
+                     icon.shadow.drawing=$SHADOW                         \
+                     label.shadow.color=$SHADOW_COLOR                    \
+                     label.shadow.distance=$SHADOW_DISTANCE              \
+                     label.shadow.angle=$SHADOW_ANGLE                    \
+                     label.shadow.drawing=$SHADOW
 
-sketchybar --bar                height=32                                                         \
-                                corner_radius=0                                                   \
-                                border_width=0                                                    \
-                                border_color=0xff555555                                           \
-                                margin=0                                                          \
-                                blur_radius=0                                                     \
-                                position=top                                                      \
-                                padding_left=4                                                    \
-                                padding_right=4                                                   \
-                                color=$BAR_COLOR                                                  \
-                                topmost=off                                                       \
-                                font_smoothing=off                                                \
-                                y_offset=-32                                                      \
-                                shadow=off                                                        \
-                                notch_width=200                                                   \
-                                                                                                  \
-           --default            drawing=on                                                        \
-                                lazy=off                                                          \
-                                updates=when_shown                                                \
-                                label.font="$FONT:Semibold:13.0"                                  \
-                                icon.font="$FONT:Bold:14.0"                                       \
-                                icon.color=$ICON_COLOR                                            \
-                                label.color=$LABEL_COLOR                                          \
-                                icon.padding_left=$PADDINGS                                       \
-                                icon.padding_right=$PADDINGS                                      \
-                                label.padding_left=$PADDINGS                                      \
-                                label.padding_right=$PADDINGS                                     \
-                                background.padding_right=$PADDINGS                                \
-                                background.padding_left=$PADDINGS                                 \
-                                background.color=$SEGMENT_BACKGROUND_COLOR                        \
-                                background.border_color=$SEGMENT_BACKGROUND_HIGHLIGHT_COLOR       \
-                                background.border_width=$SEGMENT_BORDER_WIDTH                     \
-                                background.height=$SEGMENT_HEIGHT                                 \
-                                background.corner_radius=$CORNER_RADIUS                           \
-                                background.drawing=off                                            \
-                                icon.background.height=$SEGMENT_HEIGHT                            \
-                                icon.background.color=$SEGMENT_BACKGROUND_HIGHLIGHT_COLOR         \
-                                icon.background.corner_radius=$CORNER_RADIUS                      \
-                                icon.background.drawing=off                                       \
-                                label.background.color=$SEGMENT_BACKGROUND_HIGHLIGHT_COLOR        \
-                                label.background.border_width=$SEGMENT_BORDER_WIDTH               \
-                                label.background.border_color=$SEGMENT_BACKGROUND_HIGHLIGHT_COLOR \
-                                label.background.height=$SEGMENT_HEIGHT                           \
-                                label.background.corner_radius=$CORNER_RADIUS                     \
-                                label.background.drawing=off                                      \
-                                popup.background.border_width=$POPUP_BORDER_WIDTH                 \
-                                popup.background.corner_radius=$POPUP_CORNER_RADIUS               \
-                                popup.background.border_color=$POPUP_BORDER_COLOR                 \
-                                popup.background.color=$POPUP_BACKGROUND_COLOR                    \
-                                popup.background.shadow.drawing=$SHADOW                           \
-                                icon.shadow.color=$SHADOW_COLOR                                   \
-                                label.shadow.color=$SHADOW_COLOR                                  \
-                                alias.shadow.color=0xff000000                                     \
-                                icon.shadow.distance=$SHADOW_DISTANCE                             \
-                                label.shadow.distance=$SHADOW_DISTANCE                            \
-                                alias.shadow.distance=$SHADOW_DISTANCE                            \
-                                icon.shadow.angle=$SHADOW_ANGLE                                   \
-                                label.shadow.angle=$SHADOW_ANGLE                                  \
-                                alias.shadow.angle=$SHADOW_ANGLE                                  \
-                                icon.shadow.drawing=$SHADOW                                       \
-                                label.shadow.drawing=$SHADOW                                      \
-                                alias.shadow.drawing=$SHADOW                                      \
-                                alias.color=$ICON_COLOR                                           \
-                                                                                                  \
-           --add item           label_template left                                               \
-           --set label_template icon.drawing=off                                                  \
-                                label.font="$FONT:Black:12.0"                                     \
-                                label.background.drawing=on                                       \
-                                label.color=$CONTRAST_COLOR                                       \
-                                label.padding_right=5                                             \
-                                label.background.height=$SEGMENT_HEIGHT                           \
-                                click_script="$PLUGIN_DIR/toggle_bracket.sh"                      \
-                                background.padding_left=$SEGMENT_SPACING                          \
-                                background.padding_right=0                                        \
+
+# Template for the segment labels, i.e. space name, active app, date, ...
+sketchybar --add item           label_template left                          \
+           --set label_template icon.drawing=off                             \
+                                label.font="$FONT:Black:12.0"                \
+                                label.padding_right=5                        \
+                                click_script="$PLUGIN_DIR/toggle_bracket.sh" \
+                                background.padding_left=$SEGMENT_SPACING     \
+                                background.padding_right=0                   \
                                 drawing=off
 
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/spaces.sh"
 source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/network.sh"
-source "$ITEM_DIR/memory.sh"
+# source "$ITEM_DIR/memory.sh"
 
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
-source "$ITEM_DIR/svim.sh"
 source "$ITEM_DIR/system.sh"
 source "$ITEM_DIR/spotify.sh"
 
 ############## FINALIZING THE SETUP ##############
 sketchybar --update
 
-
 ############## Animation ########################
-sketchybar --animate tanh 30 --bar shadow=on y_offset=0
+sketchybar --animate sin 30 --bar y_offset=0 notch_width=200 margin=0 shadow=on
 
-echo "sketchybar configuration loaded.."
+echo "sketchybar configuation loaded.."

@@ -14,8 +14,8 @@ if [ "$CMDLINE" != "" ]; then
   DRAW_CMD="on"
 fi
 
-sketchybar --set svim.mode label="[$MODE]" \
-                           label.drawing=$(if [ "$MODE" = "" ]; then echo "off"; else echo "on"; fi) \
-                           icon.color=$COLOR \
-                           popup.drawing=$DRAW_CMD \
+sketchybar --set system.svim label="[$MODE]" \
+                             label.drawing=$(if [ "$MODE" = "" ]; then echo "off"; else echo "on"; fi) \
+                             icon.color=$COLOR \
+                             popup.drawing=$DRAW_CMD \
            --set svim.cmdline label="$CMDLINE"

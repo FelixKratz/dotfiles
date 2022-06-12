@@ -21,17 +21,17 @@ return {
     end,
   },
 
-  ["rcarriga/nvim-dap-ui"] = {
-    after = "nvim-dap",
-    config = function()
-      require "custom.plugins.dapui"
-    end,
-  },
-
   ['mfussenegger/nvim-dap-python'] = {
     after = "nvim-dap",
     config = function()
       require('dap-python').setup('python')
+    end,
+  },
+
+  ["rcarriga/nvim-dap-ui"] = {
+    after = "nvim-dap",
+    config = function()
+      require "custom.plugins.dapui"
     end,
   },
 

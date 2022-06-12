@@ -33,6 +33,7 @@ M.movement = {
     ["<C-k>"] = { ":m '>+1<CR>==gv", "Move Current Line Down" },
     ["<C-l>"] = { ":m '<-2<CR>==gv", "Move Current Line Up" },
     ["<leader>c"] = { "<esc><cmd> :lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<CR>", "Toggle Comment" },
+    ["<leader>a"] = { ":EasyAlign<CR>", "Easy Align" },
   },
   i = {
     ["<C-k>"] = { "<Esc>:m .+1<CR>==gi", "Move Current Line Down" },
@@ -48,7 +49,7 @@ M.dap = {
     ["<leader>B"] = { ':lua require"dap".set_breakpoint(vim.fn.input("Breakpoint condition: "))<CR>', "Toggle Condition Breakpoint" },
     ["<leader>e"] = { ':lua require("dapui").eval()<CR>', "Evaluate Expression (DAP)" },
     ["<C-c>"] = { ':lua require"dap".continue()<CR>', "DAP Continue" },
-    ["<C-s>"] = { ':lua require"dap".continue()<CR>', "DAP Step" },
+    ["<C-s>"] = { ':lua require"dap".step_into()<CR>', "DAP Step" },
     ["<C-Left>"] = { "<C-w>h", "Window Left" },
     ["<C-Down>"] = { "<C-w>j", "Window Down" },
     ["<C-Up>"] = { "<C-w>k", "Window Up" },

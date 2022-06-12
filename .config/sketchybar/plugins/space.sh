@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 args=()
 if [ "$NAME" != "space_template" ]; then
@@ -7,10 +7,10 @@ if [ "$NAME" != "space_template" ]; then
 fi
 
 if [ "$SELECTED" = "true" ]; then
-  args+=(--set spaces_$DID.label label=${NAME#"spaces_$DID."})
-  args+=(--set $NAME icon.background.y_offset=-12)
+  args+=(--set spaces_$DID.label label=${NAME#"spaces_$DID."} \
+         --set $NAME icon.background.y_offset=-12              )
 else
   args+=(--set $NAME icon.background.y_offset=-20)
 fi
 
-sketchybar -m --animate tanh 20 "${args[@]}"
+sketchybar -m --animate tanh 15 "${args[@]}"
