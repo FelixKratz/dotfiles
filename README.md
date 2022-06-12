@@ -20,12 +20,12 @@ Most setup steps are in `.install.sh`
 
 SketchyBar Setup
 ----------------------
-* Uses the current master version of sketchybar: `brew install sketchybar --head`
 * Uses `sf-symbols`: `brew install --cask sf-symbols`
 * Uses `jq`: `brew install jq`
 * Uses `ifstat`: `brew install ifstat`
 * Uses `github-cli`: `brew install gh` (`gh auth login` for notifications)
 * Remove the MeetingBar alias if you don't use this app
+* Animations and some mouse events will only work correctly for sketchybar > v2.6.0
 * If you don't use yabai you can safely remove the `yabai` item from system.sh
 * (optional) yabai events:
 ```bash
