@@ -25,11 +25,13 @@ sketchybar --add       event              window_focus                          
                                           icon.font="$FONT:Bold:16.0"                   \
                                           label.drawing=off                             \
                                           icon.width=30                                 \
+                                          icon=$YABAI_GRID                              \
+                                          icon.color=$GREEN                             \
                                           updates=on                                    \
            --subscribe system.yabai       window_focus mouse.clicked                    \
                                                                                         \
            --clone     system.label       label_template                                \
-           --set       system.label       label=sys                                     \
+           --set       system.label       label=Window                                  \
                                           position=q                                    \
                                           drawing=on                                    \
                                           background.padding_right=0                    \

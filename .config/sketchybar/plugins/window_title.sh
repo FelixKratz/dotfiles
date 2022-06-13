@@ -1,4 +1,11 @@
 #!/usr/bin/env sh
 
-sketchybar --set $NAME label="$INFO"
+update() {
+  sketchybar --set $NAME label="$INFO"
+}
+
+case "$SENDER" in
+  "front_app_switched") update
+  ;;
+esac
 
