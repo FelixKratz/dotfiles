@@ -37,4 +37,14 @@ sketchybar --add       event              spotify_change $SPOTIFY_EVENT       \
                                           icon.highlight_color=$SPOTIFY_GREEN \
                                           label.drawing=off                   \
                                           background.padding_right=7          \
-           --subscribe spotify.repeat     mouse.clicked
+           --subscribe spotify.repeat     mouse.clicked                       \
+                                                                              \
+           --add       bracket            spotify                             \
+                                          spotify.back                        \
+                                          spotify.play_pause                  \
+                                          spotify.next                        \
+                                          spotify.shuffle                     \
+                                          spotify.repeat                      \
+           --set       spotify            background.color=0xaa000000         \
+                                          background.corner_radius=10         \
+                                          background.drawing=on               \

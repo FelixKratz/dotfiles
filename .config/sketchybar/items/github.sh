@@ -24,6 +24,7 @@ sketchybar --add       event          brew_upgrade                            \
                                                                               \
            --add       item           github.template popup.github.bell       \
            --set      github.template drawing=off                             \
+                                      background.corner_radius=12             \
                                       background.padding_left=7               \
                                       background.padding_right=7              \
                                       background.color=$BLACK                 \
