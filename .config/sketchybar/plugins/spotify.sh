@@ -48,7 +48,7 @@ update () {
 
   args=()
   if [ $PLAYING -eq 0 ]; then
-    curl "$COVER" -o /tmp/cover.jpg
+    curl -s --max-time 20 "$COVER" -o /tmp/cover.jpg
     args+=(--set spotify.play_pause icon=􀊆 \
            --set spotify.shuffle icon.highlight=$SHUFFLE \
            --set spotify.repeat icon.highlight=$REPEAT \

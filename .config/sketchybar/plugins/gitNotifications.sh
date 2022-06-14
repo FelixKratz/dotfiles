@@ -27,7 +27,7 @@ update() {
   do
     COUNTER=$((COUNTER + 1))
     IMPORTANT="$(echo "$title" | egrep -i "(deprecat|break|broke)")"
-    COLOR=0xff72cce8
+    COLOR=$BLUE
     PADDING=0
     if [ "${repo}" = "" ] && [ "${title}" = "" ]; then
       repo="Note"
@@ -40,10 +40,12 @@ update() {
       ;;
       "'PullRequest'") COLOR=$MAGENTA; ICON=$GIT_PULL_REQUEST; PADDING=6; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
       ;;
+      "'Commit'") COLOR=$WHITE; ICON=$GIT_COMMIT; PADDING=0 URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      ;;
     esac
     
     if [ "$IMPORTANT" != "" ]; then
-      COLOR=0xffff6578
+      COLOR=$RED
       ICON=􀁞
       args+=(--set github.bell icon.color=$COLOR)
     fi
@@ -57,20 +59,19 @@ update() {
                                             position=popup.github.bell \
                                             icon.background.color=$COLOR \
                                             drawing=on \
-                                            script="$HOME/.config/sketchybar/plugins/glow_on_hover.sh" \
                                             click_script="open $URL;
                                                           sketchybar --set github.bell popup.drawing=off")
   done <<< "$(echo "$NOTIFICATIONS" | jq -r '.[] | [.repository.name, .subject.latest_comment_url, .subject.type, .subject.title] | @sh')"
 
   sketchybar -m "${args[@]}"
 
-  if [ "$COUNT" != "$PREV_COUNT" ] && [ "$COUNT" -gt "0" ]; then
-    sketchybar --animate tanh 15 --set github.bell label.y_offset=5 icon.highlight=on label.y_offset=0
+  if [ $COUNT -gt $PREV_COUNT ] 2>/dev/null || [ "$SENDER" = "forced" ]; then
+    sketchybar --animate tanh 15 --set github.bell label.y_offset=5 label.highlight=on label.y_offset=0
   fi
 }
 
 popup() {
-  sketchybar --set $NAME popup.drawing=$1 icon.highlight=$1
+  sketchybar --set $NAME popup.drawing=$1 label.highlight=off
 }
 
 case "$SENDER" in

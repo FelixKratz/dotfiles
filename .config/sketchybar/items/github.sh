@@ -15,7 +15,7 @@ sketchybar --add       event          brew_upgrade                            \
                                       icon.font="$FONT:Bold:15.0"             \
                                       icon=$BELL                              \
                                       label=$LOADING                          \
-                                      icon.highlight_color=$BLUE              \
+                                      label.highlight_color=$BLUE             \
                                       script="$PLUGIN_DIR/gitNotifications.sh"\
                                       click_script="$POPUP_CLICK_SCRIPT"      \
            --subscribe github.bell    mouse.entered                           \
@@ -35,8 +35,6 @@ sketchybar --add       event          brew_upgrade                            \
                                       icon.background.shadow.angle=25         \
                                       icon.background.shadow.distance=2       \
                                       icon.background.shadow.drawing=on       \
-                                      script="$PLUGIN_DIR/glow_on_hover.sh"   \
-          --subscribe github.template mouse.entered mouse.exited              \
                                                                               \
            --add       item           github.commits left                     \
            --set       github.commits associated_space=1,5                    \
@@ -44,7 +42,7 @@ sketchybar --add       event          brew_upgrade                            \
                                       icon.color=$GIT_NO_COMMITS              \
                                       icon.highlight_color=$GREEN             \
                                       icon.font="$FONT:Bold:16.0"             \
-                                      icon=$GIT_COMMIT                        \
+                                      icon=$GIT_INDICATOR                     \
                                       label=$LOADING                          \
                                       click_script="open https://github.com"  \
                                       script="$PLUGIN_DIR/githubIndicator.sh" \

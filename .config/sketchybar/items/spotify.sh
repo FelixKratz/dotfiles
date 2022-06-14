@@ -45,6 +45,6 @@ sketchybar --add       event              spotify_change $SPOTIFY_EVENT       \
                                           spotify.next                        \
                                           spotify.shuffle                     \
                                           spotify.repeat                      \
-           --set       spotify            background.color=0xaa000000         \
-                                          background.corner_radius=10         \
+           --set       spotify            background.color=0x99000000         \
+                                          background.corner_radius=5          \
                                           background.drawing=on               \
