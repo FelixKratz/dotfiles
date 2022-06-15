@@ -24,7 +24,7 @@ SHADOW_ANGLE=35
 sketchybar --bar     height=32                                           \
                      corner_radius=0                                     \
                      border_width=0                                      \
-                     margin=0                                            \
+                     margin=-200                                         \
                      blur_radius=0                                       \
                      position=top                                        \
                      padding_left=4                                      \
@@ -32,7 +32,7 @@ sketchybar --bar     height=32                                           \
                      color=$BAR_COLOR                                    \
                      topmost=off                                         \
                      font_smoothing=off                                  \
-                     y_offset=0                                          \
+                     y_offset=-32                                        \
                      shadow=on                                           \
                      notch_width=0                                       \
                                                                          \
@@ -88,6 +88,6 @@ source "$ITEM_DIR/spotify.sh"
 sketchybar --update
 
 ############## Animation ########################
-sketchybar --animate sin 30 --bar notch_width=200
+sketchybar --animate sin 30 --bar margin=0 y_offset=0 notch_width=200
 
 echo "sketchybar configuation loaded.."
