@@ -33,7 +33,7 @@ sketchybar --bar     height=32                                           \
                      topmost=off                                         \
                      font_smoothing=off                                  \
                      y_offset=-32                                        \
-                     shadow=on                                           \
+                     shadow=off                                          \
                      notch_width=0                                       \
                                                                          \
            --default drawing=on                                          \
@@ -88,6 +88,6 @@ source "$ITEM_DIR/spotify.sh"
 sketchybar --update
 
 ############## Animation ########################
-sketchybar --animate sin 30 --bar margin=0 y_offset=0 notch_width=200
+sketchybar --animate sin 30 --bar y_offset=0 notch_width=200 margin=0 shadow=on
 
 echo "sketchybar configuation loaded.."

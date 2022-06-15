@@ -30,6 +30,7 @@ sketchybar --add   item          cpu.separator right                \
            --set   cpu.sys       associated_space=1                 \
                                  width=0                            \
                                  graph.color=$RED                   \
+                                 graph.fill_color=$RED              \
                                  label.drawing=off                  \
                                  icon.drawing=off                   \
                                                                     \
