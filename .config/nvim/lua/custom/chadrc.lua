@@ -14,7 +14,7 @@ M.ui = {
   hl_override = {
     Comment = { italic = true },
   },
-  theme = "penokai", -- default theme
+  theme = "penokai",
   transparency = true,
 }
 
@@ -37,14 +37,17 @@ M.plugins = {
       show_current_context = true,
       char = "│",
     },
+
     ["akinsho/bufferline.nvim"] = {
       options = {
+        always_show_bufferline = true,
         custom_areas = false,
         max_name_length = 20,
       },
     },
   },
   remove = {
+    "akinsho/bufferline.nvim",
     "feline-nvim/feline.nvim",
     "kyazdani42/nvim-tree.lua",
     "goolord/alpha-nvim",

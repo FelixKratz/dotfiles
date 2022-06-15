@@ -5,7 +5,7 @@ if not present then
 end
 
 local options = {
-   colors = require("base46").get_colors "base_30",
+   colors = require("base46").get_theme_tb "base_30",
    lsp = require "feline.providers.lsp",
    lsp_severity = vim.diagnostic.severity,
 }
