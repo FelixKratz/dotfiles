@@ -35,7 +35,15 @@ return {
     end,
   },
 
+  ["akinsho/bufferline.nvim"] = {
+    after = "base46",
+    config = function()
+       require "plugins.configs.bufferline"
+    end,
+  },
+
   ["feline-nvim/feline.nvim"] = {
+    after = "base46",
     config = function()
       require "custom.plugins.feline"
     end,
