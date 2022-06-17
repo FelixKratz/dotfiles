@@ -1,3 +1,5 @@
+require("core.utils").load_mappings()
+
 vim.cmd("set foldcolumn=1")
 vim.cmd("set foldenable")
 vim.cmd("set foldlevel=99")
