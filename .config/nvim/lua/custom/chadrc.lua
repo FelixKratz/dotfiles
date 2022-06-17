@@ -47,6 +47,7 @@ M.plugins = {
     },
   },
   remove = {
+    "folke/which-key.nvim",
     "akinsho/bufferline.nvim",
     "feline-nvim/feline.nvim",
     "kyazdani42/nvim-tree.lua",
