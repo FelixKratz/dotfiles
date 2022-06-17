@@ -29,18 +29,19 @@ update() {
     IMPORTANT="$(echo "$title" | egrep -i "(deprecat|break|broke)")"
     COLOR=$BLUE
     PADDING=0
+
     if [ "${repo}" = "" ] && [ "${title}" = "" ]; then
       repo="Note"
       title="No new notifications"
     fi 
     case "${type}" in
-      "'Issue'") COLOR=$GREEN; ICON=$GIT_ISSUE; PADDING=6; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'Issue'") COLOR=$GREEN; ICON=$GIT_ISSUE; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
       ;;
-      "'Discussion'") COLOR=$WHITE; ICON=$GIT_DISCUSSION; PADDING=6; URL="https://www.github.com/notifications"
+      "'Discussion'") COLOR=$WHITE; ICON=$GIT_DISCUSSION; URL="https://www.github.com/notifications"
       ;;
-      "'PullRequest'") COLOR=$MAGENTA; ICON=$GIT_PULL_REQUEST; PADDING=6; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'PullRequest'") COLOR=$MAGENTA; ICON=$GIT_PULL_REQUEST; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
       ;;
-      "'Commit'") COLOR=$WHITE; ICON=$GIT_COMMIT; PADDING=0 URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
+      "'Commit'") COLOR=$WHITE; ICON=$GIT_COMMIT; URL="$(gh api "$(echo "${url}" | sed -e "s/^'//" -e "s/'$//")" | jq .html_url)"
       ;;
     esac
     
@@ -66,12 +67,12 @@ update() {
   sketchybar -m "${args[@]}"
 
   if [ $COUNT -gt $PREV_COUNT ] 2>/dev/null || [ "$SENDER" = "forced" ]; then
-    sketchybar --animate tanh 15 --set github.bell label.y_offset=5 label.highlight=on label.y_offset=0
+    sketchybar --animate tanh 15 --set github.bell label.y_offset=5 label.y_offset=0
   fi
 }
 
 popup() {
-  sketchybar --set $NAME popup.drawing=$1 label.highlight=off
+  sketchybar --set $NAME popup.drawing=$1
 }
 
 case "$SENDER" in
