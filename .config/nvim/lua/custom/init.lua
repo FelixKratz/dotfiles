@@ -30,7 +30,6 @@ vim.cmd("hi DapUIBreakpointsCurrentLine guifg=#9dd274 gui=bold")
 vim.cmd("hi link DapUIBreakpointsLine DapUILineNumber")
 vim.cmd("hi DapUIBreakpointsDisabledLine guifg=#424242")
 
-vim.cmd("hi IndentBlanklineContextChar guifg=#e1e3e4 gui=nocombine")
 local autocmd = vim.api.nvim_create_autocmd
 
 -- Use relative & absolute line numbers in 'n' & 'i' modes respectively
@@ -39,9 +38,14 @@ autocmd("InsertEnter", {
     vim.opt.relativenumber = true
   end,
 })
+
 autocmd("InsertLeave", {
   callback = function()
     vim.opt.relativenumber = false
+    if require("luasnip").session.current_nodes[vim.api.nvim_get_current_buf()]
+      and not require("luasnip").session.jump_active then
+      require("luasnip").unlink_current()
+    end
   end,
 })
 

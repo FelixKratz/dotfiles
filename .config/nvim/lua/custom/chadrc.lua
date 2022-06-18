@@ -11,8 +11,10 @@ M.options = {
 }
 
 M.ui = {
+  -- This is grey but not italic
   hl_override = {
     Comment = { italic = true },
+    IndentBlanklineContextChar = { fg="#e1e3e4" },
   },
   theme = "penokai",
   transparency = true,
@@ -35,6 +37,7 @@ M.plugins = {
       show_trailing_blankline_indent = true,
       show_first_indent_level = true,
       show_current_context = true,
+      show_current_context_start = false,
       char = "│",
     },
 
