@@ -9,8 +9,8 @@ local config = {
     repl = "r",
     toggle = "t",
   },
-  sidebar = {
-    -- You can change the order of elements in the sidebar
+  layouts = {
+    {
     elements = {
       -- Provide as ID strings or tables with "id" and "size" keys
       {
@@ -21,13 +21,17 @@ local config = {
       { id = "breakpoints", size = 0.1 },
       { id = "stacks", size = 0.1 },
     },
-    size = 60,
-    position = "left", -- Can be "left", "right", "top", "bottom"
-  },
-  tray = {
-    elements = { "repl" },
-    size = 10,
-    position = "bottom", -- Can be "left", "right", "top", "bottom"
+      size = 60,
+      position = 'left',
+    },
+    {
+      elements = {
+        'repl',
+        'console',
+      },
+      size = 10,
+      position = 'bottom',
+    },
   },
   floating = {
     max_height = nil, -- These can be integers or a float between 0 and 1.
@@ -37,7 +41,7 @@ local config = {
       close = { "q", "<Esc>" },
     },
   },
-  windows = { indent = 1 },
 }
 
 require("dapui").setup(config)
+

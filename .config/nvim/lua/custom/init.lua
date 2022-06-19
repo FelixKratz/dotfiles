@@ -42,10 +42,10 @@ autocmd("InsertEnter", {
 autocmd("InsertLeave", {
   callback = function()
     vim.opt.relativenumber = false
-    if require("luasnip").session.current_nodes[vim.api.nvim_get_current_buf()]
-      and not require("luasnip").session.jump_active then
-      require("luasnip").unlink_current()
-    end
+    -- if require("luasnip").session.current_nodes[vim.api.nvim_get_current_buf()]
+    --   and not require("luasnip").session.jump_active then
+    --   require("luasnip").unlink_current()
+    -- end
   end,
 })
 
