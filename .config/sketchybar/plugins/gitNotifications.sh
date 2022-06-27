@@ -85,4 +85,3 @@ case "$SENDER" in
   "mouse.clicked") popup toggle
   ;;
 esac
-

@@ -34,6 +34,10 @@ sketchybar --add       event              window_focus                          
            --set       system.label       label=Window                                  \
                                           position=q                                    \
                                           drawing=on                                    \
+                                          icon.drawing=off                              \
+                                          icon.background.drawing=on                    \
+                                          icon.background.color=$TRANSPARENT            \
+                                          icon.background.image.scale=0.5               \
                                           background.padding_right=0                    \
                                           script="$PLUGIN_DIR/window_title.sh"          \
            --subscribe system.label       front_app_switched                            \

@@ -13,7 +13,7 @@ GREY=0xff2a2f38
 TRANSPARENT=0x00000000
 
 # General bar colors
-BAR_COLOR=$GREY # Grey bar
+BAR_COLOR=0x15ffffff #$GREY # Grey bar
 ICON_COLOR=$WHITE # Color of all icons
 LABEL_COLOR=$WHITE # Color of all labels
 
@@ -25,4 +25,3 @@ SHADOW_COLOR=$BLACK
 # Item specific special colors
 GIT_NO_COMMITS=0xffd3d3d3
 SPOTIFY_GREEN=0xff1db954
-VIM=

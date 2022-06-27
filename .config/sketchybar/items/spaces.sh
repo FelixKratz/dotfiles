@@ -10,7 +10,7 @@ sketchybar --add   space          space_template left                \
                                   icon.font="$FONT:Bold:17.0"        \
                                   script="$PLUGIN_DIR/space.sh"      \
                                   icon.padding_right=6               \
-                                  icon.padding_left=2                \
+                                  icon.padding_left=3                \
                                   background.padding_left=2          \
                                   background.padding_right=2         \
                                   icon.background.height=2           \

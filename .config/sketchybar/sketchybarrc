@@ -16,12 +16,12 @@ SEGMENT_SPACING=13 # The spacing between segments
 POPUP_BORDER_WIDTH=2
 POPUP_CORNER_RADIUS=3
 
-SHADOW=on
+SHADOW=off
 SHADOW_DISTANCE=3
 SHADOW_ANGLE=35
 
 # Setting up the general bar appearance and default values
-sketchybar --bar     height=32                                           \
+sketchybar --bar     height=39                                           \
                      corner_radius=0                                     \
                      border_width=0                                      \
                      margin=-200                                         \
@@ -29,7 +29,7 @@ sketchybar --bar     height=32                                           \
                      position=top                                        \
                      padding_left=4                                      \
                      padding_right=4                                     \
-                     color=$BAR_COLOR                                    \
+                     color=0x000000                                      \
                      topmost=off                                         \
                      font_smoothing=off                                  \
                      y_offset=-32                                        \
@@ -53,6 +53,7 @@ sketchybar --bar     height=32                                           \
                      popup.background.border_color=$POPUP_BORDER_COLOR   \
                      popup.background.color=$POPUP_BACKGROUND_COLOR      \
                      popup.background.shadow.drawing=$SHADOW             \
+                     popup.blur_radius=50                                \
                      icon.shadow.color=$SHADOW_COLOR                     \
                      icon.shadow.distance=$SHADOW_DISTANCE               \
                      icon.shadow.angle=$SHADOW_ANGLE                     \
@@ -88,6 +89,21 @@ source "$ITEM_DIR/spotify.sh"
 sketchybar --update
 
 ############## Animation ########################
-sketchybar --animate sin 30 --bar y_offset=0 notch_width=200 margin=0 shadow=on
-
+# sketchybar --animate sin 30 \
+#            --bar y_offset=0 \
+#                  notch_width=200 \
+#                  margin=0 \
+#                  shadow=on \
+#                  corner_radius=20 \
+#                  corner_radius=20 \
+#                  corner_radius=20 \
+#                  corner_radius=0 \
+#                  color=0x000000 \
+#                  color=0x000000 \
+#                  color=$BAR_COLOR \
+#                  blur_radius=0 \
+#                  blur_radius=0 \
+#                  blur_radius=0 \
+#                  blur_radius=50
+#
 echo "sketchybar configuation loaded.."

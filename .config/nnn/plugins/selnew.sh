@@ -10,4 +10,4 @@ else
   targets+=("\"$*\"")
 fi
 
-alacritty msg create-window -e sh -c "sleep 0.1 && $(which nvim) ${targets[*]}"
+alacritty msg create-window -e sh -c "cd \"$PWD\" && sleep 0.1 && $(which nvim) ${targets[*]}"

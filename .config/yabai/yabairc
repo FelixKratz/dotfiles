@@ -4,7 +4,7 @@ sudo yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
 
-yabai -m config external_bar               all:32:0
+yabai -m config external_bar               all:39:0
 yabai -m config window_border              on
 yabai -m config mouse_follows_focus        off
 yabai -m config focus_follows_mouse        off
@@ -15,7 +15,7 @@ yabai -m config window_opacity             off
 yabai -m config window_opacity_duration    0.0
 yabai -m config active_window_opacity      1.0
 yabai -m config normal_window_opacity      1.0
-yabai -m config window_border_width        5
+yabai -m config window_border_width        4
 yabai -m config active_window_border_color 0xff2f343d
 # yabai -m config normal_window_border_color 0xff555555
 yabai -m config normal_window_border_color 0xff4b5059
@@ -30,16 +30,16 @@ yabai -m config mouse_drop_action          swap
 
 yabai -m config layout                     bsp
 yabai -m config top_padding                6
-yabai -m config bottom_padding             6
-yabai -m config left_padding               6
-yabai -m config right_padding              6
-yabai -m config window_gap                 6
-
+yabai -m config bottom_padding             3
+yabai -m config left_padding               3
+yabai -m config right_padding              3
+yabai -m config window_gap                 8
 # Do not manage some apps which are not resizable
 yabai -m rule --add app="^(LuLu|Vimac|Calculator|VLC|System Preferences|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice)$" manage=off
 
 # ===== Rules ==================================
 
+yabai -m rule --add label="Steam" app="^Steam$" manage=off
 yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
 yabai -m rule --add label="Alfred" app="^Alfred$" manage=off
 yabai -m rule --add label="Safari" app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off

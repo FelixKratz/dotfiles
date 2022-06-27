@@ -11,12 +11,14 @@ sketchybar --add   item          mailIndicator right                   \
                                                                        \
            --add   alias         MeetingBar right                      \
            --set   MeetingBar    background.padding_right=-8           \
-                                 background.padding_left=-6            \
+                                 background.padding_left=-10           \
                                  update_freq=10                        \
                                                                        \
            --add   item          calendar.time right                   \
            --set   calendar.time update_freq=15                        \
                                  icon.drawing=off                      \
+                                 width=50                              \
+                                 align=center                          \
                                  script="$PLUGIN_DIR/time.sh"          \
                                                                        \
            --clone calendar.date label_template                        \

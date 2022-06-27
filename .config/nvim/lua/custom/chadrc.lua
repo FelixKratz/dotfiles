@@ -7,6 +7,13 @@ M.options = {
     vim.opt.clipboard = "unnamed"
     vim.opt.cul = false
     vim.opt.mouse = "nv"
+    vim.cmd("set foldcolumn=1")
+    vim.cmd("set foldenable")
+    vim.cmd("set foldlevel=99")
+    vim.cmd("set foldmethod=indent")
+    vim.cmd("set foldnestmax=99")
+    vim.cmd("set colorcolumn=80")
+    vim.cmd("set noshowmode")
   end,
 }
 

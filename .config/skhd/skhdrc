@@ -43,10 +43,6 @@ shift + lalt - n : yabai -m window --space next; yabai -m space --focus next
 shift + lalt - x : yabai -m space --mirror x-axis
 shift + lalt - y : yabai -m space --mirror y-axis
 
-# Rotate windows clockwise and anticlockwise: (shift +) lalt - r
-shift + lalt - r : yabai -m space --rotate  90
-lalt         - r : yabai -m space --rotate 270
-
 ## Stacks (shift + ctrl - ...)
 # Add the active window to the window or stack to the {direction}: shift + ctrl - {j, k, l, ö}
 shift + ctrl - j    : yabai -m window  west --stack $(yabai -m query --windows --window | jq -r '.id'); sketchybar -m --trigger window_focus
@@ -95,3 +91,4 @@ shift + lalt - v : yabai -m window --insert north; skhd -k "cmd - n"
 
 # Toggle sketchybar
 shift + lalt - space : sketchybar -m --bar hidden=toggle
+shift + lalt - r : sketchybar --exit
