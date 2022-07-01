@@ -1,6 +1,7 @@
 # dotfiles
 My macOS configuration files.
-<img width="1512" alt="Screen Shot 2022-06-27 at 20 14 14" src="https://user-images.githubusercontent.com/22680421/176008523-9fac2beb-b0a7-4995-9bbf-339abd034f09.png">
+<img width="1512" alt="Screen Shot 2022-07-01 at 13 15 37" src="https://user-images.githubusercontent.com/22680421/176889073-28b8e61b-66b2-48eb-8b2e-0bf3840eedde.png">
+
 
 
 jklö centric navigation and vim moves for my german keyboard.
