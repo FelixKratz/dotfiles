@@ -24,13 +24,13 @@ update() {
           args+=(--set $NAME icon=$YABAI_PARENT_ZOOM icon.color=$BLUE)
           yabai -m config active_window_border_color $BLUE > /dev/null 2>&1 &
         else
-          args+=(--set $NAME icon=$YABAI_GRID icon.color=$GREEN)
-          yabai -m config active_window_border_color $GREEN > /dev/null 2>&1 &
+          args+=(--set $NAME icon=$YABAI_GRID icon.color=$WHITE)
+          yabai -m config active_window_border_color $WHITE > /dev/null 2>&1 &
         fi
         ;;
       "true")
-        args+=(--set $NAME icon=$YABAI_FLOAT icon.color=$MAGENTA)
-        yabai -m config active_window_border_color $MAGENTA > /dev/null 2>&1 &
+        args+=(--set $NAME icon=$YABAI_FLOAT icon.color=$WHITE)
+        yabai -m config active_window_border_color $WHITE > /dev/null 2>&1 &
         ;;
     esac
   fi
