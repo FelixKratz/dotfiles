@@ -14,5 +14,6 @@ fi
 
 sketchybar --set system.svim label="[$MODE]" \
                              label.drawing=$(if [ "$MODE" = "" ]; then echo "off"; else echo "on"; fi) \
+                             icon.highlight=$(if [ "$MODE" = "-" ]; then echo "off"; else echo "on"; fi) \
                              popup.drawing=$DRAW_CMD \
            --set svim.cmdline label="$CMDLINE"

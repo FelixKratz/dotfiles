@@ -22,18 +22,18 @@ SHADOW_ANGLE=35
 
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                           \
-                     corner_radius=0                                     \
+                     corner_radius=9                                     \
                      border_width=0                                      \
-                     margin=-200                                         \
-                     blur_radius=0                                       \
+                     margin=10                                           \
+                     blur_radius=50                                      \
                      position=top                                        \
-                     padding_left=4                                      \
-                     padding_right=4                                     \
-                     color=0x000000                                      \
+                     padding_left=10                                     \
+                     padding_right=10                                    \
+                     color=$BAR_COLOR                                    \
                      topmost=off                                         \
                      font_smoothing=off                                  \
-                     y_offset=-32                                        \
-                     shadow=off                                          \
+                     y_offset=10                                         \
+                     shadow=on                                           \
                      notch_width=0                                       \
                                                                          \
            --default drawing=on                                          \
@@ -76,14 +76,14 @@ sketchybar --add item           label_template left                          \
 
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/spaces.sh"
-source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/network.sh"
 # source "$ITEM_DIR/memory.sh"
 
+source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/calendar.sh"
+# source "$ITEM_DIR/system.sh"
 source "$ITEM_DIR/cpu.sh"
-source "$ITEM_DIR/system.sh"
-source "$ITEM_DIR/spotify.sh"
+# source "$ITEM_DIR/spotify.sh"
 
 ############## FINALIZING THE SETUP ##############
 sketchybar --update

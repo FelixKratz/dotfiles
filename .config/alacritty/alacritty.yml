@@ -47,7 +47,7 @@ window:
   # by DPI and the specified value is always added at both opposing sides.
   padding:
     x: 3
-    y: 0
+    y: 5
 
   # Spread additional padding evenly around the terminal content.
   #dynamic_padding: false
@@ -63,7 +63,7 @@ window:
   #     - buttonless: Title bar, transparent background and no title bar buttons
   decorations: buttonless
 
-  opacity: 0.9
+  opacity: 0.95
 
   # Startup Mode (changes require restart)
   #
@@ -176,171 +176,343 @@ font:
 # If `true`, bold text is drawn using the bright color variants.
 #draw_bold_text_with_bright_colors: false
 
-colors:
-  # Default colors
-  primary:
-    background: "#2a2f38"
-    # background: "#000000"
-    foreground: "#e1e3e4"
+color_schemes:
 
-    # Bright and dim foreground colors
-    #
-    # The dimmed foreground color is calculated automatically if it is not
-    # present. If the bright foreground color is not set, or
-    # `draw_bold_text_with_bright_colors` is `false`, the normal foreground
-    # color will be used.
-    #dim_foreground: '#828482'
-    #bright_foreground: '#eaeaea'
 
-  # Cursor colors
-  #
-  # Colors which should be used to draw the terminal cursor.
-  #
-  # Allowed values are CellForeground/CellBackground, which reference the
-  # affected cell, or hexadecimal colors like #ff00ff.
-  cursor:
-    text: CellBackground
-    cursor: CellForeground
 
-  # Vi mode cursor colors
-  #
-  # Colors for the cursor when the vi mode is active.
-  #
-  # Allowed values are CellForeground/CellBackground, which reference the
-  # affected cell, or hexadecimal colors like #ff00ff.
-  vi_mode_cursor:
-    text: CellBackground
-    cursor: CellForeground
+  latte: &latte
 
-  # Search colors
-  #
-  # Colors used for the search bar and match highlighting.
-  #search:
-    # Allowed values are CellForeground/CellBackground, which reference the
-    # affected cell, or hexadecimal colors like #ff00ff.
-    #matches:
-    #  foreground: '#000000'
-    #  background: '#ffffff'
-    #focused_match:
-    #  foreground: '#ffffff'
-    #  background: '#000000'
+    # Default colors
+    primary:
+      background: '#EFF1F5' # base
+      foreground: '#4C4F69' # text
+      # Bright and dim foreground colors
+      dim_foreground: '#4C4F69' # text
+      bright_foreground: '#4C4F69' # text
 
-    #bar:
-    #  background: '#c5c8c6'
-    #  foreground: '#1d1f21'
+    # Cursor colors
+    cursor:
+      text: '#EFF1F5' # base
+      cursor: '#DC8A78' # rosewater
+    vi_mode_cursor:
+      text: '#EFF1F5' # base
+      cursor: '#7287FD' # lavender
 
-  # Keyboard regex hints
-  #hints:
-    # First character in the hint label
-    #
-    # Allowed values are CellForeground/CellBackground, which reference the
-    # affected cell, or hexadecimal colors like #ff00ff.
-    #start:
-    #  foreground: '#1d1f21'
-    #  background: '#e9ff5e'
+    # Search colors
+    search:
+      matches:
+        foreground: '#EFF1F5' # base
+        background: '#6C6F85' # subtext0
+      focused_match:
+        foreground: '#EFF1F5' # base
+        background: '#40A02B' # green
+      footer_bar:
+        foreground: '#EFF1F5' # base
+        background: '#6C6F85' # subtext0
 
-    # All characters after the first one in the hint label
-    #
-    # Allowed values are CellForeground/CellBackground, which reference the
-    # affected cell, or hexadecimal colors like #ff00ff.
-    #end:
-    #  foreground: '#e9ff5e'
-    #  background: '#1d1f21'
+    # Keyboard regex hints
+    hints:
+      start:
+        foreground: '#EFF1F5' # base
+        background: '#DF8E1D' # yellow
+      end:
+        foreground: '#EFF1F5' # base
+        background: '#6C6F85' # subtext0
 
-  # Line indicator
-  #
-  # Color used for the indicator displaying the position in history during
-  # search and vi mode.
-  #
-  # By default, these will use the opposing primary color.
-  #line_indicator:
-  #  foreground: None
-  #  background: None
+    # Selection colors
+    selection:
+      text: '#EFF1F5' # base
+      background: '#DC8A78' # rosewater
 
-  # Selection colors
-  #
-  # Colors which should be used to draw the selection area.
-  #
-  # Allowed values are CellForeground/CellBackground, which reference the
-  # affected cell, or hexadecimal colors like #ff00ff.
-  selection:
-    text: CellBackground
-    background: CellForeground
+    # Normal colors
+    normal:
+      black:   '#5C5F77' # subtext1
+      red:     '#D20F39' # red
+      green:   '#40A02B' # green
+      yellow:  '#DF8E1D' # yellow
+      blue:    '#1E66F5' # blue
+      magenta: '#EA76CB' # pink
+      cyan:    '#179299' # teal
+      white:   '#ACB0BE' # surface2
 
-  # Normal colors
-  normal:
-    black   : "#181a1c"
-    red     : "#ff6578"
-    green   : "#9dd274"
-    yellow  : "#eacb64"
-    blue    : "#72cce8"
-    magenta : "#ba9cf3"
-    cyan    : "#f69c5e"
-    white   : "#e1e3e4"
-  # Indexed Colors
-  #
-  # The indexed colors include all colors from 16 to 256.
-  # When these are not set, they're filled with sensible defaults.
-  #
-  # Example:
-  #   `- { index: 16, color: '#ff00ff' }`
-  #
-  #indexed_colors: []
+    # Bright colors
+    bright:
+      black:   '#6C6F85' # subtext0
+      red:     '#D20F39' # red
+      green:   '#40A02B' # green
+      yellow:  '#DF8E1D' # yellow
+      blue:    '#1E66F5' # blue
+      magenta: '#EA76CB' # pink
+      cyan:    '#179299' # teal
+      white:   '#BCC0CC' # surface1
 
-# Bell
-#
-# The bell is rung every time the BEL control character is received.
-#bell:
-  # Visual Bell Animation
-  #
-  # Animation effect for flashing the screen when the visual bell is rung.
-  #
-  # Values for `animation`:
-  #   - Ease
-  #   - EaseOut
-  #   - EaseOutSine
-  #   - EaseOutQuad
-  #   - EaseOutCubic
-  #   - EaseOutQuart
-  #   - EaseOutQuint
-  #   - EaseOutExpo
-  #   - EaseOutCirc
-  #   - Linear
-  #animation: EaseOutExpo
+    # Dim colors
+    dim:
+      black:   '#5C5F77' # subtext1
+      red:     '#D20F39' # red
+      green:   '#40A02B' # green
+      yellow:  '#DF8E1D' # yellow
+      blue:    '#1E66F5' # blue
+      magenta: '#EA76CB' # pink
+      cyan:    '#179299' # teal
+      white:   '#ACB0BE' # surface2
 
-  # Duration of the visual bell flash in milliseconds. A `duration` of `0` will
-  # disable the visual bell animation.
-  #duration: 0
+    indexed_colors:
+      - { index: 16, color: '#FE640B' }
+      - { index: 17, color: '#DC8A78' }
 
-  # Visual bell animation color.
-  #color: '#ffffff'
 
-  # Bell Command
-  #
-  # This program is executed whenever the bell is rung.
-  #
-  # When set to `command: None`, no command will be executed.
-  #
-  # Example:
-  #   command:
-  #     program: notify-send
-  #     args: ["Hello, World!"]
-  #
-  #command: None
 
-# Background opacity
-#
-# Window opacity as a floating point number from `0.0` to `1.0`.
-# The value `0.0` is completely transparent and `1.0` is opaque.
-#background_opacity: .8
+  frappe: &frappe
 
-#selection:
-  # This string contains all characters that are used as separators for
-  # "semantic words" in Alacritty.
-  #semantic_escape_chars: ",?`|:\"' ()[]{}<>\t"
+    # Default colors
+    primary:
+      background: '#303446' # base
+      foreground: '#C6D0F5' # text
+      # Bright and dim foreground colors
+      dim_foreground: '#C6D0F5' # text
+      bright_foreground: '#C6D0F5' # text
 
-  # When set to `true`, selected text will be copied to the primary clipboard.
-  #save_to_clipboard: false
+    # Cursor colors
+    cursor:
+      text: '#303446' # base
+      cursor: '#F2D5CF' # rosewater
+    vi_mode_cursor:
+      text: '#303446' # base
+      cursor: '#BABBF1' # lavender
+
+    # Search colors
+    search:
+      matches:
+        foreground: '#303446' # base
+        background: '#A5ADCE' # subtext0
+      focused_match:
+        foreground: '#303446' # base
+        background: '#A6D189' # green
+      footer_bar:
+        foreground: '#303446' # base
+        background: '#A5ADCE' # subtext0
+
+    # Keyboard regex hints
+    hints:
+      start:
+        foreground: '#303446' # base
+        background: '#E5C890' # yellow
+      end:
+        foreground: '#303446' # base
+        background: '#A5ADCE' # subtext0
+
+    # Selection colors
+    selection:
+      text: '#303446' # base
+      background: '#F2D5CF' # rosewater
+
+    # Normal colors
+    normal:
+      black:   '#51576D' # surface1
+      red:     '#E78284' # red
+      green:   '#A6D189' # green
+      yellow:  '#E5C890' # yellow
+      blue:    '#8CAAEE' # blue
+      magenta: '#F4B8E4' # pink
+      cyan:    '#81C8BE' # teal
+      white:   '#B5BFE2' # subtext1
+
+    # Bright colors
+    bright:
+      black:   '#626880' # surface2
+      red:     '#E78284' # red
+      green:   '#A6D189' # green
+      yellow:  '#E5C890' # yellow
+      blue:    '#8CAAEE' # blue
+      magenta: '#F4B8E4' # pink
+      cyan:    '#81C8BE' # teal
+      white:   '#A5ADCE' # subtext0
+
+    # Dim colors
+    dim:
+      black:   '#51576D' # surface1
+      red:     '#E78284' # red
+      green:   '#A6D189' # green
+      yellow:  '#E5C890' # yellow
+      blue:    '#8CAAEE' # blue
+      magenta: '#F4B8E4' # pink
+      cyan:    '#81C8BE' # teal
+      white:   '#B5BFE2' # subtext1
+
+    indexed_colors:
+      - { index: 16, color: '#EF9F76' }
+      - { index: 17, color: '#F2D5CF' }
+
+
+
+  macchiato: &macchiato
+
+    # Default colors
+    primary:
+      background: '#24273A' # base
+      foreground: '#CAD3F5' # text
+      # Bright and dim foreground colors
+      dim_foreground: '#CAD3F5' # text
+      bright_foreground: '#CAD3F5' # text
+
+    # Cursor colors
+    cursor:
+      text: '#24273A' # base
+      cursor: '#F4DBD6' # rosewater
+    vi_mode_cursor:
+      text: '#24273A' # base
+      cursor: '#B7BDF8' # lavender
+
+    # Search colors
+    search:
+      matches:
+        foreground: '#24273A' # base
+        background: '#A5ADCB' # subtext0
+      focused_match:
+        foreground: '#24273A' # base
+        background: '#A6DA95' # green
+      footer_bar:
+        foreground: '#24273A' # base
+        background: '#A5ADCB' # subtext0
+
+    # Keyboard regex hints
+    hints:
+      start:
+        foreground: '#24273A' # base
+        background: '#EED49F' # yellow
+      end:
+        foreground: '#24273A' # base
+        background: '#A5ADCB' # subtext0
+
+    # Selection colors
+    selection:
+      text: '#24273A' # base
+      background: '#F4DBD6' # rosewater
+
+    # Normal colors
+    normal:
+      black:   '#494D64' # surface1
+      red:     '#ED8796' # red
+      green:   '#A6DA95' # green
+      yellow:  '#EED49F' # yellow
+      blue:    '#8AADF4' # blue
+      magenta: '#F5BDE6' # pink
+      cyan:    '#8BD5CA' # teal
+      white:   '#B8C0E0' # subtext1
+
+    # Bright colors
+    bright:
+      black:   '#5B6078' # surface2
+      red:     '#ED8796' # red
+      green:   '#A6DA95' # green
+      yellow:  '#EED49F' # yellow
+      blue:    '#8AADF4' # blue
+      magenta: '#F5BDE6' # pink
+      cyan:    '#8BD5CA' # teal
+      white:   '#A5ADCB' # subtext0
+
+    # Dim colors
+    dim:
+      black:   '#494D64' # surface1
+      red:     '#ED8796' # red
+      green:   '#A6DA95' # green
+      yellow:  '#EED49F' # yellow
+      blue:    '#8AADF4' # blue
+      magenta: '#F5BDE6' # pink
+      cyan:    '#8BD5CA' # teal
+      white:   '#B8C0E0' # subtext1
+
+    indexed_colors:
+      - { index: 16, color: '#F5A97F' }
+      - { index: 17, color: '#F4DBD6' }
+
+
+
+  mocha: &mocha
+
+    # Default colors
+    primary:
+      background: '#1E1E2E' # base
+      foreground: '#CDD6F4' # text
+      # Bright and dim foreground colors
+      dim_foreground: '#CDD6F4' # text
+      bright_foreground: '#CDD6F4' # text
+
+    # Cursor colors
+    cursor:
+      text: '#1E1E2E' # base
+      cursor: '#F5E0DC' # rosewater
+    vi_mode_cursor:
+      text: '#1E1E2E' # base
+      cursor: '#B4BEFE' # lavender
+
+    # Search colors
+    search:
+      matches:
+        foreground: '#1E1E2E' # base
+        background: '#A6ADC8' # subtext0
+      focused_match:
+        foreground: '#1E1E2E' # base
+        background: '#A6E3A1' # green
+      footer_bar:
+        foreground: '#1E1E2E' # base
+        background: '#A6ADC8' # subtext0
+
+    # Keyboard regex hints
+    hints:
+      start:
+        foreground: '#1E1E2E' # base
+        background: '#F9E2AF' # yellow
+      end:
+        foreground: '#1E1E2E' # base
+        background: '#A6ADC8' # subtext0
+
+    # Selection colors
+    selection:
+      text: '#1E1E2E' # base
+      background: '#F5E0DC' # rosewater
+
+    # Normal colors
+    normal:
+      black:   '#45475A' # surface1
+      red:     '#F38BA8' # red
+      green:   '#A6E3A1' # green
+      yellow:  '#F9E2AF' # yellow
+      blue:    '#89B4FA' # blue
+      magenta: '#F5C2E7' # pink
+      cyan:    '#94E2D5' # teal
+      white:   '#BAC2DE' # subtext1
+
+    # Bright colors
+    bright:
+      black:   '#585B70' # surface2
+      red:     '#F38BA8' # red
+      green:   '#A6E3A1' # green
+      yellow:  '#F9E2AF' # yellow
+      blue:    '#89B4FA' # blue
+      magenta: '#F5C2E7' # pink
+      cyan:    '#94E2D5' # teal
+      white:   '#A6ADC8' # subtext0
+
+    # Dim colors
+    dim:
+      black:   '#45475A' # surface1
+      red:     '#F38BA8' # red
+      green:   '#A6E3A1' # green
+      yellow:  '#F9E2AF' # yellow
+      blue:    '#89B4FA' # blue
+      magenta: '#F5C2E7' # pink
+      cyan:    '#94E2D5' # teal
+      white:   '#BAC2DE' # subtext1
+
+    indexed_colors:
+      - { index: 16, color: '#FAB387' }
+      - { index: 17, color: '#F5E0DC' }
+
+
+
+colors: *macchiato
 
 cursor:
   # Cursor style

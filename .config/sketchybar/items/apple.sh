@@ -2,17 +2,15 @@
 
 POPUP_OFF="sketchybar --set apple.logo popup.drawing=off"
 
-sketchybar --add event lock     "com.apple.screenIsLocked"                  \
-           --add event unlock   "com.apple.screenIsUnlocked"                \
+sketchybar --add item           apple.logo left                             \
                                                                             \
-           --add item           apple.logo left                             \
            --set apple.logo     icon=$APPLE                                 \
                                 icon.font="$FONT:Black:16.0"                \
                                 icon.color=$GREEN                           \
+                                background.padding_left=5                   \
+                                background.padding_right=25                 \
                                 label.drawing=off                           \
                                 click_script="$POPUP_CLICK_SCRIPT"          \
-                                script="$PLUGIN_DIR/wake.sh"                \
-           --subscribe          apple.logo lock unlock                      \
                                                                             \
            --add item           apple.prefs popup.apple.logo                \
            --set apple.prefs    icon=$PREFERENCES                           \

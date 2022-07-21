@@ -1,18 +1,12 @@
 #!/usr/bin/env sh
 
-sketchybar --add   item          cpu.separator right                \
-           --set   cpu.separator icon.drawing=off                   \
-                                 label.drawing=off                  \
-                                 background.padding_left=0          \
-                                 background.padding_right=0         \
-                                 associated_space=1                 \
-                                                                    \
-           --add   item          cpu.topproc right                  \
+sketchybar --add   item          cpu.topproc right                  \
            --set   cpu.topproc   label.font="$FONT:Semibold:7"      \
                                  label=CPU                          \
                                  icon.drawing=off                   \
                                  width=0                            \
                                  y_offset=6                         \
+                                 background.padding_right=15        \
                                  associated_space=1                 \
                                  update_freq=5                      \
                                  script="$PLUGIN_DIR/topproc.sh"    \
@@ -24,6 +18,7 @@ sketchybar --add   item          cpu.separator right                \
                                  width=40                           \
                                  icon.drawing=off                   \
                                  update_freq=2                      \
+                                 background.padding_right=15        \
                                  associated_space=1                 \
                                                                     \
            --add   graph         cpu.sys right 100                  \
@@ -40,18 +35,4 @@ sketchybar --add   item          cpu.separator right                \
                                  associated_space=1                 \
                                  label.drawing=off                  \
                                  icon.drawing=off                   \
-                                 script="$PLUGIN_DIR/cpu.sh"        \
-                                                                    \
-           --clone cpu.label     label_template                     \
-           --set   cpu.label     associated_space=1                 \
-                                 label=cpu                          \
-                                 position=right                     \
-                                 drawing=on                         \
-                                                                    \
-           --add   bracket       cpu                                \
-                                 cpu.separator                      \
-                                 cpu.topproc                        \
-                                 cpu.percent                        \
-                                 cpu.user                           \
-                                 cpu.sys                            \
-                                 cpu.label
+                                 script="$PLUGIN_DIR/cpu.sh"

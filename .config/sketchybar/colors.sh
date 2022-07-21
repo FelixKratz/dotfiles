@@ -1,19 +1,19 @@
 #!/usr/bin/env sh
 
 # Color Palette
-BLACK=0xff181a1c
-WHITE=0xffe1e3e4
-RED=0xffff6578
-GREEN=0xff9dd274
-BLUE=0xff72cce8
-YELLOW=0xffeacb64
-ORANGE=0xfff69c5e
-MAGENTA=0xffba9cf3
-GREY=0xff2a2f38
+BLACK=0xff181926
+WHITE=0xffcad3f5
+RED=0xffed8796
+GREEN=0xffa6da95
+BLUE=0xff8aadf4
+YELLOW=0xffeed49f
+ORANGE=0xfff5a97f
+MAGENTA=0xffc6a0f6
+GREY=0xff939ab7
 TRANSPARENT=0x00000000
 
 # General bar colors
-BAR_COLOR=0xcc2a2f38 #$GREY # Grey bar
+BAR_COLOR=0xcc24273a #$GREY # Grey bar
 ICON_COLOR=$WHITE # Color of all icons
 LABEL_COLOR=$WHITE # Color of all labels
 

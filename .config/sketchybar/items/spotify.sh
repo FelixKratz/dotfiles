@@ -36,7 +36,6 @@ sketchybar --add       event              spotify_change $SPOTIFY_EVENT       \
                                           updates=on                          \
                                           icon.highlight_color=$SPOTIFY_GREEN \
                                           label.drawing=off                   \
-                                          background.padding_right=7          \
            --subscribe spotify.repeat     mouse.clicked                       \
                                                                               \
            --add       bracket            spotify                             \
