@@ -13,18 +13,16 @@ sketchybar --add   item          mailIndicator right                   \
            --set   calendar.time update_freq=15                        \
                                  icon.drawing=off                      \
                                  label.color=$BLACK                    \
-                                 label.padding_right=5                \
-                                 width=55                              \
+                                 width=60                              \
                                  align=center                          \
                                  script="$PLUGIN_DIR/time.sh"          \
                                                                        \
-           --clone calendar.date label_template                        \
+           --add item calendar.date right                              \
            --set   calendar.date update_freq=60                        \
                                  position=right                        \
                                  label=cal                             \
                                  label.color=$BLACK                    \
-                                 label.padding_left=5                  \
-                                 background.padding_left=10             \
+                                 label.font="$FONT:Black:12.0"         \
                                  drawing=on                            \
                                  background.padding_right=0            \
                                  script="$PLUGIN_DIR/date.sh"          \

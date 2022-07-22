@@ -6,9 +6,8 @@ sketchybar --add   item          cpu.topproc right                  \
                                  icon.drawing=off                   \
                                  width=0                            \
                                  y_offset=6                         \
-                                 background.padding_right=15        \
-                                 associated_space=1                 \
                                  update_freq=5                      \
+                                 background.padding_right=10        \
                                  script="$PLUGIN_DIR/topproc.sh"    \
                                                                     \
            --add   item          cpu.percent right                  \
@@ -18,21 +17,20 @@ sketchybar --add   item          cpu.topproc right                  \
                                  width=40                           \
                                  icon.drawing=off                   \
                                  update_freq=2                      \
-                                 background.padding_right=15        \
-                                 associated_space=1                 \
+                                 background.padding_right=10        \
                                                                     \
            --add   graph         cpu.sys right 100                  \
-           --set   cpu.sys       associated_space=1                 \
-                                 width=0                            \
+           --set   cpu.sys       width=0                            \
                                  graph.color=$RED                   \
                                  graph.fill_color=$RED              \
                                  label.drawing=off                  \
                                  icon.drawing=off                   \
+                                 background.padding_right=10        \
                                                                     \
            --add   graph         cpu.user right 100                 \
            --set   cpu.user      graph.color=$BLUE                  \
                                  update_freq=2                      \
-                                 associated_space=1                 \
                                  label.drawing=off                  \
                                  icon.drawing=off                   \
+                                 background.padding_right=10        \
                                  script="$PLUGIN_DIR/cpu.sh"

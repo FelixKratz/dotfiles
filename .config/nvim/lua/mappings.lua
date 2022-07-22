@@ -8,7 +8,7 @@ vim.api.nvim_set_keymap("", "ö", "l", opts)
 vim.api.nvim_set_keymap("", "ß", "$", opts)
 vim.api.nvim_set_keymap("", "Y", "y$", opts)
 vim.api.nvim_set_keymap("", "ä", "za", opts)
-vim.api.nvim_set_keymap("", "Y", "zM", opts)
+vim.api.nvim_set_keymap("", "Ä", "zR", opts)
 
 vim.api.nvim_set_keymap("n", "s", ":w<CR>", opts)
 vim.api.nvim_set_keymap("n", "q", ":q<CR>", opts)
