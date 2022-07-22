@@ -72,10 +72,6 @@ mas install 1451685025 #Wireguard
 mas install 497799835 #xCode
 mas install 1480933944 #Vimari
 
-# Installing nvim and plant dotfiles
-echo "Installing neovim config..."
-git clone https://github.com/NvChad/NvChad ~/.config/nvim --depth 1
-
 # macOS Settings
 echo "Changing macOS defaults..."
 defaults write com.apple.NetworkBrowser BrowseAllInterfaces 1
@@ -149,10 +145,10 @@ brew services start sketchybar
 brew services start svim
 
 echo "Installing yabai scripting addition (!!sudo!!)"
-sudo yabai --install-sa
-
 csrutil status
+sudo yabai --install-sa
 echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
+
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 echo "Manual Install Needed: Alfred"
