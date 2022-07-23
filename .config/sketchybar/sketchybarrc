@@ -53,9 +53,11 @@ sketchybar --bar     height=39                                           \
 # Left
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/spaces.sh"
+source "$ITEM_DIR/front_app.sh"
 
 # Right
 source "$ITEM_DIR/github.sh"
+source "$ITEM_DIR/mail.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
 
