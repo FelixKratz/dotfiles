@@ -19,7 +19,7 @@ capabilities.textDocument.completion.completionItem = {
 }
 
 
-local servers = { "pyright", "texlab", "asm_lsp", "ccls" }
+local servers = { "pyright", "texlab", "asm_lsp", "clangd", "sumneko_lua" }
 
 for _, lsp in ipairs(servers) do
   require("lspconfig")[lsp].setup {

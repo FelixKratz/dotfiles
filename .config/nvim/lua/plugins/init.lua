@@ -38,10 +38,17 @@ return require('packer').startup(function(use)
     end,
   }
   use {
-    "williamboman/nvim-lsp-installer",
+    "williamboman/mason.nvim",
     after = "nvim-lspconfig",
     config = function()
-      require "plugins.lsp_installer"
+      require "plugins.mason"
+    end,
+  }
+  use {
+    "williamboman/mason-lspconfig.nvim",
+    after = "mason.nvim",
+    config = function()
+      require "plugins.mason_lspconfig"
     end,
   }
   use "rafamadriz/friendly-snippets"
