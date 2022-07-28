@@ -18,17 +18,17 @@ SHADOW=on
 
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                           \
-                     corner_radius=11                                    \
+                     corner_radius=0                                     \
                      border_width=0                                      \
-                     margin=10                                           \
+                     margin=0                                            \
                      blur_radius=50                                      \
                      position=top                                        \
-                     padding_left=10                                     \
-                     padding_right=10                                    \
-                     color=$BAR_COLOR                                    \
+                     padding_left=5                                      \
+                     padding_right=5                                     \
+                     color=$TRANSPARENT                                  \
                      topmost=off                                         \
                      font_smoothing=off                                  \
-                     y_offset=10                                         \
+                     y_offset=5                                          \
                      shadow=$SHADOW                                      \
                      notch_width=200                                     \
                                                                          \
@@ -60,6 +60,30 @@ source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/mail.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
+
+ITEMS=$(sketchybar --query bar | jq -r '.items | .[]')
+
+LEFT_ITEMS=()
+RIGHT_ITEMS=()
+for item in $ITEMS
+do
+  POS=$(sketchybar --query ${item} | jq -r '.geometry.position')
+  if [ "$POS" = "left" ]; then
+    LEFT_ITEMS+=(${item})
+  elif [ "$POS" = "right" ]; then
+    RIGHT_ITEMS+=(${item})
+  fi
+done
+
+sketchybar --add braket left_items ${LEFT_ITEMS[@]} \
+           --set left_items background.color=$BAR_COLOR \
+                            background.height=39 \
+                            background.corner_radius=11
+
+sketchybar --add braket right_items ${RIGHT_ITEMS[@]} \
+           --set right_items background.color=$BAR_COLOR \
+                             background.height=39 \
+                             background.corner_radius=11
 
 ############## FINALIZING THE SETUP ##############
 sketchybar --update
