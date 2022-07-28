@@ -1,6 +1,7 @@
 # dotfiles
 My macOS configuration files.
 <img width="1440" alt="Screen Shot 2022-07-21 at 22 33 09" src="https://user-images.githubusercontent.com/22680421/180314745-f0bf6361-0be8-4897-a22d-0f8e0df53d10.png">
+screenshot at this commit: https://github.com/FelixKratz/dotfiles/tree/d697905ab7844622378129858ae7ee332994d2ff
 
 
 
