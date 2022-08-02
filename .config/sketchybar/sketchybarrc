@@ -18,7 +18,7 @@ SHADOW=on
 
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                           \
-                     corner_radius=11                                    \
+                     corner_radius=9                                     \
                      border_width=0                                      \
                      margin=10                                           \
                      blur_radius=50                                      \
@@ -27,6 +27,7 @@ sketchybar --bar     height=39                                           \
                      padding_right=10                                    \
                      color=$BAR_COLOR                                    \
                      topmost=off                                         \
+                     sticky=on                                           \
                      font_smoothing=off                                  \
                      y_offset=10                                         \
                      shadow=$SHADOW                                      \
@@ -48,7 +49,7 @@ sketchybar --bar     height=39                                           \
                      popup.background.corner_radius=$POPUP_CORNER_RADIUS \
                      popup.background.border_color=$POPUP_BORDER_COLOR   \
                      popup.background.color=$POPUP_BACKGROUND_COLOR      \
-                     popup.background.shadow.drawing=$SHADOW             \
+                     popup.background.shadow.drawing=$SHADOW
 
 # Left
 source "$ITEM_DIR/apple.sh"
