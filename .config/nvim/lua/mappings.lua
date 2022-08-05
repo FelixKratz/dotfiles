@@ -15,6 +15,7 @@ vim.api.nvim_set_keymap("n", "q", ":q<CR>", opts)
 vim.api.nvim_set_keymap("n", "<TAB>", ":BufferLineCycleNext<CR>", opts)
 vim.api.nvim_set_keymap("n", "<S-TAB>", ":BufferLineCyclePrev<CR>", opts)
 vim.api.nvim_set_keymap("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle_current_linewise()<CR>", opts)
+vim.api.nvim_set_keymap("n", "<leader>fw", "<cmd>Telescope live_grep<cr>", opts)
 
 vim.api.nvim_set_keymap("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle_linewise_op(vim.fn.visualmode())<CR>", opts)
 vim.api.nvim_set_keymap("v", "<leader>a", ":EasyAlign<CR>", opts)

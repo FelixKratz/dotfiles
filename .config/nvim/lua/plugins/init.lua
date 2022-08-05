@@ -75,6 +75,10 @@ return require('packer').startup(function(use)
     after = "cmp_luasnip",
   }
   use {
+    'nvim-telescope/telescope.nvim', tag = '0.1.0',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
+  use {
     "hrsh7th/cmp-nvim-lsp",
     after = "cmp-nvim-lua",
   }
