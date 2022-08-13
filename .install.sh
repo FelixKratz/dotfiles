@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Install xCode cli tools
-echo "Installing commandline tools and cocoapods..."
+echo "Installing commandline tools..."
 xcode-select --install
 
 # Install Brew
@@ -29,9 +29,11 @@ brew install wget
 brew install jq
 brew install gh
 brew install ripgrep
+brew install rename
 brew install bear
 brew install neofetch
 brew install wireguard-go
+brew install gnuplot
 brew install lulu
 brew install ifstat
 brew install hdf5
@@ -52,7 +54,6 @@ brew install --cask inkscape
 brew install --cask moonlight
 brew install --cask mumble
 brew install --cask libreoffice
-brew install --cask flux
 brew install --cask alacritty
 brew install --cask spotify
 brew install --cask monitorcontrol
@@ -86,7 +87,7 @@ defaults write NSGlobalDomain KeyRepeat -int 1
 defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 defaults write NSGlobalDomain AppleShowAllExtensions -bool true
 defaults write NSGlobalDomain _HIHideMenuBar -bool true
-defaults write NSGlobalDomain AppleHighlightColor -string "0.615686 0.823529 0.454902"
+defaults write NSGlobalDomain AppleHighlightColor -string "0.65098 0.85490 0.58431"
 defaults write NSGlobalDomain AppleAccentColor -int 1
 defaults write com.apple.screencapture location -string "$HOME/Desktop"
 defaults write com.apple.screencapture disable-shadow -bool true
@@ -135,7 +136,9 @@ conda install jupyterlab
 conda install seaborn
 conda install opencv
 conda install joblib
-pip3 install debugpy
+conda install pytables
+pip install debugpy
+pip install sklearn
 
 # Start Services
 echo "Starting Services (grant permissions)..."
@@ -145,10 +148,10 @@ brew services start sketchybar
 brew services start svim
 
 echo "Installing yabai scripting addition (!!sudo!!)"
-csrutil status
 sudo yabai --install-sa
-echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
 
+csrutil status
+echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 echo "Manual Install Needed: Alfred"
