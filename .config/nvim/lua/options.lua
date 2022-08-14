@@ -19,8 +19,3 @@ vim.cmd("set foldnestmax=99")
 vim.cmd("set termguicolors")
 
 vim.cmd("set colorcolumn=80")
-
-vim.schedule(function()
-  vim.opt.shadafile = vim.fn.expand "$HOME" .. "/.local/share/nvim/shada/main.shada"
-  vim.cmd [[ silent! rsh ]]
-end)
