@@ -4,10 +4,11 @@ sketchybar --add       item            github.bell right                  \
            --set       github.bell     update_freq=180                    \
                                        icon.font="$FONT:Bold:15.0"        \
                                        icon=$BELL                         \
-                                       icon.color=$GREEN                  \
+                                       icon.color=$BLUE                   \
                                        label=$LOADING                     \
                                        label.highlight_color=$BLUE        \
                                        popup.align=right                  \
+                                       background.padding_right=10        \
                                        script="$PLUGIN_DIR/github.sh"     \
                                        click_script="$POPUP_CLICK_SCRIPT" \
            --subscribe github.bell     mouse.entered                      \

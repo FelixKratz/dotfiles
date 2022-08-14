@@ -24,6 +24,10 @@ sketchybar --add item        cpu.top right                 \
                              label.drawing=off             \
                              icon.drawing=off              \
                              background.padding_right=10   \
+                             background.padding_left=10    \
+                             background.height=30          \
+                             background.drawing=on         \
+                             background.color=$TRANSPARENT \
                                                            \
            --add graph       cpu.user right 100            \
            --set cpu.user    graph.color=$BLUE             \
@@ -31,4 +35,8 @@ sketchybar --add item        cpu.top right                 \
                              label.drawing=off             \
                              icon.drawing=off              \
                              background.padding_right=10   \
+                             background.padding_left=10    \
+                             background.height=30          \
+                             background.drawing=on         \
+                             background.color=$TRANSPARENT \
                              script="$PLUGIN_DIR/cpu.sh"
