@@ -14,6 +14,7 @@ sketchybar --add       event           spotify_change $SPOTIFY_EVENT       \
            --add       item            spotify.title q                     \
            --set       spotify.title   click_script="$POPUP_SCRIPT"        \
                                        icon=􀑪                              \
+                                       drawing=off                         \
                                        script="$PLUGIN_DIR/spotify.sh"     \
                                        background.padding_right=0          \
            --subscribe spotify.title   mouse.entered mouse.exited          \
@@ -22,6 +23,7 @@ sketchybar --add       event           spotify_change $SPOTIFY_EVENT       \
            --add       item            spotify.artist e                    \
            --set       spotify.artist  click_script="$POPUP_SCRIPT"        \
                                        icon=􀓤                              \
+                                       drawing=off                         \
                                        background.padding_left=0           \
                                        script="$PLUGIN_DIR/spotify.sh"     \
            --subscribe spotify.artist  mouse.entered mouse.exited          \

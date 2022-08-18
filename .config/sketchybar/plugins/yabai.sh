@@ -43,19 +43,7 @@ mouse_clicked() {
   update
 }
 
-mouse_entered() {
-  sketchybar --set $NAME background.drawing=on 
-}
-
-mouse_exited() {
-  sketchybar --set $NAME background.drawing=off 
-}
-
 case "$SENDER" in
-  "mouse.entered") mouse_entered
-  ;;
-  "mouse.exited") mouse_exited
-  ;;
   "mouse.clicked") mouse_clicked
   ;;
   "forced") exit 0
