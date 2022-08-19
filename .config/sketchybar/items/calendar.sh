@@ -5,11 +5,12 @@ sketchybar --add item     calendar right               \
                           icon=cal                     \
                           icon.color=$BLACK            \
                           icon.font="$FONT:Black:12.0" \
-                          icon.padding_left=15         \
-                          label.width=55               \
-                          label.align=right            \
+                          icon.padding_left=5         \
+                          icon.padding_right=5         \
                           label.color=$BLACK           \
-                          label.padding_right=15       \
+                          label.padding_left=5        \
+                          label.padding_right=5       \
+                          width=140                    \
                           align=center                 \
                           script="$PLUGIN_DIR/time.sh" \
                           background.color=0xffb8c0e0  \

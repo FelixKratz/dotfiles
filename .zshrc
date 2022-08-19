@@ -46,6 +46,11 @@ function mas() {
   fi
 }
 
+function zen () {
+  ~/.config/sketchybar/plugins/zen.sh $1
+}
+
+
 function push() {
   command git push
   sketchybar --trigger git_push
