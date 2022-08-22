@@ -1,5 +1,5 @@
 local options = {
-  indicator_icon = '▎',
+  indicator = { style = 'icon', icon = '▎' },
   separator_style = {'', ''},
   buffer_close_icon = '',
   modified_icon = '●',
