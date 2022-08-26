@@ -27,4 +27,5 @@ sketchybar   --add item       separator left                          \
                               background.padding_left=26              \
                               background.padding_right=15             \
                               label.drawing=off                       \
+                              associated_display=active               \
                               icon.color=$WHITE

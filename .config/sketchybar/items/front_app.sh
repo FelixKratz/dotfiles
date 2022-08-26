@@ -9,6 +9,7 @@ sketchybar --add       event        window_focus                      \
                                     icon=$YABAI_GRID                  \
                                     icon.color=$GREEN                 \
                                     updates=on                        \
+                                    associated_display=active         \
            --subscribe system.yabai window_focus mouse.clicked        \
                                                                       \
            --add       item         front_app left                    \
@@ -18,5 +19,6 @@ sketchybar --add       event        window_focus                      \
                                     background.padding_right=10       \
                                     label.color=$WHITE                \
                                     label.font="$FONT:Black:12.0"     \
+                                    associated_display=active         \
            --subscribe front_app    front_app_switched
 
