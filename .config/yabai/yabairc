@@ -28,7 +28,6 @@ yabai -m config mouse_action2              resize
 yabai -m config mouse_drop_action          swap
 
 
-yabai -m config layout                     bsp
 yabai -m config top_padding                11
 yabai -m config bottom_padding             11
 yabai -m config left_padding               11
@@ -60,5 +59,7 @@ yabai -m space 5 --label misc
 yabai -m space 6 --label doc
 yabai -m space 7 --label help
 yabai -m space 8 --label music
+
+yabai -m config layout                     bsp
 
 echo "yabai configuration loaded.."
