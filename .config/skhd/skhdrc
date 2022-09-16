@@ -56,10 +56,11 @@ shift + ctrl - p : yabai -m window --focus stack.prev
 
 ## Resize (ctrl + lalt - ...)
 # Resize windows: ctrl + lalt - {j, k, l, ö}
-ctrl + lalt - j    : yabai -m window --resize left:-50:0;  yabai -m window --resize right:-50:0
-ctrl + lalt - k    : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
-ctrl + lalt - l    : yabai -m window --resize top:0:-50;   yabai -m window --resize bottom:0:-50
-ctrl + lalt - 0x29 : yabai -m window --resize right:50:0;  yabai -m window --resize left:50:0
+ctrl + lalt - j    : yabai -m window --resize right:-100:0 || yabai -m window --resize left:-100:0
+ctrl + lalt - k    : yabai -m window --resize bottom:0:100 || yabai -m window --resize top:0:100
+ctrl + lalt - l    : yabai -m window --resize bottom:0:-100 || yabai -m window --resize top:0:-100
+ctrl + lalt - 0x29 : yabai -m window --resize right:100:0 || yabai -m window --resize left:100:0
+
 
 # Equalize size of windows: ctrl + lalt - e
 ctrl + lalt - e : yabai -m space --balance
