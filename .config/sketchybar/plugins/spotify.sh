@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 next ()
 {
@@ -44,9 +44,9 @@ update ()
   PLAYING=1
   if [ "$(echo "$INFO" | jq -r '.["Player State"]')" = "Playing" ]; then
     PLAYING=0
-    TRACK="$(echo "$INFO" | jq -r .Name | cut -c1-25)"
-    ARTIST="$(echo "$INFO" | jq -r .Artist | cut -c1-25)"
-    ALBUM="$(echo "$INFO" | jq -r .Album | cut -c1-25)"
+    TRACK="$(echo "$INFO" | jq -r .Name | sed 's/\(.\{25\}\).*/\1.../')"
+    ARTIST="$(echo "$INFO" | jq -r .Artist | sed 's/\(.\{25\}\).*/\1.../')"
+    ALBUM="$(echo "$INFO" | jq -r .Album | sed 's/\(.\{25\}\).*/\1.../')"
     SHUFFLE=$(osascript -e 'tell application "Spotify" to get shuffling')
     REPEAT=$(osascript -e 'tell application "Spotify" to get repeating')
     COVER=$(osascript -e 'tell application "Spotify" to get artwork url of current track')

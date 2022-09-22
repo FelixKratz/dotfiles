@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 if [ $1 = "on" ]; then
   sketchybar --set github.bell drawing=off \

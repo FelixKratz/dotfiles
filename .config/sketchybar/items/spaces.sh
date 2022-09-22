@@ -18,6 +18,8 @@ do
                               background.color=0xff3C3E4F        \
                               background.drawing=on              \
                               label.drawing=off                  \
+                              script=""                          \
+                              mach_helper="$HELPER"              \
                               click_script="$SPACE_CLICK_SCRIPT"
 done
 

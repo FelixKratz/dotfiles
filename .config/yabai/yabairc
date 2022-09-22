@@ -3,65 +3,57 @@
 sudo yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
+yabai -m signal --add event=display_added action="sleep 1 && $HOME/.config/yabai/create_spaces.sh"
+yabai -m signal --add event=display_removed action="sleep 1 && $HOME/.config/yabai/create_spaces.sh"
 
-yabai -m config external_bar               all:49:0
-yabai -m config window_border              on
-yabai -m config mouse_follows_focus        off
-yabai -m config focus_follows_mouse        off
-yabai -m config window_placement           second_child
-yabai -m config window_topmost             off
-yabai -m config window_shadow              float
-yabai -m config window_opacity             on
-yabai -m config window_opacity_duration    0.15
-yabai -m config active_window_opacity      1.0
-yabai -m config normal_window_opacity      0.95
-yabai -m config window_border_width        4
-yabai -m config window_animation_duration  0.15
-yabai -m config window_border_width        4
-yabai -m config active_window_border_color 0xffe1e3e4
-# yabai -m config normal_window_border_color 0xff555555
-yabai -m config normal_window_border_color 0xff2a2f38
-yabai -m config insert_feedback_color      0xff9dd274
-yabai -m config split_ratio                0.50
-yabai -m config auto_balance               off
-yabai -m config mouse_modifier             fn
-yabai -m config mouse_action1              move
-yabai -m config mouse_action2              resize
-yabai -m config mouse_drop_action          swap
+$HOME/.config/yabai/create_spaces.sh
 
+yabai -m config external_bar               all:39:0     \
+                window_border              on           \
+                mouse_follows_focus        off          \
+                focus_follows_mouse        off          \
+                window_placement           second_child \
+                window_topmost             off          \
+                window_shadow              float        \
+                window_opacity             on           \
+                window_opacity_duration    0.15         \
+                active_window_opacity      1.0          \
+                normal_window_opacity      0.95         \
+                window_border_width        2            \
+                window_border_radius       11           \
+                window_animation_duration  0.15         \
+                active_window_border_color 0xffe1e3e4   \
+                normal_window_border_color 0xff2a2f38   \
+                insert_feedback_color      0xff9dd274   \
+                split_ratio                0.50         \
+                auto_balance               off          \
+                mouse_modifier             fn           \
+                mouse_action1              move         \
+                mouse_action2              resize       \
+                mouse_drop_action          swap         \
+                                                        \
+                top_padding                20           \
+                bottom_padding             10           \
+                left_padding               10           \
+                right_padding              10           \
+                window_gap                 8
 
-yabai -m config top_padding                11
-yabai -m config bottom_padding             11
-yabai -m config left_padding               11
-yabai -m config right_padding              11
-yabai -m config window_gap                 12
-# Do not manage some apps which are not resizable
+# Exclude problematic apps from being managed:
 yabai -m rule --add app="^(LuLu|Vimac|Calculator|VLC|System Preferences|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice)$" manage=off
 
-# ===== Rules ==================================
+yabai -m rule --add label="Steam" app="^Steam$" manage=off \
+              --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off \
+              --add label="Alfred" app="^Alfred$" manage=off \
+              --add label="Safari" app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off \
+              --add label="System Preferences" app="^System Preferences$" manage=off \
+              --add label="App Store" app="^App Store$" manage=off \
+              --add label="Activity Monitor" app="^Activity Monitor$" manage=off \
+              --add label="Calculator" app="^Calculator$" manage=off \
+              --add label="Dictionary" app="^Dictionary$" manage=off \
+              --add label="Software Update" title="Software Update" manage=off \
+              --add label="About This Mac" app="System Information" title="About This Mac" manage=off \
+              --add label="Select file to save to" app="^Inkscape$" title="Select file to save to" manage=off
 
-yabai -m rule --add label="Steam" app="^Steam$" manage=off
-yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
-yabai -m rule --add label="Alfred" app="^Alfred$" manage=off
-yabai -m rule --add label="Safari" app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off
-yabai -m rule --add label="System Preferences" app="^System Preferences$" manage=off
-yabai -m rule --add label="App Store" app="^App Store$" manage=off
-yabai -m rule --add label="Activity Monitor" app="^Activity Monitor$" manage=off
-yabai -m rule --add label="Calculator" app="^Calculator$" manage=off
-yabai -m rule --add label="Dictionary" app="^Dictionary$" manage=off
-yabai -m rule --add label="Software Update" title="Software Update" manage=off
-yabai -m rule --add label="About This Mac" app="System Information" title="About This Mac" manage=off
-yabai -m rule --add label="Select file to save to" app="^Inkscape$" title="Select file to save to" manage=off
-
-yabai -m space 1 --label code
-yabai -m space 2 --label tex
-yabai -m space 3 --label web
-yabai -m space 4 --label idle
-yabai -m space 5 --label misc
-yabai -m space 6 --label doc
-yabai -m space 7 --label help
-yabai -m space 8 --label music
-
-yabai -m config layout                     bsp
+yabai -m config layout bsp
 
 echo "yabai configuration loaded.."

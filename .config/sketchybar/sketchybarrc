@@ -16,6 +16,12 @@ POPUP_CORNER_RADIUS=11
 
 SHADOW=on
 
+HELPER=git.felix.helper
+# Start the helper process
+killall helper
+cd $HOME/.config/sketchybar/helper && make
+$HOME/.config/sketchybar/helper/helper $HELPER &
+
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                         \
                      color=$BAR_COLOR                                  \
@@ -28,7 +34,7 @@ sketchybar --bar     height=39                                         \
                      y_offset=10                                       \
                      margin=10                                         \
                      blur_radius=20                                    \
-                     notch_width=0                                     \
+                     notch_width=200                                   \
                                                                        \
            --default updates=when_shown                                \
                      icon.font="$FONT:Bold:14.0"                       \
@@ -57,7 +63,6 @@ source "$ITEM_DIR/spotify.sh"
 
 # Right
 source "$ITEM_DIR/github.sh"
-source "$ITEM_DIR/mail.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
 
