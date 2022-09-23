@@ -15,7 +15,7 @@ local options = {
     removed_sym = " ",
     moved_sym = "",
     open_fn = function()
-      return require("packer.util").float { border = "single" }
+      return require "packer.util".float { border = "single" }
     end,
   },
 }
@@ -63,7 +63,7 @@ return require('packer').startup(function(use)
     "L3MON4D3/LuaSnip",
     after = "nvim-cmp",
     config = function()
-      require("plugins.luasnip")
+      require "plugins.luasnip"
     end,
   }
   use {
@@ -89,27 +89,27 @@ return require('packer').startup(function(use)
   use {
     "ray-x/lsp_signature.nvim",
     config = function()
-      require("lsp_signature").setup()
+      require "lsp_signature".setup()
     end
   }
   use {
     'lukas-reineke/indent-blankline.nvim',
     after = "nvim-treesitter",
     config = function()
-      require("plugins.blankline")
+      require "plugins.blankline"
     end,
   }
   use {
     'lewis6991/gitsigns.nvim',
     config = function()
-      require('gitsigns').setup()
+      require "gitsigns".setup()
     end
   }
   use "junegunn/vim-easy-align"
   use {
     "karb94/neoscroll.nvim",
     config = function()
-      require("neoscroll").setup()
+      require "neoscroll".setup()
     end,
   }
   use {
@@ -122,7 +122,7 @@ return require('packer').startup(function(use)
     'mfussenegger/nvim-dap-python',
     after = "nvim-dap",
     config = function()
-      require('dap-python').setup('python')
+      require "dap-python".setup('python')
     end,
   }
   use {
@@ -135,13 +135,13 @@ return require('packer').startup(function(use)
   use {
     'numToStr/Comment.nvim',
     config = function()
-        require('Comment').setup()
+        require "Comment".setup()
     end
   }
   use {
     'norcalli/nvim-colorizer.lua',
     config = function()
-      require'colorizer'.setup()
+      require "colorizer".setup()
     end
   }
   use {
@@ -149,7 +149,7 @@ return require('packer').startup(function(use)
     tag = "v2.*",
     requires = 'kyazdani42/nvim-web-devicons',
     config = function()
-      require("plugins.bufferline")
+      require "plugins.bufferline"
     end
   }
   use {
@@ -169,8 +169,14 @@ return require('packer').startup(function(use)
       require "plugins.feline"
     end,
   }
-
+  use {
+    "folke/todo-comments.nvim",
+    requires = "nvim-lua/plenary.nvim",
+    config = function()
+      require "todo-comments".setup()
+    end
+  }
   if packer_bootstrap then
-    require('packer').sync()
+    require "packer".sync()
   end
 end)
