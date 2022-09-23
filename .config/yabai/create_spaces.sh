@@ -12,7 +12,6 @@ do
   LAST_SPACE=$(($LAST_SPACE+$DELTA))
   EXISTING_SPACE_COUNT="$(echo "$line" | wc -w)"
   MISSING_SPACES=$(($DESIRED_SPACES_PER_DISPLAY - $EXISTING_SPACE_COUNT))
-  echo $MISSING_SPACES
   if [ "$MISSING_SPACES" -gt 0 ]; then
     for i in $(seq 1 $MISSING_SPACES)
     do
