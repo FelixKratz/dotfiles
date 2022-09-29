@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
 sketchybar --add       event        window_focus                  \
+           --add       event        windows_on_spaces             \
            --add       item         system.yabai left             \
            --set       system.yabai script="$PLUGIN_DIR/yabai.sh" \
                                     icon.font="$FONT:Bold:16.0"   \
@@ -10,7 +11,9 @@ sketchybar --add       event        window_focus                  \
                                     icon.color=$GREEN             \
                                     updates=on                    \
                                     associated_display=active     \
-           --subscribe system.yabai window_focus mouse.clicked    \
+           --subscribe system.yabai window_focus                  \
+                                    windows_on_spaces             \
+                                    mouse.clicked                 \
                                                                   \
            --add       item         front_app left                \
            --set       front_app    mach_helper="$HELPER"         \

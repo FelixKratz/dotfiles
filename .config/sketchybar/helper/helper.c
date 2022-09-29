@@ -14,13 +14,20 @@ void handler(env env) {
 
   if (selected && strlen(selected) > 0) {
     // Space items
+    char* width;
+    if (strcmp(selected, "true") == 0) {
+      width = "0";
+    } else {
+      width = "dynamic";
+    }
     char command[256];
-    snprintf(command, 256, "--set %s icon.highlight=%s", name, selected);
+    snprintf(command, 256, "--animate tanh 20 --set %s icon.highlight=%s label.width=%s", name, selected, width);
     sketchybar(command);
   } 
   else if (strcmp(sender, "front_app_switched") == 0) {
     // front_app item
     char command[256];
+    
     snprintf(command, 256, "--set %s label=\"%s\"", name, info);
     sketchybar(command);
   }

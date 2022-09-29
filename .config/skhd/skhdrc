@@ -31,13 +31,28 @@ shift + lalt - k : yabai -m window --warp south || $(yabai -m window --display s
 shift + lalt - l : yabai -m window --warp north || $(yabai -m window --display north; yabai -m display --focus north) || yabai -m window --move rel:0:-10
 shift + lalt - 0x29 : yabai -m window --warp east || $(yabai -m window --display east; yabai -m display --focus east; yabai -m window --warp first) || yabai -m window --move rel:10:0
 
+# Toggle split orientation of the selected windows node: shift + lalt - s
+shift + lalt - s : yabai -m window --toggle split
+
 # Moving windows between spaces: shift + lalt - {1, 2, 3, 4, p, n } (Assumes 4 Spaces Max per Display)
-shift + lalt - 1 : DISPLAY="$(yabai -m query --displays --display | jq '.index')"; yabai -m window --space $((1+4*($DISPLAY - 1)))
-shift + lalt - 2 : DISPLAY="$(yabai -m query --displays --display | jq '.index')"; yabai -m window --space $((2+4*($DISPLAY - 1)))
-shift + lalt - 3 : DISPLAY="$(yabai -m query --displays --display | jq '.index')"; yabai -m window --space $((3+4*($DISPLAY - 1)))
-shift + lalt - 4 : DISPLAY="$(yabai -m query --displays --display | jq '.index')"; yabai -m window --space $((4+4*($DISPLAY - 1)))
-shift + lalt - p : yabai -m window --space prev; yabai -m space --focus prev
-shift + lalt - n : yabai -m window --space next; yabai -m space --focus next
+shift + lalt - 1 : DISPLAY="$(yabai -m query --displays --display | jq '.index')";\
+                  yabai -m window --space $((1+4*($DISPLAY - 1)));\
+                  sketchybar --trigger windows_on_spaces
+
+shift + lalt - 2 : DISPLAY="$(yabai -m query --displays --display | jq '.index')";\
+                  yabai -m window --space $((2+4*($DISPLAY - 1)));\
+                  sketchybar --trigger windows_on_spaces
+
+shift + lalt - 3 : DISPLAY="$(yabai -m query --displays --display | jq '.index')";\
+                  yabai -m window --space $((3+4*($DISPLAY - 1)));\
+                  sketchybar --trigger windows_on_spaces
+
+shift + lalt - 4 : DISPLAY="$(yabai -m query --displays --display | jq '.index')";\
+                  yabai -m window --space $((4+4*($DISPLAY - 1)));\
+                  sketchybar --trigger windows_on_spaces
+
+shift + lalt - p : yabai -m window --space prev; yabai -m space --focus prev; sketchybar --trigger windows_on_spaces
+shift + lalt - n : yabai -m window --space next; yabai -m space --focus next; sketchybar --trigger windows_on_spaces
 
 # Mirror Space on X and Y Axis: shift + lalt - {x, y}
 shift + lalt - x : yabai -m space --mirror x-axis
@@ -86,8 +101,6 @@ lalt - t : alacritty msg create-window
 # New window in hor./ vert. splits for all applications with yabai
 lalt - s : yabai -m window --insert east;  skhd -k "cmd - n"
 lalt - v : yabai -m window --insert south; skhd -k "cmd - n"
-shift + lalt - s : yabai -m window --insert west;  skhd -k "cmd - n"
-shift + lalt - v : yabai -m window --insert north; skhd -k "cmd - n"
 
 # Toggle sketchybar
 shift + lalt - space : sketchybar --bar hidden=toggle

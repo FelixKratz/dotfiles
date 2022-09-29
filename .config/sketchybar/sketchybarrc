@@ -34,7 +34,7 @@ sketchybar --bar     height=39                                         \
                      y_offset=10                                       \
                      margin=10                                         \
                      blur_radius=20                                    \
-                     notch_width=200                                   \
+                     notch_width=0                                     \
                                                                        \
            --default updates=when_shown                                \
                      icon.font="$FONT:Bold:14.0"                       \
@@ -57,12 +57,14 @@ sketchybar --bar     height=39                                         \
 source "$ITEM_DIR/apple.sh"
 source "$ITEM_DIR/spaces.sh"
 source "$ITEM_DIR/front_app.sh"
+# source "$ITEM_DIR/window_title.sh"
 
 # Center
 source "$ITEM_DIR/spotify.sh"
 
 # Right
 source "$ITEM_DIR/github.sh"
+# source "$ITEM_DIR/mail.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
 

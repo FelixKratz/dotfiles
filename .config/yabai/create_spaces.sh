@@ -1,9 +1,7 @@
 #!/bin/sh
 
 DESIRED_SPACES_PER_DISPLAY=4
-DISPLAY_INFO="$(yabai -m query --displays)"
-DISPLAY_COUNT="$(echo "$DISPLAY_INFO" | jq '.[].index' | wc -l)"
-CURRENT_SPACES="$(echo "$DISPLAY_INFO" | jq -r '.[].spaces | @sh')"
+CURRENT_SPACES="$(yabai -m query --displays | jq -r '.[].spaces | @sh')"
 
 DELTA=0
 while read -r line
