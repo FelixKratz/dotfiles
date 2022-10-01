@@ -26,7 +26,7 @@ SketchyBar Setup
 ```bash
 curl https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.3/sketchybar-app-font.ttf > $HOME/Library/Fonts/sketchybar-app-font.ttf
 ```
-* If you don't use yabai you can safely remove the `yabai` item from system.sh
+* If you don't use yabai you can safely remove the `yabai` item from `ìtems/front_app.sh`
 * (optional) yabai events:
 ```bash
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
