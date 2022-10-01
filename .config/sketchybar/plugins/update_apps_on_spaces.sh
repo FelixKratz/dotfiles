@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-DISPLAY_INFO="$(yabai -m query --displays)"
 CURRENT_SPACES="$(yabai -m query --displays | jq -r '.[].spaces | @sh')"
 
 args=()
