@@ -75,7 +75,7 @@ return require('packer').startup(function(use)
     after = "cmp_luasnip",
   }
   use {
-    'nvim-telescope/telescope.nvim', tag = '0.1.0',
+    'nvim-telescope/telescope.nvim',
     requires = { {'nvim-lua/plenary.nvim'} }
   }
   use {
@@ -159,14 +159,6 @@ return require('packer').startup(function(use)
     run = ":CatppuccinCompile",
     config = function()
       require "plugins.catppuccin"
-    end,
-  }
-  use {
-    "feline-nvim/feline.nvim",
-    requires = 'kyazdani42/nvim-web-devicons',
-    after = "catppuccin",
-    config = function()
-      require "plugins.feline"
     end,
   }
   use {
