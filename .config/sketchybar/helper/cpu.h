@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <mach/mach.h>
 #include <stdbool.h>
@@ -84,13 +85,13 @@ static inline void cpu_update(struct cpu* cpu) {
 
     char color[16];
     if (total_perc >= .7) {
-      snprintf(color, 16, "0xffed8796");
+      snprintf(color, 16, "%s", getenv("RED"));
     } else if (total_perc >= .3) {
-      snprintf(color, 16, "0xfff5a97f");
+      snprintf(color, 16, "%s", getenv("ORANGE"));
     } else if (total_perc >= .1) {
-      snprintf(color, 16, "0xffeed49f");
+      snprintf(color, 16, "%s", getenv("YELLOW"));
     } else {
-      snprintf(color, 16, "0xffcad3f5");
+      snprintf(color, 16, "%s", getenv("WHITE"));
     }
 
     snprintf(cpu->command, 256, "--push cpu.sys %.2f "
