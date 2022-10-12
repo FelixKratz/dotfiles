@@ -91,7 +91,7 @@ static inline void cpu_update(struct cpu* cpu) {
     } else if (total_perc >= .1) {
       snprintf(color, 16, "%s", getenv("YELLOW"));
     } else {
-      snprintf(color, 16, "%s", getenv("WHITE"));
+      snprintf(color, 16, "%s", getenv("LABEL_COLOR"));
     }
 
     snprintf(cpu->command, 256, "--push cpu.sys %.2f "

@@ -17,12 +17,12 @@ do
                               background.padding_right=-8                   \
                               background.height=26                          \
                               background.corner_radius=9                    \
-                              background.color=0xff3C3E4F                   \
+                              background.color=$SPACE_BACKGROUND            \
                               background.drawing=on                         \
                               label.font="sketchybar-app-font:Regular:16.0" \
                               label.background.height=26                    \
                               label.background.drawing=on                   \
-                              label.background.color=0xff494d64             \
+                              label.background.color=$OPEN_APPS_BACKGROUND  \
                               label.background.corner_radius=9              \
                               label.drawing=off                             \
                               script=""                                     \

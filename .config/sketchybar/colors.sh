@@ -13,14 +13,14 @@ export GREY=0xff939ab7
 export TRANSPARENT=0x00000000
 
 # General bar colors
-BAR_COLOR=0xcc24273a #$GREY # Grey bar
-ICON_COLOR=$WHITE # Color of all icons
-LABEL_COLOR=$WHITE # Color of all labels
+export BAR_COLOR=0xcc24273a #$GREY # Grey bar
+export ICON_COLOR=$WHITE # Color of all icons
+export LABEL_COLOR=$WHITE # Color of all labels
+export SPACE_BACKGROUND=0xff3c3e4f
+export OPEN_APPS_BACKGROUND=0xff494d64
+export CALENDAR_BACKGROUND=0xffb8c0e0
 
-POPUP_BACKGROUND_COLOR=$BLACK
-POPUP_BORDER_COLOR=$WHITE
+export POPUP_BACKGROUND_COLOR=$BLACK
+export POPUP_BORDER_COLOR=$WHITE
 
-SHADOW_COLOR=$BLACK
-
-# Item specific special colors
-SPOTIFY_GREEN=$GREEN
+export SHADOW_COLOR=$BLACK
