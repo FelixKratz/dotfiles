@@ -29,32 +29,7 @@ alias cfg="git --git-dir=$HOME/dotfiles/ --work-tree=$HOME"
 
 eval "$(starship init zsh)"
 
-# Sketchybar interactivity overloads
-function brew() {
-  command brew "$@" 
-
-  if [[ $* =~ "upgrade" ]] || [[ $* =~ "update" ]] || [[ $* =~ "outdated" ]]; then
-    sketchybar --trigger brew_upgrade
-  fi
-}
-
-function mas() {
-  command mas "$@" 
-
-  if [[ $* =~ "upgrade" ]] || [[ $* =~ "update" ]] || [[ $* =~ "outdated" ]]; then
-    sketchybar --trigger brew_upgrade
-  fi
-}
-
-function zen () {
-  ~/.config/sketchybar/plugins/zen.sh $1
-}
-
-
-function push() {
-  command git push
-  sketchybar --trigger git_push
-}
+alias ssh="TERM=xterm-256color ssh"
 
 alias n="nnn"
 function nnn () {
@@ -63,6 +38,26 @@ function nnn () {
     if [ -f "$NNN_TMPFILE" ]; then
             . "$NNN_TMPFILE"
     fi
+}
+
+# Fancy sketchybar commands
+function margin () {
+  if [ $1 = "on" ]; then
+    yabai -m config top_padding 20
+    sketchybar --animate sin 30 --bar margin=10 y_offset=10 corner_radius=9
+  else
+    yabai -m config top_padding 10
+    sketchybar --animate sin 30 --bar margin=0 y_offset=0 corner_radius=0
+  fi
+}
+
+function zen () {
+  ~/.config/sketchybar/plugins/zen.sh $1
+}
+
+function suyabai () {
+  SHA256=$(shasum -a 256 /opt/homebrew/bin/yabai | awk "{print \$1;}")
+  sudo sed -i '' -e 's/sha256:[[:alnum:]]*/sha256:'${SHA256}'/' /private/etc/sudoers.d/yabai
 }
 
 # Only load conda into path but dont actually use the bloat that comes with it
