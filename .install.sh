@@ -39,6 +39,8 @@ brew install ifstat
 brew install hdf5
 brew install mactex
 brew install starship
+brew install dooit
+brew install alfred
 brew install zsh-autosuggestions
 brew install zsh-syntax-highlighting
 brew install skhd
@@ -121,6 +123,8 @@ git clone git@github.com:shaunsingh/SFMono-Nerd-Font-Ligaturized.git /tmp/SFMono
 mv /tmp/SFMono_Nerd_Font/* $HOME/Library/Fonts
 rm -rf /tmp/SFMono_Nerd_Font/
 
+curl https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.3/sketchybar-app-font.ttf > $HOME/Library/Fonts/sketchybar-app-font.ttf
+
 source $HOME/.zshrc
 cfg config --local status.showUntrackedFiles no
 
@@ -129,14 +133,15 @@ echo "Installing Python Packages..."
 curl https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh | sh
 source $HOME/.zshrc
 conda install -c apple tensorflow-deps
-python -m pip install tensorflow-macos
-python -m pip install tensorflow-metal
+conda install -c conda-forge pybind11
 conda install matplotlib
 conda install jupyterlab
 conda install seaborn
 conda install opencv
 conda install joblib
 conda install pytables
+pip install tensorflow-macos
+pip install tensorflow-metal
 pip install debugpy
 pip install sklearn
 
@@ -147,13 +152,9 @@ brew services start fyabai
 brew services start sketchybar
 brew services start svim
 
-echo "Installing yabai scripting addition (!!sudo!!)"
-sudo yabai --install-sa
-
 csrutil status
 echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
-echo "Manual Install Needed: Alfred"
 echo "Installation complete...\nRun nvim +PackerSync and Restart..."
 
