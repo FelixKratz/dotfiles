@@ -21,7 +21,7 @@ sketchybar --add       event           spotify_change $SPOTIFY_EVENT        \
                                        label.drawing=off                    \
                                        drawing=off                          \
            --subscribe spotify.anchor  mouse.entered mouse.exited           \
-                                       mouse.exited.global volume_change    \
+                                       mouse.exited.global                  \
                                                                             \
            --add       item            spotify.cover popup.spotify.anchor   \
            --set       spotify.cover   script="$PLUGIN_DIR/spotify.sh"      \

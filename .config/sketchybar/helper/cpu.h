@@ -69,7 +69,7 @@ static inline void cpu_update(struct cpu* cpu) {
     fgets(line, sizeof(line), file);
 
     char* start = strstr(line, FILTER_PATTERN);
-    char topproc[64];
+    char topproc[32];
     uint32_t caret = 0;
     for (int i = 0; i < sizeof(line); i++) {
       if (start && i == start - line) {
@@ -77,6 +77,11 @@ static inline void cpu_update(struct cpu* cpu) {
         continue;
       }
 
+      if (i > 29) break;
+      if (i > 27) {
+        topproc[caret++] = '.';
+        continue;
+      }
       topproc[caret++] = line[i];
       if (line[i] == '\0') break;
     }

@@ -106,52 +106,12 @@ popup () {
   sketchybar --set spotify.anchor popup.drawing=$1
 }
 
-volume_change() {
-  ALREADY_DRAWING=$(sketchybar --query spotify.anchor | jq -r ".icon.drawing")
-
-  if [ "$ALREADY_DRAWING" = "on" ]; then
-    sketchybar --set spotify.anchor icon.width=$(($INFO*17/10))
-  else
-    source "$HOME/.config/sketchybar/colors.sh"
-
-    sketchybar --set spotify.anchor icon.width=0 \
-                                    width=0 \
-                                    align=left \
-                                    label.drawing=off \
-                                    icon.drawing=on \
-                                    background.drawing=on \
-               --animate tanh 30 --set spotify.anchor icon.width=$(($INFO*17/10)) \
-                                                      width=170 \
-                                                      background.color=0xff494d64 \
-                                                      background.corner_radius=10 \
-                                                      background.height=3 \
-                                                      background.corner_radius=2 \
-                                                      y_offset=-16
-    sleep 2
-    
-    sketchybar --set spotify.anchor icon.width=0 \
-               --animate tanh 30 --set spotify.anchor width=20 \
-                                                      background.height=20 \
-                                                      background.corner_radius=10 \
-                                                      background.color=$WHITE \
-                                                      y_offset=0
-    sleep "0.5"
-    sketchybar --set spotify.anchor icon.drawing=off \
-                                    background.drawing=off \
-                                    label.drawing=on \
-                                    width=170 \
-                                    align=center
-  fi
-}
-
 case "$SENDER" in
   "mouse.clicked") mouse_clicked
   ;;
   "mouse.entered") popup on
   ;;
   "mouse.exited"|"mouse.exited.global") popup off
-  ;;
-  "volume_change") volume_change
   ;;
   *) update
   ;;

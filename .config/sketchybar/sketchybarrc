@@ -20,7 +20,7 @@ HELPER=git.felix.helper
 # Start the helper process
 killall helper
 cd $HOME/.config/sketchybar/helper && make
-$HOME/.config/sketchybar/helper/helper $HELPER &
+$HOME/.config/sketchybar/helper/helper $HELPER > /dev/null 2>&1 &
 
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                         \
@@ -65,6 +65,7 @@ source "$ITEM_DIR/spotify.sh"
 source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/cpu.sh"
+source "$ITEM_DIR/volume.sh"
 
 ############## FINALIZING THE SETUP ##############
 sketchybar --update
