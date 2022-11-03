@@ -11,7 +11,7 @@ do
     apps=$(yabai -m query --windows --space $space | jq -r ".[].app")
     for app in $apps
     do
-      icon_strip+=" $($HOME/.config/yabai/icon_map.sh "$app")"
+      icon_strip+=" $($HOME/.config/sketchybar/icon_map.sh "$app")"
     done
     args+=(--set space.$space label="$icon_strip" label.drawing=on)
   done
