@@ -15,7 +15,11 @@ sketchybar --add item volume right                             \
                         align=left                             \
            --subscribe volume volume_change
 
-sketchybar --add item volume_icon right                     \
-           --set volume_icon icon.font="$FONT:Regular:21.0" \
-                             icon=􀥒                         \
-                             label.drawing=off
+sketchybar --add alias "Control Center,Sound" right                 \
+           --set "Control Center,Sound" icon.drawing=off            \
+                                        label.drawing=off           \
+                                        alias.color=$BLACK          \
+                                        background.color=$WHITE     \
+                                        background.corner_radius=13 \
+                                        background.height=26        \
+                                        background.padding_right=8
