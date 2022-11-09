@@ -24,7 +24,7 @@ window_state() {
           args+=(--set $NAME icon=$YABAI_PARENT_ZOOM icon.color=$BLUE)
           yabai -m config active_window_border_color $BLUE > /dev/null 2>&1 &
         else
-          args+=(--set $NAME icon=$YABAI_GRID icon.color=0xfff0c6c6)
+          args+=(--set $NAME icon=$YABAI_GRID icon.color=$ORANGE)
           yabai -m config active_window_border_color $WHITE > /dev/null 2>&1 &
         fi
         ;;
@@ -39,7 +39,6 @@ window_state() {
 }
 
 windows_on_spaces () {
-  DISPLAY_INFO="$(yabai -m query --displays)"
   CURRENT_SPACES="$(yabai -m query --displays | jq -r '.[].spaces | @sh')"
 
   args=()
