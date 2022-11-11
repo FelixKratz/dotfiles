@@ -7,25 +7,21 @@ ITEM_DIR="$HOME/.config/sketchybar/items" # Directory where the items are config
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins" # Directory where all the plugin scripts are stored
 
 FONT="SF Pro" # Needs to have Regular, Bold, Semibold, Heavy and Black variants
-SPACE_CLICK_SCRIPT="yabai -m space --focus \$SID 2>/dev/null" # The script that is run for clicking on space components
-
 PADDINGS=3 # All paddings use this value (icon, label, background)
 
-POPUP_BORDER_WIDTH=2
-POPUP_CORNER_RADIUS=11
-
-SHADOW=on
-
+# Setting up and starting the helper process
 HELPER=git.felix.helper
-# Start the helper process
 killall helper
 cd $HOME/.config/sketchybar/helper && make
 $HOME/.config/sketchybar/helper/helper $HELPER > /dev/null 2>&1 &
 
+# Unload the macOS on screen indicator overlay for volume change
+launchctl unload -F /System/Library/LaunchAgents/com.apple.OSDUIHelper.plist > /dev/null 2>&1 &
+
 # Setting up the general bar appearance and default values
 sketchybar --bar     height=39                                         \
                      color=$BAR_COLOR                                  \
-                     shadow=$SHADOW                                    \
+                     shadow=on                                         \
                      position=top                                      \
                      sticky=on                                         \
                      padding_right=7                                   \
@@ -47,11 +43,13 @@ sketchybar --bar     height=39                                         \
                      label.padding_right=$PADDINGS                     \
                      background.padding_right=$PADDINGS                \
                      background.padding_left=$PADDINGS                 \
+                     background.height=26                              \
+                     background.corner_radius=9                        \
                      popup.background.border_width=2                   \
                      popup.background.corner_radius=11                 \
                      popup.background.border_color=$POPUP_BORDER_COLOR \
                      popup.background.color=$POPUP_BACKGROUND_COLOR    \
-                     popup.background.shadow.drawing=$SHADOW
+                     popup.background.shadow.drawing=on
 
 # Left
 source "$ITEM_DIR/apple.sh"
@@ -62,12 +60,14 @@ source "$ITEM_DIR/front_app.sh"
 source "$ITEM_DIR/spotify.sh"
 
 # Right
-source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/calendar.sh"
-source "$ITEM_DIR/cpu.sh"
+source "$ITEM_DIR/brew.sh"
+source "$ITEM_DIR/github.sh"
 source "$ITEM_DIR/volume.sh"
+source "$ITEM_DIR/divider.sh"
+source "$ITEM_DIR/cpu.sh"
 
-############## FINALIZING THE SETUP ##############
+# Forcing all item scripts to run (never do this outside of sketchybarrc)
 sketchybar --update
 
 echo "sketchybar configuation loaded.."

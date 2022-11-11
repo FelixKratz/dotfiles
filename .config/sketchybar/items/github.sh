@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
+
 sketchybar --add       item            github.bell right                  \
            --set       github.bell     update_freq=180                    \
                                        icon.font="$FONT:Bold:15.0"        \
@@ -7,7 +9,6 @@ sketchybar --add       item            github.bell right                  \
                                        icon.color=$BLUE                   \
                                        label=$LOADING                     \
                                        label.highlight_color=$BLUE        \
-                                       background.padding_left=10         \
                                        popup.align=right                  \
                                        script="$PLUGIN_DIR/github.sh"     \
                                        click_script="$POPUP_CLICK_SCRIPT" \

@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+FRONT_APP_SCRIPT='sketchybar --set $NAME label="$INFO"'
+
 sketchybar --add       event        window_focus                  \
            --add       event        windows_on_spaces             \
            --add       item         system.yabai left             \
@@ -16,7 +18,7 @@ sketchybar --add       event        window_focus                  \
                                     mouse.clicked                 \
                                                                   \
            --add       item         front_app left                \
-           --set       front_app    mach_helper="$HELPER"         \
+           --set       front_app    script="$FRONT_APP_SCRIPT"    \
                                     icon.drawing=off              \
                                     background.padding_left=0     \
                                     background.padding_right=10   \

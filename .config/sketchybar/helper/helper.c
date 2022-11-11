@@ -12,26 +12,7 @@ void handler(env env) {
   char* info = env_get_value_for_key(env, "INFO");
   char* selected = env_get_value_for_key(env, "SELECTED");
 
-  if (selected && strlen(selected) > 0) {
-    // Space items
-    char* width;
-    if (strcmp(selected, "true") == 0) {
-      width = "0";
-    } else {
-      width = "dynamic";
-    }
-    char command[256];
-    snprintf(command, 256, "--animate tanh 20 --set %s icon.highlight=%s label.width=%s", name, selected, width);
-    sketchybar(command);
-  } 
-  else if (strcmp(sender, "front_app_switched") == 0) {
-    // front_app item
-    char command[256];
-    
-    snprintf(command, 256, "--set %s label=\"%s\"", name, info);
-    sketchybar(command);
-  }
-  else if ((strcmp(sender, "routine") == 0)
+  if ((strcmp(sender, "routine") == 0)
             || (strcmp(sender, "forced") == 0)) {
     // CPU and Clock routine updates
     cpu_update(&g_cpu);
