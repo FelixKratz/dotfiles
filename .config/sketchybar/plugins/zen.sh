@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ $1 = "on" ]; then
+zen_on() {
   sketchybar --set github.bell drawing=off \
              --set apple.logo drawing=off \
              --set '/cpu.*/' drawing=off \
@@ -11,7 +11,9 @@ if [ $1 = "on" ]; then
              --set volume_alias drawing=off \
              --set spotify.anchor updates=off drawing=off \
              --bar padding_left=18
-else
+}
+
+zen_off() {
   sketchybar --set github.bell drawing=on \
              --set apple.logo drawing=on \
              --set '/cpu.*/' drawing=on \
@@ -22,5 +24,17 @@ else
              --set volume_alias drawing=on \
              --set spotify.anchor updates=on \
              --bar padding_left=7
+}
+
+if [ "$1" = "on" ]; then
+  zen_on
+elif [ "$1" = "off" ]; then
+  zen_off
+else
+  if [ "$(sketchybar --query apple.logo | jq -r ".geometry.drawing")" = "on" ]; then
+    zen_on
+  else
+    zen_off
+  fi
 fi
 

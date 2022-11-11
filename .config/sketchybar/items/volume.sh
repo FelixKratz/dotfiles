@@ -15,12 +15,14 @@ sketchybar --add item volume right                             \
                         align=left                             \
            --subscribe volume volume_change
 
-sketchybar --add alias "Control Center,Sound" right       \
-           --rename "Control Center,Sound" volume_alias   \
-           --set volume_alias icon.drawing=off            \
-                              label.drawing=off           \
-                              alias.color=$BLACK          \
-                              background.color=$WHITE     \
-                              background.corner_radius=13 \
-                              background.height=26        \
-                              background.padding_right=8
+sketchybar --add alias "Control Center,Sound" right          \
+           --rename "Control Center,Sound" volume_alias      \
+           --set volume_alias icon.drawing=off               \
+                              label.drawing=off              \
+                              alias.color=$BLACK             \
+                              background.color=$WHITE        \
+                              background.corner_radius=13    \
+                              background.height=26           \
+                              background.padding_right=8     \
+                              script="$PLUGIN_DIR/volume.sh" \
+           --subscribe volume_alias mouse.clicked

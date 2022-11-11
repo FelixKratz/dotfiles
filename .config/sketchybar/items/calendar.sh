@@ -13,4 +13,5 @@ sketchybar --add item     calendar right                         \
                           align=center                           \
                           background.color=$CALENDAR_BACKGROUND  \
                           background.height=26                   \
-                          background.corner_radius=11
+                          background.corner_radius=11            \
+                          click_script="$PLUGIN_DIR/zen.sh"

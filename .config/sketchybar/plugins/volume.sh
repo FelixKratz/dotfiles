@@ -17,7 +17,18 @@ volume_change() {
   fi
 }
 
+mouse_clicked() {
+  MUTED=$(osascript -e 'output muted of (get volume settings)')
+
+  if [ "$MUTED" = "false" ]; then
+    osascript -e 'set volume output muted true'
+  else
+    osascript -e 'set volume output muted false'
+  fi
+}
+
 case "$SENDER" in
   "volume_change") volume_change
   ;;
+  "mouse.clicked") mouse_clicked
 esac
