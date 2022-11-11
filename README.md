@@ -41,7 +41,13 @@ lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger window_foc
 shift + lalt - 1 : yabai -m window --space 1 && sketchybar --trigger windows_on_spaces
 ```
 
-NOTE: The `helper` C program is included here only to show off this specific functionality of sketchybar and is not needed generally. It provides the data for the cpu graph, the date-time, handles the events for space changes and front app changes. Using a `mach_helper` provides a *much* lower overhead solution for performance sensitive tasks, since the `helper` talks directly to sketchybar via kernel level messages. For most tasks (including those listed above) this difference in performance does not matter at all.
+NOTE: The `helper` C program is included here only to show off this specific
+functionality of sketchybar and is not needed generally. It provides the data
+for the cpu graph and the date-time. Using a `mach_helper` provides a *much*
+lower overhead solution for performance sensitive tasks, since the `helper`
+talks directly to sketchybar via kernel level messages.
+For most tasks (including those listed above) this difference in performance
+does not matter at all.
 
 neovim setup
 ---------------
