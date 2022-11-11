@@ -3,7 +3,6 @@
 source "$HOME/.config/sketchybar/colors.sh"
 
 OUTDATED=$(brew outdated)
-echo "$OUTDATED"
 COUNT=$(echo "$OUTDATED" | wc -l | tr -d ' ')
 
 COLOR=$RED
