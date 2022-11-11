@@ -9,7 +9,8 @@ zen_on() {
              --set separator drawing=off \
              --set front_app drawing=off \
              --set volume_alias drawing=off \
-             --set spotify.anchor updates=off drawing=off \
+             --set spotify.anchor drawing=off \
+             --set spotify.play updates=off \
              --bar padding_left=18
 }
 
@@ -22,7 +23,7 @@ zen_off() {
              --set front_app drawing=on \
              --set system.yabai drawing=on \
              --set volume_alias drawing=on \
-             --set spotify.anchor updates=on \
+             --set spotify.play updates=on \
              --bar padding_left=7
 }
 
