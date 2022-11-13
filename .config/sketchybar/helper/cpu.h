@@ -86,6 +86,8 @@ static inline void cpu_update(struct cpu* cpu) {
       if (line[i] == '\0') break;
     }
 
+    topproc[31] = '\0';
+
     pclose(file);
 
     char color[16];
