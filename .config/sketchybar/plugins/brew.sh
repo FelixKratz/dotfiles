@@ -2,8 +2,7 @@
 
 source "$HOME/.config/sketchybar/colors.sh"
 
-OUTDATED=$(brew outdated)
-COUNT=$(echo "$OUTDATED" | wc -l | tr -d ' ')
+COUNT=$(brew outdated | wc -l | tr -d ' ')
 
 COLOR=$RED
 
@@ -12,9 +11,10 @@ case "$COUNT" in
   ;;
   [1-2][0-9]) COLOR=$YELLOW
   ;;
-  [0-9]) COLOR=$WHITE
+  [1-9]) COLOR=$WHITE
   ;;
-  0) COLOR=$GREEN; COUNT=􀆅
+  0) COLOR=$GREEN
+     COUNT=􀆅
   ;;
 esac
 
