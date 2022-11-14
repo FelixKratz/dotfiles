@@ -40,6 +40,15 @@ function nnn () {
     fi
 }
 
+# Sketchybar interactivity overloads
+function brew() {
+  command brew "$@" 
+
+  if [[ $* =~ "upgrade" ]] || [[ $* =~ "update" ]] || [[ $* =~ "outdated" ]]; then
+    sketchybar --trigger brew_update
+  fi
+}
+
 # Fancy sketchybar commands
 function margin () {
   if [ $1 = "on" ]; then
