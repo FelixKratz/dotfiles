@@ -55,7 +55,7 @@ function brew() {
 
 NOTE: The `helper` C program is included here only to show off this specific
 functionality of sketchybar and is not needed generally. It provides the data
-for the cpu graph and the date-time. Using a `mach_helper` provides a *much*
+for the cpu graph. Using a `mach_helper` provides a *much*
 lower overhead solution for performance sensitive tasks, since the `helper`
 talks directly to sketchybar via kernel level messages.
 For most tasks (including those listed above) this difference in performance
