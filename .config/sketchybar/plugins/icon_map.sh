@@ -1,4 +1,4 @@
-case "$1" in
+case $@ in
 "Brave Browser")
   icon_result=":brave_browser:"
   ;;
@@ -185,7 +185,7 @@ case "$1" in
 "Bitwarden")
   icon_result=":bit_warden:"
   ;;
-"System Preferences")
+"System Preferences" | "System Settings")
   icon_result=":gear:"
   ;;
 "Discord" | "Discord Canary" | "Discord PTB")
