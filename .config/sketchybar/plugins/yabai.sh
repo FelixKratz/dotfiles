@@ -62,7 +62,7 @@ windows_on_spaces () {
 
 mouse_clicked() {
   yabai -m window --toggle float
-  update
+  window_state
 }
 
 case "$SENDER" in

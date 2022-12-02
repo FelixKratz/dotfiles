@@ -42,6 +42,7 @@ shift + lalt - f : yabai -m window --toggle zoom-fullscreen; sketchybar --trigge
 lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger window_focus
 shift + lalt - 1 : yabai -m window --space 1 && sketchybar --trigger windows_on_spaces
 ```
+* (optional) Uses `brew install switchaudio-osx` for audio device switching context menu on volume alias right click
 * (optional) update outdated packages after running brew commands (add to `.zshrc`):
 ```bash
 function brew() {

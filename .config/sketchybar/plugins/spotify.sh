@@ -69,8 +69,7 @@ update ()
            --set spotify.repeat icon.highlight=$REPEAT \
            --set spotify.cover background.image="/tmp/cover.jpg" \
                                background.color=0x00000000 \
-           --set spotify.anchor icon.drawing=on \
-                                drawing=on \
+           --set spotify.anchor drawing=on \
            --set spotify drawing=on                               )
   else
     args+=(--set spotify.title drawing=off \
