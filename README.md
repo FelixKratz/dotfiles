@@ -18,6 +18,33 @@ color scheme consistency across all configurations.
 
 Most setup steps are in `.install.sh`
 
+SketchyBar Features:
+----------------------
+
+<img width="1512" alt="Screenshot 2022-11-11 at 17 33 00" src="https://user-images.githubusercontent.com/22680421/201389564-97d4cfd6-18f0-4ed5-be6a-47388d8d53c0.png">
+
+* I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces. The active space animates their active applications to disappear:
+
+https://user-images.githubusercontent.com/22680421/201390794-92b37f3a-631f-4312-bb3f-342a5c963928.mov
+
+* Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled)
+
+* Mousing over the music icon in the center gives a small spotify player widget with player controls:
+<img width="492" alt="Screenshot 2022-11-11 at 17 54 31" src="https://user-images.githubusercontent.com/22680421/201390348-2b3d038d-24fc-448c-b5e5-827275303295.png">
+
+* The volume icon on the right side can be clicked to toggle mute and animates volume changes:
+
+https://user-images.githubusercontent.com/22680421/201391279-14c89e0b-af16-4b29-b815-82da2d230863.mov
+
+* The volume icon on the right side can be right-clicked to show and select the audio output device:
+![Screenshot 2022-12-11 at 12 46 48](https://user-images.githubusercontent.com/22680421/206901837-f4f8793e-ba0f-465b-b3a5-72d4fea17de4.png)
+
+* The bell can be hovered to view github notifications
+
+* Clicking the date/time toggles a "zen" mode, hiding all distracting items in the bar:
+<img width="1512" alt="Screenshot 2022-11-11 at 18 01 32" src="https://user-images.githubusercontent.com/22680421/201391668-c4282435-9866-491d-a007-398942abdfb9.png">
+
+
 SketchyBar Setup
 ----------------------
 * Uses `sf-symbols`: `brew install --cask sf-symbols`
