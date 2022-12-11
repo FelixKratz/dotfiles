@@ -21,8 +21,6 @@ Most setup steps are in `.install.sh`
 SketchyBar Features:
 ----------------------
 
-<img width="1512" alt="Screenshot 2022-11-11 at 17 33 00" src="https://user-images.githubusercontent.com/22680421/201389564-97d4cfd6-18f0-4ed5-be6a-47388d8d53c0.png">
-
 * I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces. The active space animates their active applications to disappear:
 
 https://user-images.githubusercontent.com/22680421/201390794-92b37f3a-631f-4312-bb3f-342a5c963928.mov
