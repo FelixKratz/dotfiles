@@ -25,3 +25,5 @@ do
   fi
   DELTA=$(($DELTA+$MISSING_SPACES))
 done <<< "$CURRENT_SPACES"
+
+sketchybar --trigger space_change
