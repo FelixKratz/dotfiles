@@ -1,3 +1,5 @@
+#!/usr/bin/env sh
+
 SPOTIFY_EVENT="com.spotify.client.PlaybackStateChanged"
 POPUP_SCRIPT="sketchybar -m --set spotify.anchor popup.drawing=toggle"
 
@@ -91,7 +93,7 @@ sketchybar --add       event           spotify_change $SPOTIFY_EVENT        \
            --add       item            spotify.next popup.spotify.anchor    \
            --set       spotify.next    icon=􀊐                               \
                                        icon.padding_left=5                  \
-                                       icon.padding_right=10                \
+                                       icon.padding_right=5                 \
                                        icon.color=$BLACK                    \
                                        label.drawing=off                    \
                                        script="$PLUGIN_DIR/spotify.sh"      \

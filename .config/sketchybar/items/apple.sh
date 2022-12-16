@@ -4,11 +4,10 @@ POPUP_OFF="sketchybar --set apple.logo popup.drawing=off"
 POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
 
 sketchybar --add item           apple.logo left                             \
-                                                                            \
            --set apple.logo     icon=$APPLE                                 \
                                 icon.font="$FONT:Black:16.0"                \
                                 icon.color=$GREEN                           \
-                                background.padding_right=25                 \
+                                background.padding_right=15                 \
                                 label.drawing=off                           \
                                 click_script="$POPUP_CLICK_SCRIPT"          \
                                                                             \

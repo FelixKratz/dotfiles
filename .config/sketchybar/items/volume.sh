@@ -1,3 +1,5 @@
+#!/usr/bin/env sh
+
 sketchybar --add item volume right                      \
            --set volume script="$PLUGIN_DIR/volume.sh"  \
                         updates=on                      \
@@ -12,6 +14,8 @@ sketchybar --add item volume right                      \
                         background.color=$BACKGROUND_2  \
                         background.height=8             \
                         background.corner_radius=3      \
+                        background.padding_left=0       \
+                        background.padding_right=0      \
                         align=left                      \
            --subscribe volume volume_change
 
