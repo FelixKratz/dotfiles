@@ -50,7 +50,7 @@ SketchyBar Setup
 * Uses `github-cli`: `brew install gh` (`gh auth login` for notifications)
 * Uses [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font):
 ```bash
-curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.3/sketchybar-app-font.ttf -o $HOME/Library/Fonts/sketchybar-app-font.ttf
+curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.4/sketchybar-app-font.ttf -o $HOME/Library/Fonts/sketchybar-app-font.ttf
 ```
 * The volume icon is an `alias`, make sure to give screen capture permission. If your system is british, you need to rename "Control Center" to "Control Centre" in `items/volume.sh`. The volume icon should be enabled to always show in the macOS bar via System Preferences.
 * If you don't use yabai you can safely remove the `yabai` item from `ìtems/front_app.sh`
