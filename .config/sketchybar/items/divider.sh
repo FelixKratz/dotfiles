@@ -9,5 +9,5 @@ sketchybar --add item divider right \
            --set divider label.drawing=off \
                          icon=􀫰 \
                          icon.font="$FONT:BLACK:22.0" \
-                         background.padding_left=10 \
-                         background.padding_right=20
+                         background.padding_left=5 \
+                         background.padding_right=10
