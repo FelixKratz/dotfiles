@@ -80,6 +80,9 @@ case $@ in
 "Microsoft Word")
   icon_result=":microsoft_word:"
   ;;
+"Microsoft Teams")
+  icon_result=":microsoft_teams:"
+  ;;
 "Iris")
   icon_result=":iris:"
   ;;
@@ -212,7 +215,7 @@ case $@ in
 "Blender")
   icon_result=":blender:"
   ;;
-"Canary Mail" | "HEY" | "Mail" | "Mailspring" | "MailMate" | "邮件")
+"Canary Mail" | "HEY" | "Mail" | "Mailspring" | "MailMate" | "邮件" | "Outlook")
   icon_result=":mail:"
   ;;
 "Safari" | "Safari Technology Preview")
