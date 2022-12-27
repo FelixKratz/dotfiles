@@ -3,7 +3,8 @@ local options = {
     "lua",
     "c",
     "cpp",
-    "python"
+    "python",
+    "rust"
   },
   highlight = {
     enable = true,

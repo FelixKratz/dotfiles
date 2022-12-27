@@ -51,6 +51,12 @@ return require('packer').startup(function(use)
       require "plugins.mason_lspconfig"
     end,
   }
+  use { 'simrat39/rust-tools.nvim',
+    after = "mason-lspconfig.nvim",
+    config = function()
+      require "rust-tools".setup()
+    end,
+  }
   use "rafamadriz/friendly-snippets"
   use {
     "hrsh7th/nvim-cmp",
@@ -82,6 +88,10 @@ return require('packer').startup(function(use)
     "hrsh7th/cmp-nvim-lsp",
     after = "cmp-nvim-lua",
   }
+  -- use {
+  --   'hrsh7th/cmp-nvim-lsp-signature-help',
+  --   after = "cmp-nvim-lsp",
+  -- }
   use {
     "hrsh7th/cmp-path",
     after = "cmp-nvim-lsp",
@@ -160,6 +170,12 @@ return require('packer').startup(function(use)
     config = function()
       require "plugins.catppuccin"
     end,
+  }
+  use {
+    "luukvbaal/nnn.nvim",
+    config = function()
+      require("nnn").setup()
+    end
   }
   use {
     "folke/todo-comments.nvim",
