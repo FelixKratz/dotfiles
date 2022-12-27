@@ -32,7 +32,7 @@ toggle_devices() {
     COUNTER=$((COUNTER+1))
   done <<< "$(SwitchAudioSource -a -t output)"
 
-  sketchybar -m "${args[@]}"
+  sketchybar -m "${args[@]}" > /dev/null
 }
 
 if [ "$BUTTON" = "right" ] || [ "$MODIFIER" = "shift" ]; then

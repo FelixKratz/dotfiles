@@ -64,7 +64,7 @@ update() {
                                                           sketchybar --set github.bell popup.drawing=off")
   done <<< "$(echo "$NOTIFICATIONS" | jq -r '.[] | [.repository.name, .subject.latest_comment_url, .subject.type, .subject.title] | @sh')"
 
-  sketchybar -m "${args[@]}"
+  sketchybar -m "${args[@]}" > /dev/null
 
   if [ $COUNT -gt $PREV_COUNT ] 2>/dev/null || [ "$SENDER" = "forced" ]; then
     sketchybar --animate tanh 15 --set github.bell label.y_offset=5 label.y_offset=0
