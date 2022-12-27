@@ -25,20 +25,13 @@ alias gdiff="git diff HEAD"
 alias vdiff="git difftool HEAD"
 alias log="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
 alias cfg="git --git-dir=$HOME/dotfiles/ --work-tree=$HOME"
+alias push="git push"
+alias g="lazygit"
 
 
 eval "$(starship init zsh)"
 
 alias ssh="TERM=xterm-256color ssh"
-
-alias n="nnn"
-function nnn () {
-    command nnn "$@"
-
-    if [ -f "$NNN_TMPFILE" ]; then
-            . "$NNN_TMPFILE"
-    fi
-}
 
 # Sketchybar interactivity overloads
 function brew() {
@@ -47,6 +40,15 @@ function brew() {
   if [[ $* =~ "upgrade" ]] || [[ $* =~ "update" ]] || [[ $* =~ "outdated" ]]; then
     sketchybar --trigger brew_update
   fi
+}
+
+alias n="nnn"
+function nnn () {
+    command nnn "$@"
+
+    if [ -f "$NNN_TMPFILE" ]; then
+            . "$NNN_TMPFILE"
+    fi
 }
 
 # Fancy sketchybar commands
@@ -66,11 +68,15 @@ function zen () {
 
 function suyabai () {
   SHA256=$(shasum -a 256 /opt/homebrew/bin/yabai | awk "{print \$1;}")
-  sudo sed -i '' -e 's/sha256:[[:alnum:]]*/sha256:'${SHA256}'/' /private/etc/sudoers.d/yabai
+  if [ -f "/private/etc/sudoers.d/yabai" ]; then
+    sudo sed -i '' -e 's/sha256:[[:alnum:]]*/sha256:'${SHA256}'/' /private/etc/sudoers.d/yabai
+  else
+    echo "sudoers file does not exist yet"
+  fi
 }
-
 # Only load conda into path but dont actually use the bloat that comes with it
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export EDITOR="$(which nvim)"
 export VISUAL="$HOME/.config/nnn/plugins/selnew.sh"
+export XDG_CONFIG_HOME="$HOME/.config"

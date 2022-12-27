@@ -50,6 +50,7 @@ brew install sketchybar
 brew install svim
 brew install sf-symbols
 brew install switchaudio-osx
+brew install lazygit
 
 # Brew Casks
 echo "Installing Brew Casks..."
