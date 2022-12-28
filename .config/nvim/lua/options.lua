@@ -22,5 +22,4 @@ vim.cmd("set foldlevel=99")
 vim.cmd("set foldmethod=indent")
 vim.cmd("set foldnestmax=99")
 vim.cmd("set termguicolors")
-
 vim.cmd("set colorcolumn=80")

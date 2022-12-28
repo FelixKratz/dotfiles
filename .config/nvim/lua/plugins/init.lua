@@ -68,6 +68,7 @@ return require('packer').startup(function(use)
   use {
     "L3MON4D3/LuaSnip",
     after = "nvim-cmp",
+    requires = "onsails/lspkind.nvim",
     config = function()
       require "plugins.luasnip"
     end,
@@ -163,15 +164,6 @@ return require('packer').startup(function(use)
     end
   }
   use {
-    "catppuccin/nvim",
-    as = "catppuccin",
-    after = "bufferline.nvim",
-    run = ":CatppuccinCompile",
-    config = function()
-      require "plugins.catppuccin"
-    end,
-  }
-  use {
     "luukvbaal/nnn.nvim",
     config = function()
       require("nnn").setup()
@@ -184,6 +176,23 @@ return require('packer').startup(function(use)
       require "todo-comments".setup()
     end
   }
+  use {
+    "folke/trouble.nvim",
+    requires = "kyazdani42/nvim-web-devicons",
+    config = function()
+      require("plugins.trouble")
+    end
+  }
+  use {
+    "catppuccin/nvim",
+    as = "catppuccin",
+    after = "trouble.nvim",
+    run = ":CatppuccinCompile",
+    config = function()
+      require "plugins.catppuccin"
+    end,
+  }
+
   if packer_bootstrap then
     require "packer".sync()
   end

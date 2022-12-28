@@ -12,7 +12,9 @@ local options = {
     dap = {
       enabled = true,
       enable_ui = true,
-    }
+    },
+    cmp = true,
+    lsp_trouble = true,
   },
   custom_highlights = {
     Comment = { fg = colors.surface2, style = { "italic" } }, -- just comments

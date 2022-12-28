@@ -3,10 +3,27 @@ vim.opt.completeopt = "menuone,noselect"
 local cmp = require("cmp")
 
 local options = {
+  window = {
+    completion = {
+      border = "rounded",
+      side_padding = 1,
+      winhighlight = "Normal:Normal,FloatBorder:Normal,CursorLine:Visual,Search:None",
+      zindex = 1001,
+    },
+    documentation = {
+      border = "rounded",
+      side_padding = 1,
+      winhighlight = "Normal:Normal,FloatBorder:Normal,CursorLine:Visual,Search:None",
+      zindex = 1001,
+    }
+  },
   snippet = {
     expand = function(args)
       require("luasnip").lsp_expand(args.body)
     end,
+  },
+  formatting = {
+    format = require 'lspkind'.cmp_format( { mode = "symbol_text" } ),
   },
   mapping = {
     ["<C-Space>"] = cmp.mapping.complete(),
