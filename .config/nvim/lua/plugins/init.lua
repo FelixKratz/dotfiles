@@ -82,10 +82,6 @@ return require('packer').startup(function(use)
     after = "cmp_luasnip",
   }
   use {
-    'nvim-telescope/telescope.nvim',
-    requires = { {'nvim-lua/plenary.nvim'} }
-  }
-  use {
     "hrsh7th/cmp-nvim-lsp",
     after = "cmp-nvim-lua",
   }
@@ -181,6 +177,14 @@ return require('packer').startup(function(use)
     requires = "kyazdani42/nvim-web-devicons",
     config = function()
       require("plugins.trouble")
+    end
+  }
+  use {
+    'nvim-telescope/telescope.nvim',
+    requires = { {'nvim-lua/plenary.nvim'} },
+    after = "trouble.nvim",
+    config = function()
+      require "plugins.telescope"
     end
   }
   use {
