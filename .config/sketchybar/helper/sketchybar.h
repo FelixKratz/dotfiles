@@ -179,11 +179,11 @@ static inline bool mach_server_begin(struct mach_server* mach_server, mach_handl
 
   mach_server->handler = handler;
   mach_server->is_running = true;
+  struct mach_buffer buffer;
   while (mach_server->is_running) {
-    struct mach_buffer* buffer = (struct mach_buffer*)malloc(sizeof(struct mach_buffer));
-    mach_receive_message(mach_server->port, buffer, false);
-    mach_server->handler((env)buffer->message.descriptor.address);
-    mach_msg_destroy(&buffer->message.header);
+    mach_receive_message(mach_server->port, &buffer, false);
+    mach_server->handler((env)buffer.message.descriptor.address);
+    mach_msg_destroy(&buffer.message.header);
   }
 
   return true;
