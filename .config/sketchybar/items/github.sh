@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
 
@@ -19,7 +19,7 @@ sketchybar --add       item            github.bell right                  \
            --add       item            github.template popup.github.bell  \
            --set       github.template drawing=off                        \
                                        background.corner_radius=12        \
-                                       background.padding_left=7          \
-                                       background.padding_right=7         \
+                                       padding_left=7                     \
+                                       padding_right=7                    \
                                        icon.background.height=2           \
                                        icon.background.y_offset=-12

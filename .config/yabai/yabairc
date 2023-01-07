@@ -17,6 +17,7 @@ yabai -m config external_bar               all:39:0     \
                 window_border              on           \
                 mouse_follows_focus        off          \
                 focus_follows_mouse        off          \
+                window_zoom_persist        off          \
                 window_placement           second_child \
                 window_topmost             off          \
                 window_shadow              float        \
@@ -27,7 +28,7 @@ yabai -m config external_bar               all:39:0     \
                 window_border_width        2            \
                 window_border_hidpi        off          \
                 window_border_radius       11           \
-                window_animation_duration  0.2          \
+                window_animation_duration  0.22         \
                 active_window_border_color 0xffe1e3e4   \
                 normal_window_border_color 0xff2a2f38   \
                 insert_feedback_color      0xff9dd274   \

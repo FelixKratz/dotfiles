@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 source "$HOME/.config/sketchybar/colors.sh"
 

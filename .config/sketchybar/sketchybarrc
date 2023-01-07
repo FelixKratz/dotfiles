@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 source "$HOME/.config/sketchybar/colors.sh" # Loads all defined colors
 source "$HOME/.config/sketchybar/icons.sh" # Loads all defined icons
@@ -41,8 +41,8 @@ sketchybar --bar     height=39                                         \
                      label.color=$LABEL_COLOR                          \
                      label.padding_left=$PADDINGS                      \
                      label.padding_right=$PADDINGS                     \
-                     background.padding_right=$PADDINGS                \
-                     background.padding_left=$PADDINGS                 \
+                     padding_right=$PADDINGS                           \
+                     padding_left=$PADDINGS                            \
                      background.height=30                              \
                      background.corner_radius=9                        \
                      popup.background.border_width=2                   \
@@ -63,8 +63,8 @@ source "$ITEM_DIR/spotify.sh"
 source "$ITEM_DIR/calendar.sh"
 source "$ITEM_DIR/brew.sh"
 source "$ITEM_DIR/github.sh"
+source "$ITEM_DIR/battery.sh"
 source "$ITEM_DIR/volume.sh"
-source "$ITEM_DIR/divider.sh"
 source "$ITEM_DIR/cpu.sh"
 
 # Forcing all item scripts to run (never do this outside of sketchybarrc)

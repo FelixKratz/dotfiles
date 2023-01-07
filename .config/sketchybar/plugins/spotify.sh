@@ -80,6 +80,28 @@ update ()
   sketchybar -m "${args[@]}"
 }
 
+scrubbing() {
+  DURATION_MS=$(osascript -e 'tell application "Spotify" to get duration of current track')
+  DURATION=$((DURATION_MS/1000))
+
+  TARGET=$((DURATION*PERCENTAGE/100))
+  osascript -e "tell application \"Spotify\" to set player position to $TARGET"
+  sketchybar --set spotify.state slider.percentage=$PERCENTAGE
+}
+
+scroll() {
+  DURATION_MS=$(osascript -e 'tell application "Spotify" to get duration of current track')
+  DURATION=$((DURATION_MS/1000))
+
+  FLOAT="$(osascript -e 'tell application "Spotify" to get player position')"
+  TIME=${FLOAT%.*}
+  
+  sketchybar --animate linear 10 \
+             --set spotify.state slider.percentage="$((TIME*100/DURATION))" \
+                                 icon="$(date -r $TIME +'%M:%S')" \
+                                 label="$(date -r $DURATION +'%M:%S')"
+}
+
 mouse_clicked () {
   case "$NAME" in
     "spotify.next") next
@@ -92,6 +114,8 @@ mouse_clicked () {
     ;;
     "spotify.repeat") repeat
     ;;
+    "spotify.state") scrubbing
+    ;;
     *) exit
     ;;
   esac
@@ -101,12 +125,23 @@ popup () {
   sketchybar --set spotify.anchor popup.drawing=$1
 }
 
+routine() {
+  case "$NAME" in
+    "spotify.state") scroll
+    ;;
+    *) update
+    ;;
+  esac
+}
+
 case "$SENDER" in
   "mouse.clicked") mouse_clicked
   ;;
   "mouse.entered") popup on
   ;;
   "mouse.exited"|"mouse.exited.global") popup off
+  ;;
+  "routine") routine
   ;;
   *) update
   ;;

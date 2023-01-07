@@ -1,16 +1,22 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
-toggle_mute() {
-  sketchybar --set "$NAME" popup.drawing=off
+WIDTH=100
 
-  MUTED=$(osascript -e 'output muted of (get volume settings)')
+detail_on() {
+  sketchybar --animate tanh 30 --set volume slider.width=$WIDTH
+}
 
-  if [ "$MUTED" = "false" ]; then
-    osascript -e 'set volume output muted true'
+detail_off() {
+  sketchybar --animate tanh 30 --set volume slider.width=0
+}
+
+toggle_detail() {
+  INITIAL_WIDTH=$(sketchybar --query volume | jq -r ".slider.width")
+  if [ "$INITIAL_WIDTH" -eq "0" ]; then
+    detail_on
   else
-    osascript -e 'set volume output muted false'
+    detail_off
   fi
-  exit 0
 }
 
 toggle_devices() {
@@ -28,7 +34,7 @@ toggle_devices() {
     args+=(--add item volume.device.$COUNTER popup."$NAME" \
            --set volume.device.$COUNTER label="${device}" \
                                         label.color="$COLOR" \
-                 click_script="SwitchAudioSource -s \"${device}\" && sketchybar --set /volume.device\.*/ label.color=$GREY --set \$NAME label.color=$WHITE")
+                 click_script="SwitchAudioSource -s \"${device}\" && sketchybar --set /volume.device\.*/ label.color=$GREY --set \$NAME label.color=$WHITE --set $NAME popup.drawing=off")
     COUNTER=$((COUNTER+1))
   done <<< "$(SwitchAudioSource -a -t output)"
 
@@ -38,5 +44,5 @@ toggle_devices() {
 if [ "$BUTTON" = "right" ] || [ "$MODIFIER" = "shift" ]; then
   toggle_devices
 else
-  toggle_mute
+  toggle_detail
 fi

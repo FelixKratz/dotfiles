@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" "13" "14" "15")
 
@@ -15,8 +15,8 @@ do
                               icon=${SPACE_ICONS[i]}                        \
                               icon.padding_left=10                          \
                               icon.padding_right=15                         \
-                              background.padding_left=2                     \
-                              background.padding_right=2                    \
+                              padding_left=2                                \
+                              padding_right=2                               \
                               label.padding_right=20                        \
                               icon.highlight_color=$RED                     \
                               label.font="sketchybar-app-font:Regular:16.0" \
@@ -39,8 +39,8 @@ sketchybar --add bracket spaces '/space\..*/'                  \
 sketchybar   --add item       separator left                                  \
              --set separator  icon=                                          \
                               icon.font="Hack Nerd Font:Regular:16.0"         \
-                              background.padding_left=17                      \
-                              background.padding_right=10                     \
+                              padding_left=17                                 \
+                              padding_right=10                                \
                               label.drawing=off                               \
                               associated_display=active                       \
                               click_script='yabai -m space --create
