@@ -1,10 +1,6 @@
 # dotfiles
 My macOS configuration files.
-<img width="1512" alt="Screenshot 2022-11-11 at 17 33 00" src="https://user-images.githubusercontent.com/22680421/201389026-20255532-8c7a-4c48-a34c-e8e3b1cb03fa.png">
-
-
-
-
+<img width="1512" alt="desktop" src="https://user-images.githubusercontent.com/22680421/211197150-f1ff3f18-4b1a-4c6c-8174-ff70997af0fd.png">
 
 jklö centric navigation and vim moves for my german keyboard.
 nvim as a capable C/C++ debugging environment.
@@ -23,16 +19,17 @@ SketchyBar Features:
 
 * I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces. The active space animates their active applications to disappear:
 
-https://user-images.githubusercontent.com/22680421/201390794-92b37f3a-631f-4312-bb3f-342a5c963928.mov
+https://user-images.githubusercontent.com/22680421/211197218-edb9cbd0-9be9-488c-b8ad-e96acf8a697c.mp4
 
 * Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled)
 
 * Mousing over the music icon in the center gives a small spotify player widget with player controls:
-<img width="492" alt="Screenshot 2022-11-11 at 17 54 31" src="https://user-images.githubusercontent.com/22680421/201390348-2b3d038d-24fc-448c-b5e5-827275303295.png">
+<img width="381" alt="spotify" src="https://user-images.githubusercontent.com/22680421/211197221-a3d6f8dd-4a72-4cc1-9224-78c1e7ebbb75.png">
 
-* The volume icon on the right side can be clicked to toggle mute and animates volume changes:
 
-https://user-images.githubusercontent.com/22680421/201391279-14c89e0b-af16-4b29-b815-82da2d230863.mov
+* The volume icon on the right side can be clicked to toggle the volume slider and animates volume changes:
+
+https://user-images.githubusercontent.com/22680421/211197240-632582a1-7f88-4cf2-bec7-88587112b996.mp4
 
 * The volume icon on the right side can be right-clicked to show and select the audio output device:
 ![Screenshot 2022-12-11 at 12 46 48](https://user-images.githubusercontent.com/22680421/206901837-f4f8793e-ba0f-465b-b3a5-72d4fea17de4.png)
