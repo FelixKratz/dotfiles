@@ -39,6 +39,8 @@ https://user-images.githubusercontent.com/22680421/211197240-632582a1-7f88-4cf2-
 * Clicking the date/time toggles a "zen" mode, hiding all distracting items in the bar:
 <img width="1512" alt="Screenshot 2022-11-11 at 18 01 32" src="https://user-images.githubusercontent.com/22680421/201391668-c4282435-9866-491d-a007-398942abdfb9.png">
 
+* The battery indicator is only shown when below 60%:
+<img width="552" alt="battery" src="https://user-images.githubusercontent.com/22680421/211197318-6b6b5164-3fa9-44a1-856b-391c3b233fe2.png">
 
 SketchyBar Setup
 ----------------------
