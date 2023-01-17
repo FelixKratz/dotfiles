@@ -15,6 +15,7 @@ local options = {
     },
     cmp = true,
     lsp_trouble = true,
+    leap = true,
   },
   custom_highlights = {
     Comment = { fg = colors.surface2, style = { "italic" } }, -- just comments

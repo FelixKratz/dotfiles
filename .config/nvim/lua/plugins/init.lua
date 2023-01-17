@@ -172,6 +172,15 @@ return require('packer').startup(function(use)
       require "todo-comments".setup()
     end
   }
+  use "chaoren/vim-wordmotion"
+  use {
+    "ggandor/leap.nvim",
+    config = function()
+      require('leap').add_default_mappings()
+      vim.keymap.set('n', 'f', '<Plug>(leap-forward)', {})
+      vim.keymap.set('n', 'F', '<Plug>(leap-backward)', {})
+    end,
+  }
   use {
     "folke/trouble.nvim",
     requires = "kyazdani42/nvim-web-devicons",
@@ -194,6 +203,13 @@ return require('packer').startup(function(use)
     run = ":CatppuccinCompile",
     config = function()
       require "plugins.catppuccin"
+    end,
+  }
+  use {
+    "LeonHeidelbach/trailblazer.nvim",
+    after = "catppuccin",
+    config = function()
+        require("plugins.trailblazer")
     end,
   }
 
