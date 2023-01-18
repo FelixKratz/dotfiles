@@ -197,20 +197,27 @@ return require('packer').startup(function(use)
     end
   }
   use {
+    "kiyoon/jupynium.nvim",
+    run = "pip3 install --user .",
+    config = function()
+      require "plugins.jupynium"
+    end
+  }
+  use {
     "catppuccin/nvim",
     as = "catppuccin",
     after = "trouble.nvim",
     run = ":CatppuccinCompile",
     config = function()
       require "plugins.catppuccin"
-    end,
+    end
   }
   use {
     "LeonHeidelbach/trailblazer.nvim",
     after = "catppuccin",
     config = function()
         require("plugins.trailblazer")
-    end,
+    end
   }
 
   if packer_bootstrap then
