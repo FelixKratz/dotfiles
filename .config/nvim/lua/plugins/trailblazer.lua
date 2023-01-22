@@ -3,20 +3,27 @@ require("trailblazer").setup(
 {
   lang = "en",
   trail_options = {
-    -- Available modes to cycle through. Remove any you don't need.
-    available_trail_mark_modes = { "global_line_sorted", "buffer_local_line_sorted" },
-    -- The current / initially selected trail mark selection mode. Choose from one of the
-    -- available modes: global, global_line_sorted, buffer_local, buffer_local_line_sorted
-    current_trail_mark_mode = "buffer_local_line_sorted",
-    verbose_trail_mark_select = true, -- print current mode notification on mode change
+    available_trail_mark_modes = { -- available modes to cycle through
+      "global_chron_buf_switch_group_chron",
+      "buffer_local_line_sorted"
+    },
+    current_trail_mark_mode               = "global_chron_buf_switch_group_chron",
+    verbose_trail_mark_select             = true,
+    newest_mark_symbol                    = "",
+    cursor_mark_symbol                    = "",
+    next_mark_symbol                      = "ﭠ",
+    previous_mark_symbol                  = "ﭢ",
+    number_line_color_enabled             = true,
+    symbol_line_enabled                   = true,
+    multiple_mark_symbol_counters_enabled = false,
   },
   mappings = {
-    nv = { -- Mode union: normal & visual mode. Can be extended by adding i, x, ...
+    nv = { -- Mode union: normal & visual mode
       motions = {
-        new_trail_mark     = '<C-m>',
-        track_back         = '<C-b>',
-        peek_move_backward = '<C-k>',
-        peek_move_forward  = '<C-l>',
+        new_trail_mark        = '<C-m>',
+        track_back            = '<C-b>',
+        peek_move_next_down   = '<C-k>',
+        peek_move_previous_up = '<C-l>',
       },
       actions = {
         delete_all_trail_marks     = '<C-j>',
@@ -27,36 +34,29 @@ require("trailblazer").setup(
     },
   },
   hl_groups = {
+    TrailBlazerTrailMarkNext = {
+      guifg = colors.green,
+      guibg = "none",
+    },
+    TrailBlazerTrailMarkPrevious = {
+      guifg = colors.red,
+      guibg = "none",
+    },
     TrailBlazerTrailMarkCursor = {
-      -- You can add any valid highlight group attribute to this table
       guifg = colors.crust,
-      guibg = colors.orange,
-      gui   = "bold",
+      guibg = colors.overlay0,
     },
     TrailBlazerTrailMarkNewest = {
       guifg = colors.crust,
       guibg = colors.sky,
-      gui   = "bold",
     },
-    TrailBlazerTrailMarkGlobal = {
+    TrailBlazerTrailMarkGlobalChronBufSwitchGroupChron = {
       guifg = colors.crust,
-      guibg = colors.mauve,
-      gui   = "bold",
-    },
-    TrailBlazerTrailMarkGlobalLineSorted = {
-      guifg = colors.crust,
-      guibg = colors.red,
-      gui   = "bold",
-    },
-    TrailBlazerTrailMarkBufferLocal = {
-      guifg = colors.crust,
-      guibg = colors.green,
-      gui   = "bold",
+      guibg = colors.peach,
     },
     TrailBlazerTrailMarkBufferLocalLineSorted = {
       guifg = colors.crust,
-      guibg = colors.lavender,
-      gui   = "bold",
+      guibg = colors.mauve,
     },
   },
 })
