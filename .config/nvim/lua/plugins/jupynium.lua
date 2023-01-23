@@ -9,7 +9,7 @@ require("jupynium").setup({
   -- which means that it will open the Selenium browser when you open this file.
   -- Related command :JupyniumStartAndAttachToServer
   auto_start_server = {
-    enable = false,
+    enable = true,
     file_pattern = { "*.ju.*" },
   },
 
@@ -25,7 +25,7 @@ require("jupynium").setup({
   -- when you open a .ju.py file on nvim.
   -- Related command :JupyniumStartSync
   auto_start_sync = {
-    enable = false,
+    enable = true,
     file_pattern = { "*.ju.*", "*.md" },
   },
 
@@ -52,7 +52,7 @@ require("jupynium").setup({
     },
   },
 
-  use_default_keybindings = true,
+  use_default_keybindings = false,
   textobjects = {
     use_default_keybindings = true,
   },
@@ -60,4 +60,21 @@ require("jupynium").setup({
   -- Dim all cells except the current one
   -- Related command :JupyniumShortsightedToggle
   shortsighted = false,
+})
+
+local augroup = vim.api.nvim_create_augroup("jupynium", { clear = false })
+
+vim.api.nvim_create_autocmd({ "BufWinEnter" }, {
+  pattern = "*.ju.*",
+  callback = function()
+    local buf_id = vim.api.nvim_get_current_buf()
+    vim.keymap.set({ "n", "x" }, "<C-x>", "<cmd>JupyniumExecuteSelectedCells<CR>", { buffer = buf_id })
+    vim.keymap.set({ "n", "x" }, "<space>x", "<cmd>JupyniumExecuteSelectedCells<CR><cmd>lua require'jupynium.textobj'.goto_next_cell_separator()<cr>", { buffer = buf_id })
+    vim.keymap.set({ "n", "x" }, "<space>c", "<cmd>JupyniumClearSelectedCellsOutputs<CR>", { buffer = buf_id })
+    vim.keymap.set({ "n", "x" }, "<space>S", "<cmd>JupyniumScrollToCell<cr>", { buffer = buf_id })
+    vim.keymap.set({ "n", "x" }, "<space>T", "<cmd>JupyniumToggleSelectedCellsOutputsScroll<cr>", { buffer = buf_id })
+    vim.keymap.set("", "<PageUp>", "<cmd>JupyniumScrollUp<cr>", { buffer = buf_id })
+    vim.keymap.set("", "<PageDown>", "<cmd>JupyniumScrollDown<cr>", { buffer = buf_id })
+  end,
+  group = augroup,
 })
