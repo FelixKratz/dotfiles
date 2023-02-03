@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 zen_on() {
   sketchybar --set github.bell drawing=off \
@@ -8,7 +8,7 @@ zen_on() {
              --set system.yabai drawing=off \
              --set separator drawing=off \
              --set front_app drawing=off \
-             --set volume_alias drawing=off \
+             --set volume_icon drawing=off \
              --set spotify.anchor drawing=off \
              --set spotify.play updates=off \
              --set brew drawing=off
@@ -22,7 +22,7 @@ zen_off() {
              --set separator drawing=on \
              --set front_app drawing=on \
              --set system.yabai drawing=on \
-             --set volume_alias drawing=on \
+             --set volume_icon drawing=on \
              --set spotify.play updates=on \
              --set brew drawing=on
 }

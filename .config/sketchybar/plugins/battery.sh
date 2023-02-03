@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
@@ -30,4 +30,3 @@ if [[ $CHARGING != "" ]]; then
 fi
 
 sketchybar --set $NAME drawing=$DRAWING icon="$ICON" icon.color=$COLOR
-

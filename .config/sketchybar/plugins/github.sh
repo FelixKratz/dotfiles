@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 update() {
   source "$HOME/.config/sketchybar/colors.sh"
@@ -51,17 +51,20 @@ update() {
       args+=(--set github.bell icon.color=$COLOR)
     fi
     
+    notification=(
+      label="$(echo "$title" | sed -e "s/^'//" -e "s/'$//")"
+      icon="$ICON $(echo "$repo" | sed -e "s/^'//" -e "s/'$//"):"
+      icon.padding_left="$PADDING"
+      label.padding_right="$PADDING"
+      icon.color=$COLOR
+      position=popup.github.bell
+      icon.background.color=$COLOR
+      drawing=on
+      click_script="open $URL; sketchybar --set github.bell popup.drawing=off"
+    )
+
     args+=(--clone github.notification.$COUNTER github.template \
-           --set github.notification.$COUNTER label="$(echo "$title" | sed -e "s/^'//" -e "s/'$//")" \
-                                            icon="$ICON $(echo "$repo" | sed -e "s/^'//" -e "s/'$//"):" \
-                                            icon.padding_left="$PADDING" \
-                                            label.padding_right="$PADDING" \
-                                            icon.color=$COLOR \
-                                            position=popup.github.bell \
-                                            icon.background.color=$COLOR \
-                                            drawing=on \
-                                            click_script="open $URL;
-                                                          sketchybar --set github.bell popup.drawing=off")
+           --set github.notification.$COUNTER "${notification[@]}")
   done <<< "$(echo "$NOTIFICATIONS" | jq -r '.[] | [.repository.name, .subject.latest_comment_url, .subject.type, .subject.title] | @sh')"
 
   sketchybar -m "${args[@]}" > /dev/null

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # General Icons
 LOADING=􀖇
@@ -37,3 +37,10 @@ BATTERY_50=􀺶
 BATTERY_25=􀛩
 BATTERY_0=􀛪
 BATTERY_CHARGING=􀢋
+
+# Volume Icons
+VOLUME_100=􀊩
+VOLUME_66=􀊧
+VOLUME_33=􀊥
+VOLUME_10=􀊡
+VOLUME_0=􀊣
