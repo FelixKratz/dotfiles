@@ -104,4 +104,14 @@ lalt - v : yabai -m window --insert south; skhd -k "cmd - n"
 
 # Toggle sketchybar
 shift + lalt - space : sketchybar --bar hidden=toggle
-shift + lalt - r : sketchybar --exit
+shift + lalt - r : sketchybar --remove '/.*/' && sh -c '$HOME/.config/sketchybar/sketchybarrc'
+
+# Toggle margin of sketchybar
+shift + lalt - m : CURRENT="$(sketchybar --query bar | jq -r '.y_offset')"; \
+                  if [ "$CURRENT" -eq "0" ]; then \
+                    yabai -m config external_bar all:49:0; \
+                    sketchybar --animate sin 15 --bar margin=10 y_offset=10 corner_radius=9; \
+                  else \
+                    yabai -m config external_bar all:39:0; \
+                    sketchybar --animate sin 15 --bar margin=0 y_offset=0 corner_radius=0; \
+                  fi \

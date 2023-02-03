@@ -6,14 +6,14 @@ launchctl unload -F /System/Library/LaunchAgents/com.apple.WindowManager.plist >
 sudo yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
-yabai -m signal --add event=display_added action="sleep 1 && $HOME/.config/yabai/create_spaces.sh"
+yabai -m signal --add event=display_added action="sleep 2 && $HOME/.config/yabai/create_spaces.sh"
 yabai -m signal --add event=display_removed action="sleep 1 && $HOME/.config/yabai/create_spaces.sh"
 yabai -m signal --add event=window_created action="sketchybar --trigger windows_on_spaces"
 yabai -m signal --add event=window_destroyed action="sketchybar --trigger windows_on_spaces"
 
 $HOME/.config/yabai/create_spaces.sh
 
-yabai -m config external_bar               all:39:0     \
+yabai -m config external_bar               all:49:0     \
                 window_border              on           \
                 mouse_follows_focus        off          \
                 focus_follows_mouse        off          \
@@ -39,7 +39,7 @@ yabai -m config external_bar               all:39:0     \
                 mouse_action2              resize       \
                 mouse_drop_action          swap         \
                                                         \
-                top_padding                20           \
+                top_padding                10           \
                 bottom_padding             10           \
                 left_padding               10           \
                 right_padding              10           \
