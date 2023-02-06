@@ -5,7 +5,7 @@ zen_on() {
              --set apple.logo drawing=off \
              --set '/cpu.*/' drawing=off \
              --set calendar icon.drawing=off \
-             --set system.yabai drawing=off \
+             --set yabai drawing=off \
              --set separator drawing=off \
              --set front_app drawing=off \
              --set volume_icon drawing=off \
@@ -21,7 +21,7 @@ zen_off() {
              --set calendar icon.drawing=on \
              --set separator drawing=on \
              --set front_app drawing=on \
-             --set system.yabai drawing=on \
+             --set yabai drawing=on \
              --set volume_icon drawing=on \
              --set spotify.play updates=on \
              --set brew drawing=on

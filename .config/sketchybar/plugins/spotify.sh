@@ -56,25 +56,23 @@ update ()
   if [ $PLAYING -eq 0 ]; then
     curl -s --max-time 20 "$COVER" -o /tmp/cover.jpg
     if [ "$ARTIST" == "" ]; then
-      args+=(--set spotify.title label="$TRACK" \
-             --set spotify.album label="Podcast" \
+      args+=(--set spotify.title label="$TRACK"
+             --set spotify.album label="Podcast"
              --set spotify.artist label="$ALBUM"  )
     else
-      args+=(--set spotify.title label="$TRACK" \
-             --set spotify.album label="$ALBUM" \
+      args+=(--set spotify.title label="$TRACK"
+             --set spotify.album label="$ALBUM"
              --set spotify.artist label="$ARTIST")
     fi
-    args+=(--set spotify.play icon=􀊆 \
-           --set spotify.shuffle icon.highlight=$SHUFFLE \
-           --set spotify.repeat icon.highlight=$REPEAT \
-           --set spotify.cover background.image="/tmp/cover.jpg" \
-                               background.color=0x00000000 \
-           --set spotify.anchor drawing=on                         )
+    args+=(--set spotify.play icon=􀊆
+           --set spotify.shuffle icon.highlight=$SHUFFLE
+           --set spotify.repeat icon.highlight=$REPEAT
+           --set spotify.cover background.image="/tmp/cover.jpg"
+                               background.color=0x00000000
+           --set spotify.anchor drawing=on                      )
   else
-    args+=(--set spotify.title \
-           --set spotify.artist \
-           --set spotify.anchor drawing=off popup.drawing=off \
-           --set spotify.play icon=􀊄                           )
+    args+=(--set spotify.anchor drawing=off popup.drawing=off
+           --set spotify.play icon=􀊄                         )
   fi
   sketchybar -m "${args[@]}"
 }
