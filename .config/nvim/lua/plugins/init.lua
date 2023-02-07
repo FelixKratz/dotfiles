@@ -1,226 +1,178 @@
-local fn = vim.fn
-local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
-if fn.empty(fn.glob(install_path)) > 0 then
-  packer_bootstrap = fn.system({'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path})
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git",
+    "clone",
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable", -- latest stable release
+    lazypath,
+  })
 end
+vim.opt.rtp:prepend(lazypath)
 
-local options = {
-  auto_clean = true,
-  compile_on_sync = true,
-  git = { clone_timeout = 6000 },
-  display = {
-    working_sym = "ﲊ",
-    error_sym = "✗ ",
-    done_sym = " ",
-    removed_sym = " ",
-    moved_sym = "",
-    open_fn = function()
-      return require "packer.util".float { border = "single" }
-    end,
-  },
-}
-
-return require('packer').startup(function(use)
-  require('packer').init(options)
-
-  use 'wbthomason/packer.nvim'
-  use {
-    'nvim-treesitter/nvim-treesitter',
-    run = ':TSUpdate',
+return require("lazy").setup(
+{
+  "rafamadriz/friendly-snippets",
+  "saadparwaiz1/cmp_luasnip",
+  "hrsh7th/cmp-nvim-lua",
+  "hrsh7th/cmp-nvim-lsp",
+  "hrsh7th/cmp-path",
+  "junegunn/vim-easy-align",
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
     config = function()
       require "plugins.treesitter"
     end,
-  }
-  use {
+  },
+  {
     "neovim/nvim-lspconfig",
     config = function()
       require "plugins.lspconfig"
     end,
-  }
-  use {
+  },
+  {
     "williamboman/mason.nvim",
-    after = "nvim-lspconfig",
     config = function()
       require "plugins.mason"
     end,
-  }
-  use {
+  },
+  {
     "williamboman/mason-lspconfig.nvim",
-    after = "mason.nvim",
     config = function()
       require "plugins.mason_lspconfig"
     end,
-  }
-  use { 'simrat39/rust-tools.nvim',
-    after = "mason-lspconfig.nvim",
+  },
+  { "simrat39/rust-tools.nvim",
     config = function()
       require "rust-tools".setup()
     end,
-  }
-  use "rafamadriz/friendly-snippets"
-  use {
+  },
+  {
     "hrsh7th/nvim-cmp",
-    after = "friendly-snippets",
     config = function()
       require "plugins.cmp"
     end,
-  }
-  use {
+  },
+  {
     "L3MON4D3/LuaSnip",
-    after = "nvim-cmp",
-    requires = "onsails/lspkind.nvim",
+    dependencies = "onsails/lspkind.nvim",
     config = function()
       require "plugins.luasnip"
     end,
-  }
-  use {
-    "saadparwaiz1/cmp_luasnip",
-    after = "LuaSnip",
-  }
-  use {
-    "hrsh7th/cmp-nvim-lua",
-    after = "cmp_luasnip",
-  }
-  use {
-    "hrsh7th/cmp-nvim-lsp",
-    after = "cmp-nvim-lua",
-  }
-  -- use {
-  --   'hrsh7th/cmp-nvim-lsp-signature-help',
-  --   after = "cmp-nvim-lsp",
-  -- }
-  use {
-    "hrsh7th/cmp-path",
-    after = "cmp-nvim-lsp",
-  }
-  use {
+  },
+  {
     "ray-x/lsp_signature.nvim",
     config = function()
       require "lsp_signature".setup()
     end
-  }
-  use {
-    'lukas-reineke/indent-blankline.nvim',
-    after = "nvim-treesitter",
+  },
+  {
+    "lukas-reineke/indent-blankline.nvim",
     config = function()
       require "plugins.blankline"
     end,
-  }
-  use {
-    'lewis6991/gitsigns.nvim',
+  },
+  {
+    "lewis6991/gitsigns.nvim",
     config = function()
       require "gitsigns".setup()
     end
-  }
-  use "junegunn/vim-easy-align"
-  use {
-    "karb94/neoscroll.nvim",
-    config = function()
-      require "neoscroll".setup()
-    end,
-  }
-  use {
+  },
+  {
+    lazy = true,
     "mfussenegger/nvim-dap",
     config = function()
       require "plugins.dap"
     end,
-  }
-  use {
-    'mfussenegger/nvim-dap-python',
-    after = "nvim-dap",
+  },
+  {
+    lazy = true,
+    "mfussenegger/nvim-dap-python",
     config = function()
-      require "dap-python".setup('python')
+      require "dap-python".setup("python")
     end,
-  }
-  use {
+  },
+  {
+    lazy = true,
     "rcarriga/nvim-dap-ui",
-    after = "nvim-dap",
     config = function()
       require "plugins.dapui"
     end,
-  }
-  use {
-    'numToStr/Comment.nvim',
+  },
+  {
+    lazy = true,
+    "numToStr/Comment.nvim",
     config = function()
         require "Comment".setup()
     end
-  }
-  use {
-    'norcalli/nvim-colorizer.lua',
+  },
+  {
+    "norcalli/nvim-colorizer.lua",
     config = function()
       require "colorizer".setup()
     end
-  }
-  use {
-    'akinsho/bufferline.nvim',
-    tag = "v2.*",
-    requires = 'kyazdani42/nvim-web-devicons',
+  },
+  {
+    "akinsho/bufferline.nvim",
+    version = "v2.*",
+    dependencies = "kyazdani42/nvim-web-devicons",
     config = function()
       require "plugins.bufferline"
     end
-  }
-  use {
+  },
+  {
+    lazy = true,
     "luukvbaal/nnn.nvim",
     config = function()
       require("nnn").setup()
     end
-  }
-  use {
+  },
+  {
     "folke/todo-comments.nvim",
-    requires = "nvim-lua/plenary.nvim",
+    dependencies = "nvim-lua/plenary.nvim",
     config = function()
       require "todo-comments".setup()
     end
-  }
-  use "chaoren/vim-wordmotion"
-  use {
+  },
+  {
+    lazy = true,
     "ggandor/leap.nvim",
     config = function()
-      require('leap').add_default_mappings()
-      vim.keymap.set('n', 'f', '<Plug>(leap-forward)', {})
-      vim.keymap.set('n', 'F', '<Plug>(leap-backward)', {})
+      require("leap").add_default_mappings()
+      vim.keymap.set("n", "f", "<Plug>(leap-forward)", {})
+      vim.keymap.set("n", "F", "<Plug>(leap-backward)", {})
     end,
-  }
-  use {
-    "folke/trouble.nvim",
-    requires = "kyazdani42/nvim-web-devicons",
+  },
+  {
+    lazy = true,
+    "nvim-telescope/telescope.nvim",
+    dependencies = "nvim-lua/plenary.nvim",
     config = function()
-      require("plugins.trouble")
+      require("telescope").setup()
     end
-  }
-  use {
-    'nvim-telescope/telescope.nvim',
-    requires = { {'nvim-lua/plenary.nvim'} },
-    after = "trouble.nvim",
-    config = function()
-      require "plugins.telescope"
-    end
-  }
-  use {
+  },
+  {
+    lazy = true,
     "kiyoon/jupynium.nvim",
-    run = "pip3 install --user .",
+    build = "pip3 install --user .",
     config = function()
       require "plugins.jupynium"
     end
-  }
-  use {
+  },
+  {
     "catppuccin/nvim",
-    as = "catppuccin",
-    after = "trouble.nvim",
-    run = ":CatppuccinCompile",
+    name = "catppuccin",
+    build = ":CatppuccinCompile",
     config = function()
       require "plugins.catppuccin"
     end
-  }
-  use {
+  },
+  {
     "LeonHeidelbach/trailblazer.nvim",
-    after = "catppuccin",
     config = function()
         require("plugins.trailblazer")
     end
-  }
-
-  if packer_bootstrap then
-    require "packer".sync()
-  end
-end)
+  },
+})

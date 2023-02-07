@@ -14,7 +14,7 @@ vim.opt.showmode = false
 
 vim.opt.laststatus = 3
 vim.opt.statusline=' '
-vim.opt.cmdheight = 0
+vim.opt.cmdheight = 1
 
 vim.cmd("set foldcolumn=0")
 vim.cmd("set foldenable")

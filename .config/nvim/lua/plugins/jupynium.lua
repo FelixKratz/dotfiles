@@ -1,9 +1,8 @@
 require("jupynium").setup({
-  -- Conda users:
-  -- python_host = "~/miniconda3/envs/jupynium/bin/python",
-  python_host = vim.g.python3_host_prog or "python3",
-
-  default_notebook_URL = "localhost:8888",
+  -- Used when notebook is launched by using jupyter_command.
+  -- If nil or "", it will open at the git directory of the current buffer,
+  -- but still navigate to the directory of the current buffer. (e.g. localhost:8888/tree/path/to/buffer)
+  notebook_dir = "/tmp",
 
   -- Open the Jupynium server if it is not already running
   -- which means that it will open the Selenium browser when you open this file.
@@ -18,7 +17,7 @@ require("jupynium").setup({
   -- Related command :JupyniumAttachToServer
   auto_attach_to_server = {
     enable = true,
-    file_pattern = { "*.ju.*", "*.md" },
+    file_pattern = { "*.ju.*" },
   },
 
   -- Automatically open an Untitled.ipynb file on Notebook
@@ -26,7 +25,7 @@ require("jupynium").setup({
   -- Related command :JupyniumStartSync
   auto_start_sync = {
     enable = true,
-    file_pattern = { "*.ju.*", "*.md" },
+    file_pattern = { "*.ju.*" },
   },
 
   -- Automatically keep filename.ipynb copy of filename.ju.py
@@ -35,31 +34,10 @@ require("jupynium").setup({
   -- Related command :JupyniumDownloadIpynb
   auto_download_ipynb = false,
 
-  -- Always scroll to the current cell.
-  -- Related command :JupyniumScrollToCell
-  autoscroll = {
-    enable = true,
-    mode = "always", -- "always" or "invisible"
-    cell = {
-      top_margin_percent = 20,
-    },
-  },
-
-  scroll = {
-    page = { step = 0.5 },
-    cell = {
-      top_margin_percent = 20,
-    },
-  },
-
   use_default_keybindings = false,
   textobjects = {
     use_default_keybindings = true,
   },
-
-  -- Dim all cells except the current one
-  -- Related command :JupyniumShortsightedToggle
-  shortsighted = false,
 })
 
 local augroup = vim.api.nvim_create_augroup("jupynium", { clear = false })

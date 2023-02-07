@@ -1,4 +1,5 @@
 vim.g.mapleader = " "
+vim.g.maplocalleader = " "
 
 local opts = { silent = true, noremap = true }
 vim.api.nvim_set_keymap("", "j", "h", opts)
@@ -11,14 +12,17 @@ vim.api.nvim_set_keymap("", "ä", "za", opts)
 vim.api.nvim_set_keymap("", "Ä", "zR", opts)
 
 vim.api.nvim_set_keymap("n", "s", ":w<CR>", opts)
-vim.api.nvim_set_keymap("n", "q", ":q<CR>", opts)
+vim.api.nvim_set_keymap("n", "Q", ":q<CR>", opts)
 vim.api.nvim_set_keymap("n", "<TAB>", ":BufferLineCycleNext<CR>", opts)
 vim.api.nvim_set_keymap("n", "<S-TAB>", ":BufferLineCyclePrev<CR>", opts)
 vim.api.nvim_set_keymap("n", "<leader>x", ':bd<CR>', opts)
 vim.api.nvim_set_keymap("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle.linewise.current()<CR>", opts)
-vim.api.nvim_set_keymap("n", "<leader>fw", "<cmd>Telescope live_grep<cr>", opts)
-vim.api.nvim_set_keymap("n", "<leader>n", ":NnnPicker<CR>", opts)
-vim.api.nvim_set_keymap("n", "<leader>N", ":NnnExplorer<CR>", opts)
+vim.api.nvim_set_keymap("n", "<leader>fw", ':lua require("telescope")<CR> <cmd>Telescope live_grep<cr>', opts)
+vim.api.nvim_set_keymap("n", "<leader>n", ':lua require("nnn")<CR> :NnnPicker<CR>', opts)
+vim.api.nvim_set_keymap("n", "<leader>N", ':lua require("nnn")<CR> :NnnExplorer<CR>', opts)
+vim.api.nvim_set_keymap("n", "f", ':lua require("leap")<CR> <Plug>(leap-forward)', {})
+vim.api.nvim_set_keymap("n", "F", ':lua require("leap")<CR> <Plug>(leap-backward)', {})
+
 
 vim.api.nvim_set_keymap("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<CR>", opts)
 vim.api.nvim_set_keymap("v", "<leader>a", ":EasyAlign<CR>", opts)
@@ -36,4 +40,3 @@ vim.api.nvim_set_keymap("n", "<C-Left>", "<C-w>h", opts)
 vim.api.nvim_set_keymap("n", "<C-Down>", "<C-w>j", opts)
 vim.api.nvim_set_keymap("n", "<C-Up>", "<C-w>k", opts)
 vim.api.nvim_set_keymap("n", "<C-Right>", "<C-w>l", opts)
-vim.api.nvim_set_keymap("n", "<leader>t", ":TroubleToggle<CR>", opts)

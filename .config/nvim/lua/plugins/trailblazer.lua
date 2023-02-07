@@ -24,6 +24,7 @@ require("trailblazer").setup(
         track_back            = '<C-b>',
         peek_move_next_down   = '<C-k>',
         peek_move_previous_up = '<C-l>',
+        toggle_trail_mark_list = '<C-y>',
       },
       actions = {
         delete_all_trail_marks     = '<C-j>',
@@ -35,16 +36,16 @@ require("trailblazer").setup(
   },
   hl_groups = {
     TrailBlazerTrailMarkNext = {
-      guifg = colors.green,
+      guifg = colors.overlay0,
       guibg = "none",
     },
     TrailBlazerTrailMarkPrevious = {
-      guifg = colors.red,
+      guifg = colors.overlay0,
       guibg = "none",
     },
     TrailBlazerTrailMarkCursor = {
       guifg = colors.crust,
-      guibg = colors.overlay0,
+      guibg = colors.green,
     },
     TrailBlazerTrailMarkNewest = {
       guifg = colors.crust,

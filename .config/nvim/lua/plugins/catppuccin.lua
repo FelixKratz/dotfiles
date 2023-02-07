@@ -14,7 +14,6 @@ local options = {
       enable_ui = true,
     },
     cmp = true,
-    lsp_trouble = true,
     leap = true,
   },
   custom_highlights = {
