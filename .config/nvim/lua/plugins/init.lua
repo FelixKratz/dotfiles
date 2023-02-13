@@ -44,7 +44,9 @@ return require("lazy").setup(
       require "plugins.mason_lspconfig"
     end,
   },
-  { "simrat39/rust-tools.nvim",
+  {
+    event = "BufEnter *.rs",
+    "simrat39/rust-tools.nvim",
     config = function()
       require "rust-tools".setup()
     end,
@@ -88,7 +90,7 @@ return require("lazy").setup(
     end,
   },
   {
-    lazy = true,
+    event = "BufEnter *.py",
     "mfussenegger/nvim-dap-python",
     config = function()
       require "dap-python".setup("python")
@@ -154,7 +156,7 @@ return require("lazy").setup(
     end
   },
   {
-    lazy = true,
+    event = "BufEnter *.ju.py",
     "kiyoon/jupynium.nvim",
     build = "pip3 install --user .",
     config = function()
@@ -162,6 +164,7 @@ return require("lazy").setup(
     end
   },
   {
+    priority = 1000,
     "catppuccin/nvim",
     name = "catppuccin",
     build = ":CatppuccinCompile",
