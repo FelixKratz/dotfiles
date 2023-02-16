@@ -17,23 +17,7 @@ require("trailblazer").setup(
     symbol_line_enabled                   = true,
     multiple_mark_symbol_counters_enabled = false,
   },
-  mappings = {
-    nv = { -- Mode union: normal & visual mode
-      motions = {
-        new_trail_mark        = '<C-m>',
-        track_back            = '<C-b>',
-        peek_move_next_down   = '<C-k>',
-        peek_move_previous_up = '<C-l>',
-        toggle_trail_mark_list = '<C-y>',
-      },
-      actions = {
-        delete_all_trail_marks     = '<C-j>',
-        paste_at_last_trail_mark   = '<A-p>',
-        paste_at_all_trail_marks   = '<A-P>',
-        set_trail_mark_select_mode = '<C-t>',
-      },
-    },
-  },
+  force_mappings = nil,
   hl_groups = {
     TrailBlazerTrailMarkNext = {
       guifg = colors.overlay0,
