@@ -4,6 +4,8 @@ FRONT_APP_SCRIPT='sketchybar --set $NAME label="$INFO"'
 
 yabai=(
   script="$PLUGIN_DIR/yabai.sh"
+  updates=on
+  drawing=off
   icon.font="$FONT:Bold:16.0"
   label.drawing=off
   icon.width=30
@@ -15,7 +17,6 @@ yabai=(
 front_app=(
   script="$FRONT_APP_SCRIPT"
   icon.drawing=off
-  padding_left=0
   label.color=$WHITE
   label.font="$FONT:Black:12.0"
   associated_display=active
