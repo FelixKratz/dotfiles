@@ -1,6 +1,9 @@
 # dotfiles
 My macOS configuration files.
-<img width="1512" alt="desktop" src="https://user-images.githubusercontent.com/22680421/211197150-f1ff3f18-4b1a-4c6c-8174-ff70997af0fd.png">
+<img width="1512" alt="Screenshot 2023-02-21 at 23 22 30" src="https://user-images.githubusercontent.com/22680421/220472080-281a17e4-11aa-41ae-8908-a22f71de324b.png">
+
+
+
 
 jklö centric navigation and vim moves for my german keyboard.
 nvim as a capable C/C++ debugging environment.
