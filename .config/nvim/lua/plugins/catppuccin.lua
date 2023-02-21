@@ -1,8 +1,11 @@
-vim.g.catppuccin_flavour = "macchiato" -- latte, frappe, macchiato, mocha
-
 local colors = require("catppuccin.palettes").get_palette() -- fetch colors from palette
 
 local options = {
+  flavour = "macchiato", -- latte, frappe, macchiato, mocha
+  background = { -- :h background
+      light = "latte",
+      dark = "macchiato",
+  },
   transparent_background = true,
   compile = {
     enabled = true,

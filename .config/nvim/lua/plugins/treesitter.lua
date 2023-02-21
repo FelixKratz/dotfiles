@@ -1,6 +1,7 @@
 local options = {
   ensure_installed = {
     "lua",
+    "vim",
     "c",
     "cpp",
     "python",

@@ -16,8 +16,17 @@ require("trailblazer").setup(
     number_line_color_enabled             = true,
     symbol_line_enabled                   = true,
     multiple_mark_symbol_counters_enabled = false,
+    trail_mark_list_rows = 5,
   },
-  force_mappings = nil,
+  mappings = nil,
+  quickfix_mappings = {
+    v = {
+      actions = {
+        qf_action_move_selected_trail_marks_down = "<C-k>",
+        qf_action_move_selected_trail_marks_up = "<C-l>",
+      }
+    }
+  },
   hl_groups = {
     TrailBlazerTrailMarkNext = {
       guifg = colors.overlay0,
@@ -42,6 +51,11 @@ require("trailblazer").setup(
     TrailBlazerTrailMarkBufferLocalLineSorted = {
       guifg = colors.crust,
       guibg = colors.mauve,
+    },
+    TrailBlazerTrailMarkCustomOrd = {
+            guifg = colors.crust,
+            guibg = colors.yellow,
+            gui = "bold",
     },
   },
 })

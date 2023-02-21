@@ -15,7 +15,7 @@ vim.api.nvim_set_keymap("", "Ä", "zR", opts)
 
 -- Save and quit
 vim.api.nvim_set_keymap("n", "s", ":w<CR>", opts)
-vim.api.nvim_set_keymap("n", "Q", ":q<CR>", opts)
+vim.api.nvim_set_keymap("n", "Q", ":qa<CR>", opts)
 vim.api.nvim_set_keymap("n", "<leader>x", ':bd<CR>', opts)
 
 -- Telescope
@@ -60,9 +60,9 @@ vim.api.nvim_set_keymap("n", "<C-Up>", "<C-w>k", opts)
 vim.api.nvim_set_keymap("n", "<C-Right>", "<C-w>l", opts)
 
 -- Trailblazer
-vim.api.nvim_set_keymap("n", "<C-m>", ':lua require("trailblazer").new_trail_mark()<CR>', opts)
+vim.api.nvim_set_keymap("n", "<C-m>", ':lua require("trailblazer").new_trail_mark() require("trailblazer").open_trail_mark_list()<CR>:wincmd p<CR>', opts)
 vim.api.nvim_set_keymap("n", "<C-b>", ':lua require("trailblazer").track_back()<CR>', opts)
 vim.api.nvim_set_keymap("n", "<C-l>", ':lua require("trailblazer").peek_move_previous_up()<CR>', opts)
 vim.api.nvim_set_keymap("n", "<C-k>", ':lua require("trailblazer").peek_move_next_down()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-j>", ':lua require("trailblazer").delete_all_trail_marks()<CR>', opts)
+vim.api.nvim_set_keymap("n", "<C-j>", ':lua require("trailblazer").delete_all_trail_marks() require("trailblazer").close_trail_mark_list()<CR>', opts)
 vim.api.nvim_set_keymap("n", "<C-y>", ':lua require("trailblazer").toggle_trail_mark_list()<CR>', opts)
