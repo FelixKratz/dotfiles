@@ -1,6 +1,7 @@
 # dotfiles
 My macOS configuration files.
-<img width="1512" alt="Screenshot 2023-02-21 at 23 22 30" src="https://user-images.githubusercontent.com/22680421/220472080-281a17e4-11aa-41ae-8908-a22f71de324b.png">
+<img width="1512" alt="Screenshot 2023-02-23 at 20 45 12" src="https://user-images.githubusercontent.com/22680421/221013836-9c06a95a-d33b-48d0-bf1e-ae72e78eb6a1.png">
+
 
 
 
@@ -20,9 +21,7 @@ Most setup steps are in `.install.sh`
 SketchyBar Features:
 ----------------------
 
-* I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces. The active space animates their active applications to disappear:
-
-https://user-images.githubusercontent.com/22680421/211197218-edb9cbd0-9be9-488c-b8ad-e96acf8a697c.mp4
+* I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces.
 
 * Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled)
 
