@@ -32,7 +32,7 @@ window_state() {
         COLOR=$MAGENTA
         ;;
     esac
-    args+=(--animate sin 20 --set $NAME icon=$ICON icon.color=$COLOR --bar border_color=$COLOR)
+    args+=(--animate sin 10 --bar border_color=$COLOR)
   fi
 
   sketchybar -m "${args[@]}"
@@ -41,7 +41,7 @@ window_state() {
 windows_on_spaces () {
   CURRENT_SPACES="$(yabai -m query --displays | jq -r '.[].spaces | @sh')"
 
-  args=()
+  args=(--set spaces_bracket drawing=off --set '/space\..*/' background.drawing=on)
   while read -r line
   do
     for space in $line

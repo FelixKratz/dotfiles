@@ -50,6 +50,7 @@ defaults=(
   padding_left=$PADDINGS
   background.height=26
   background.corner_radius=9
+  background.border_width=2
   popup.background.border_width=2
   popup.background.corner_radius=9
   popup.background.border_color=$POPUP_BORDER_COLOR
