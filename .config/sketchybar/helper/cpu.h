@@ -75,7 +75,7 @@ static inline void cpu_update(struct cpu* cpu) {
     uint32_t caret = 0;
     for (int i = 0; i < sizeof(line); i++) {
       if (start && i == start - line) {
-        i+=sizeof(FILTER_PATTERN) - 1;
+        i+=9;
         continue;
       }
 
