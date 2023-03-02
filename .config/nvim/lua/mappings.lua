@@ -4,65 +4,71 @@ vim.g.maplocalleader = " "
 local opts = { silent = true, noremap = true }
 
 -- General movements
-vim.api.nvim_set_keymap("", "j", "h", opts)
-vim.api.nvim_set_keymap("", "k", "j", opts)
-vim.api.nvim_set_keymap("", "l", "k", opts)
-vim.api.nvim_set_keymap("", "ö", "l", opts)
-vim.api.nvim_set_keymap("", "ß", "$", opts)
-vim.api.nvim_set_keymap("", "Y", "y$", opts)
-vim.api.nvim_set_keymap("", "ä", "za", opts)
-vim.api.nvim_set_keymap("", "Ä", "zR", opts)
+vim.keymap.set("", "j", "h", opts)
+vim.keymap.set("", "k", "j", opts)
+vim.keymap.set("", "l", "k", opts)
+vim.keymap.set("", "ö", "l", opts)
+vim.keymap.set("", "ß", "$", opts)
+vim.keymap.set("", "Y", "y$", opts)
+vim.keymap.set("", "ä", "za", opts)
+vim.keymap.set("", "Ä", "zR", opts)
 
 -- Save and quit
-vim.api.nvim_set_keymap("n", "s", ":w<CR>", opts)
-vim.api.nvim_set_keymap("n", "Q", ":qa<CR>", opts)
-vim.api.nvim_set_keymap("n", "<leader>x", ':bd<CR>', opts)
-
--- Telescope
-vim.api.nvim_set_keymap("n", "<leader>fw", ':lua require("telescope")<CR> <cmd>Telescope live_grep<cr>', opts)
-
--- Bufferline
-vim.api.nvim_set_keymap("n", "<TAB>", ":BufferLineCycleNext<CR>", opts)
-vim.api.nvim_set_keymap("n", "<S-TAB>", ":BufferLineCyclePrev<CR>", opts)
-
--- nnn
-vim.api.nvim_set_keymap("n", "<leader>n", ':lua require("nnn")<CR> :NnnPicker<CR>', opts)
-vim.api.nvim_set_keymap("n", "<leader>N", ':lua require("nnn")<CR> :NnnExplorer<CR>', opts)
-
--- Leap
-vim.api.nvim_set_keymap("n", "f", ':lua require("leap")<CR> <Plug>(leap-forward)', {})
-vim.api.nvim_set_keymap("n", "F", ':lua require("leap")<CR> <Plug>(leap-backward)', {})
-
--- Comment
-vim.api.nvim_set_keymap("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle.linewise.current()<CR>", opts)
-vim.api.nvim_set_keymap("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<CR>", opts)
-
--- EasyAlign
-vim.api.nvim_set_keymap("v", "<leader>a", ":EasyAlign<CR>", opts)
-
--- LSP
-vim.api.nvim_set_keymap("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
-vim.api.nvim_set_keymap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-
--- Dap
-vim.api.nvim_set_keymap("n", "<leader>q", ':lua require"dap".close()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<leader>d", ':lua require"dapui".toggle({ reset = true })<CR>', opts)
-vim.api.nvim_set_keymap("n", "<leader>b", ':lua require"dap".toggle_breakpoint()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<leader>e", ':lua require("dapui").eval()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-c>", ':lua require"dap".continue()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-s>", ':lua require"dap".step_into()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-o>", ':lua require"dap".step_over()<CR>', opts)
+vim.keymap.set("n", "s", ":w<CR>", opts)
+vim.keymap.set("n", "Q", ":qa<CR>", opts)
+vim.keymap.set("n", "<leader>x", ':bd<CR>', opts)
 
 -- Window Movement
-vim.api.nvim_set_keymap("n", "<C-Left>", "<C-w>h", opts)
-vim.api.nvim_set_keymap("n", "<C-Down>", "<C-w>j", opts)
-vim.api.nvim_set_keymap("n", "<C-Up>", "<C-w>k", opts)
-vim.api.nvim_set_keymap("n", "<C-Right>", "<C-w>l", opts)
+vim.keymap.set("n", "<C-Left>", "<C-w>h", opts)
+vim.keymap.set("n", "<C-Down>", "<C-w>j", opts)
+vim.keymap.set("n", "<C-Up>", "<C-w>k", opts)
+vim.keymap.set("n", "<C-Right>", "<C-w>l", opts)
+
+-- Telescope
+vim.keymap.set("n", "<leader>fw", ':lua require("telescope")<CR> <cmd>Telescope live_grep<cr>', opts)
+
+-- Bufferline
+vim.keymap.set("n", "<TAB>", ":BufferLineCycleNext<CR>", opts)
+vim.keymap.set("n", "<S-TAB>", ":BufferLineCyclePrev<CR>", opts)
+
+-- nnn
+vim.keymap.set("n", "<leader>n", ':lua require("nnn")<CR> :NnnPicker<CR>', opts)
+vim.keymap.set("n", "<leader>N", ':lua require("nnn")<CR> :NnnExplorer<CR>', opts)
+
+-- Leap
+vim.keymap.set("n", "f", ':lua require("leap")<CR> <Plug>(leap-forward)', opts)
+vim.keymap.set("n", "F", ':lua require("leap")<CR> <Plug>(leap-backward)', opts)
+
+-- Comment
+vim.keymap.set("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle.linewise.current()<CR>", opts)
+vim.keymap.set("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<CR>", opts)
+
+-- EasyAlign
+vim.keymap.set("v", "<leader>a", ":EasyAlign<CR>", opts)
+
+-- LSP
+vim.keymap.set("n", "gD", function() vim.lsp.buf.declaration() end, opts)
+vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+
+-- Dap
+vim.keymap.set("n", "<leader>q", function() require"dap".close() end, opts)
+vim.keymap.set("n", "<leader>d", function() require"dapui".toggle({ reset = true }) end, opts)
+vim.keymap.set("n", "<leader>b", function() require"dap".toggle_breakpoint() end, opts)
+vim.keymap.set("n", "<leader>e", function() require("dapui").eval() end, opts)
+vim.keymap.set("n", "<C-c>", function() require"dap".continue() end, opts)
+vim.keymap.set("n", "<C-s>", function() require"dap".step_into() end, opts)
+vim.keymap.set("n", "<C-o>", function() require"dap".step_over() end, opts)
 
 -- Trailblazer
-vim.api.nvim_set_keymap("n", "<C-m>", ':lua require("trailblazer").new_trail_mark() require("trailblazer").open_trail_mark_list()<CR>:wincmd p<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-b>", ':lua require("trailblazer").track_back()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-l>", ':lua require("trailblazer").peek_move_previous_up()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-k>", ':lua require("trailblazer").peek_move_next_down()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-j>", ':lua require("trailblazer").delete_all_trail_marks() require("trailblazer").close_trail_mark_list()<CR>', opts)
-vim.api.nvim_set_keymap("n", "<C-y>", ':lua require("trailblazer").toggle_trail_mark_list()<CR>', opts)
+vim.keymap.set("n", "m", function() require("plugins.trailblazer").new_mark() end, opts)
+vim.keymap.set("n", "L", function() require("trailblazer").peek_move_previous_up() end, opts)
+vim.keymap.set("n", "K", function() require("trailblazer").peek_move_next_down() end, opts)
+vim.keymap.set("n", "<Esc>c", function() require("trailblazer").move_to_trail_mark_cursor() end, opts)
+vim.keymap.set("n", "<Esc>b", function() require("trailblazer").track_back() end, opts)
+vim.keymap.set("n", "<Esc>l", function() require("plugins.trailblazer").load_session() end, opts)
+vim.keymap.set("n", "<Esc>s", function() require("plugins.trailblazer").save_all_sessions() end, opts)
+vim.keymap.set("n", "<Esc>da", function() require("plugins.trailblazer").delete_all_marks() end, opts)
+vim.keymap.set("n", "<Esc>ds", function() require("trailblazer").delete_trail_mark_stack(nil, false) end, opts)
+vim.keymap.set("n", "<Esc>as", function() require("plugins.trailblazer").add_stack() end, opts)
+vim.keymap.set("n", "<Esc>p", function() require("trailblazer").switch_to_previous_trail_mark_stack(nil, false) end, opts)
+vim.keymap.set("n", "<Esc>n", function() require("trailblazer").switch_to_next_trail_mark_stack(nil, false) end, opts)

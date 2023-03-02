@@ -19,7 +19,7 @@ capabilities.textDocument.completion.completionItem = {
 }
 
 
-local servers = { "pyright", "texlab", "clangd", "lua_ls" }
+local servers = { "pyright", "texlab", "clangd" }
 
 for _, lsp in ipairs(servers) do
   require("lspconfig")[lsp].setup {
@@ -27,4 +27,16 @@ for _, lsp in ipairs(servers) do
     capabilities = capabilities,
   }
 end
+
+require("lspconfig")["lua_ls"].setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  settings = {
+    Lua = {
+      diagnostics = {
+        globals = { "vim", "on_attach" },
+      },
+    }
+  }
+}
 

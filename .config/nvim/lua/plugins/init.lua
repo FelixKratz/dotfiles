@@ -176,7 +176,7 @@ return require("lazy").setup(
     lazy = true,
     "LeonHeidelbach/trailblazer.nvim",
     config = function()
-        require("plugins.trailblazer")
+        require("plugins.trailblazer").init()
     end
   },
 })
