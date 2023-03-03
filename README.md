@@ -46,14 +46,16 @@ https://user-images.githubusercontent.com/22680421/211197240-632582a1-7f88-4cf2-
 
 SketchyBar Setup
 ----------------------
-* Uses `sf-symbols`: `brew install --cask sf-symbols`
-* Uses `jq`: `brew install jq`
-* Uses `github-cli`: `brew install gh` (`gh auth login` for notifications)
-* Uses [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font):
+* Dependencies(`sf-symbols`, `jq`, `github-cli`, `switchaudio-osx`, [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font)):
 ```bash
+brew install --cask sf-symbols
+brew install jq
+brew install gh
+brew install switchaudio-osx
 curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.4/sketchybar-app-font.ttf -o $HOME/Library/Fonts/sketchybar-app-font.ttf
 ```
-* If you don't use yabai you can safely remove the `yabai` item from `ìtems/front_app.sh`
+* (optional) `gh auth login` for GitHub notifications
+* (optional) If you don't use yabai you can safely remove the `yabai` item from `ìtems/front_app.sh`
 * (optional; needed for yabai window state and running application icons) yabai events:
 ```bash
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
@@ -67,7 +69,6 @@ shift + lalt - f : yabai -m window --toggle zoom-fullscreen; sketchybar --trigge
 lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger window_focus
 shift + lalt - 1 : yabai -m window --space 1 && sketchybar --trigger windows_on_spaces
 ```
-* (optional) Uses `brew install switchaudio-osx` for audio device switching context menu on volume alias right click
 * (optional) update outdated packages after running brew commands (add to `.zshrc`):
 ```bash
 function brew() {
@@ -89,12 +90,8 @@ does not matter at all.
 
 neovim setup
 ---------------
-* Paste my .confg/nvim/ folder
-* Run PackerSync
-```bash
-nvim +PackerSync
-```
-* My remappings are in .config/nvim/lua/mappings.lua, you can change or remove them freely.
+* Paste my `.confg/nvim/` folder
+* My remappings are in `.config/nvim/lua/mappings.lua`, you can change or remove them freely.
 * (optional) Install font and set it as the terminal font:
 ```bash
 git clone git@github.com:shaunsingh/SFMono-Nerd-Font-Ligaturized.git /tmp/SFMono_Nerd_Font
