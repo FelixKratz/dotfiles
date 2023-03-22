@@ -14,6 +14,8 @@ window_state() {
           --bar border_color=$RED)
   else 
     args+=(--set $NAME label.drawing=off drawing=off)
+    COLOR=$BAR_BORDER_COLOR
+    ICON=$YABAI_GRID
     case "$(echo "$WINDOW" | jq '.["is-floating"]')" in
       "false")
         if [ "$(echo "$WINDOW" | jq '.["has-fullscreen-zoom"]')" = "true" ]; then
@@ -22,9 +24,6 @@ window_state() {
         elif [ "$(echo "$WINDOW" | jq '.["has-parent-zoom"]')" = "true" ]; then
           ICON=$YABAI_PARENT_ZOOM
           COLOR=$BLUE
-        else
-          ICON=$YABAI_GRID
-          COLOR=$BAR_BORDER_COLOR
         fi
         ;;
       "true")
