@@ -151,7 +151,7 @@ font:
     style: Bold Italic
 
   # Point size
-  size: 13.0
+  size: 14.0
 
   # Offset is the extra space around each character. `offset.y` can be thought
   # of as modifying the line spacing, and `offset.x` as modifying the letter
@@ -576,9 +576,6 @@ cursor:
 # Directory the shell is started in. If this is unset, or `None`, the working
 # directory of the parent process will be used.
 working_directory: None
-
-# Send ESC (\x1b) before characters when alt is pressed.
-alt_send_esc: false
 
 mouse:
   # Click settings
