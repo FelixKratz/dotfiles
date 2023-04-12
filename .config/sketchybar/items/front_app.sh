@@ -15,11 +15,11 @@ yabai=(
 )
 
 front_app=(
-  script="$FRONT_APP_SCRIPT"
   icon.drawing=off
   label.color=$WHITE
   label.font="$FONT:Black:12.0"
   associated_display=active
+  script="$FRONT_APP_SCRIPT"
 )
 
 sketchybar --add event window_focus            \
@@ -33,4 +33,3 @@ sketchybar --add event window_focus            \
            --add item front_app left           \
            --set front_app "${front_app[@]}"   \
            --subscribe front_app front_app_switched
-

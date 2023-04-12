@@ -55,6 +55,10 @@ function zen () {
   ~/.config/sketchybar/plugins/zen.sh $1
 }
 
+function kill () {
+  command kill -KILL $(pidof "$@")
+}
+
 function suyabai () {
   SHA256=$(shasum -a 256 /opt/homebrew/bin/yabai | awk "{print \$1;}")
   if [ -f "/private/etc/sudoers.d/yabai" ]; then

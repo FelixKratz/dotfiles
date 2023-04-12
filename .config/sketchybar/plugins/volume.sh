@@ -3,7 +3,7 @@
 WIDTH=100
 
 volume_change() {
-  source "$HOME/.config/sketchybar/icons.sh"
+  source "$CONFIG_DIR/icons.sh"
   case $INFO in
     [6-9][0-9]|100) ICON=$VOLUME_100
     ;;
