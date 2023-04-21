@@ -30,7 +30,7 @@ window_state() {
                          --set $NAME icon.color=$COLOR)
 
   [ -z "$LABEL" ] && args+=(label.width=0) \
-                  || args+=(label="$LABEL" label.width=dynamic)
+                  || args+=(label="$LABEL" label.width=40)
 
   [ -z "$ICON" ] && args+=(icon.width=0) \
                  || args+=(icon="$ICON" icon.width=30)
