@@ -1,7 +1,7 @@
 #!/bin/bash
 
-POPUP_OFF="sketchybar --set apple.logo popup.drawing=off"
-POPUP_CLICK_SCRIPT="sketchybar --set \$NAME popup.drawing=toggle"
+POPUP_OFF='sketchybar --set apple.logo popup.drawing=off'
+POPUP_CLICK_SCRIPT='sketchybar --set $NAME popup.drawing=toggle'
 
 apple_logo=(
   icon=$APPLE

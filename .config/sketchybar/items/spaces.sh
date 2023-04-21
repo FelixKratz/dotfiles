@@ -19,7 +19,6 @@ do
     padding_left=2
     padding_right=2
     label.padding_right=20
-    icon.color=$WHITE
     icon.highlight_color=$RED
     label.color=$GREY
     label.highlight_color=$WHITE
@@ -40,7 +39,6 @@ done
 spaces_bracket=(
   background.color=$BACKGROUND_1
   background.border_color=$BACKGROUND_2
-  background.border_width=2
 )
 
 separator=(

@@ -110,7 +110,6 @@ spotify_play=(
   background.drawing=on
   icon.padding_left=4
   icon.padding_right=5
-  icon.color=$WHITE
   updates=on
   label.drawing=off
   script="$PLUGIN_DIR/spotify.sh"

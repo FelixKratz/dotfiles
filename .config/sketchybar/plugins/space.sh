@@ -6,7 +6,9 @@ update() {
   if [ "$SELECTED" = "true" ]; then
     COLOR=$GREY
   fi
-  sketchybar --set $NAME icon.highlight=$SELECTED label.highlight="$SELECTED" background.border_color=$COLOR
+  sketchybar --set $NAME icon.highlight=$SELECTED \
+                         label.highlight=$SELECTED \
+                         background.border_color=$COLOR
 }
 
 mouse_clicked() {
