@@ -10,12 +10,7 @@ window_state() {
   COLOR=$BAR_BORDER_COLOR
   ICON=""
 
-  if [[ $STACK_INDEX -gt 0 ]]; then
-    LAST_STACK_INDEX=$(yabai -m query --windows --window stack.last | jq '.["stack-index"]')
-    ICON+=$YABAI_STACK
-    LABEL="$(printf "[%s/%s]" "$STACK_INDEX" "$LAST_STACK_INDEX")"
-    COLOR=$RED
-  elif [ "$(echo "$WINDOW" | jq '.["is-floating"]')" = "true" ]; then
+  if [ "$(echo "$WINDOW" | jq '.["is-floating"]')" = "true" ]; then
     ICON+=$YABAI_FLOAT
     COLOR=$MAGENTA
   elif [ "$(echo "$WINDOW" | jq '.["has-fullscreen-zoom"]')" = "true" ]; then
@@ -24,6 +19,11 @@ window_state() {
   elif [ "$(echo "$WINDOW" | jq '.["has-parent-zoom"]')" = "true" ]; then
     ICON+=$YABAI_PARENT_ZOOM
     COLOR=$BLUE
+  elif [[ $STACK_INDEX -gt 0 ]]; then
+    LAST_STACK_INDEX=$(yabai -m query --windows --window stack.last | jq '.["stack-index"]')
+    ICON+=$YABAI_STACK
+    LABEL="$(printf "[%s/%s]" "$STACK_INDEX" "$LAST_STACK_INDEX")"
+    COLOR=$RED
   fi
 
   args=(--animate sin 10 --bar border_color=$COLOR
@@ -42,7 +42,8 @@ windows_on_spaces () {
   CURRENT_SPACES="$(yabai -m query --displays | jq -r '.[].spaces | @sh')"
 
   args=(--set spaces_bracket drawing=off
-        --set '/space\..*/' background.drawing=on)
+        --set '/space\..*/' background.drawing=on
+        --animate sin 10)
 
   while read -r line
   do
