@@ -19,7 +19,9 @@ capabilities.textDocument.completion.completionItem = {
 }
 
 
-local servers = { "pyright", "texlab", "clangd" }
+local servers = { "pyright", "texlab", "clangd", "rust_analyzer" }
+
+vim.g.rust_recommended_style = false
 
 for _, lsp in ipairs(servers) do
   require("lspconfig")[lsp].setup {
@@ -34,7 +36,7 @@ require("lspconfig")["lua_ls"].setup {
   settings = {
     Lua = {
       diagnostics = {
-        globals = { "vim", "on_attach" },
+        globals = { "vim", "sbar", "on_attach" },
       },
     }
   }

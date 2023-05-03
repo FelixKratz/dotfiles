@@ -155,14 +155,14 @@ return require("lazy").setup(
       require("telescope").setup()
     end
   },
-  {
-    event = "BufEnter *.ju.py",
-    "kiyoon/jupynium.nvim",
-    build = "pip3 install --user .",
-    config = function()
-      require "plugins.jupynium"
-    end
-  },
+  -- {
+  --   event = "BufEnter *.ju.py",
+  --   "kiyoon/jupynium.nvim",
+  --   build = "pip3 install --user .",
+  --   config = function()
+  --     require "plugins.jupynium"
+  --   end
+  -- },
   {
     priority = 1000,
     "catppuccin/nvim",

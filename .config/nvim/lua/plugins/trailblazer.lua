@@ -25,7 +25,7 @@ function M.init()
       move_to_nearest_before_peek_motion_directive_down = "down",
     },
     event_list = {
-      -- "TrailBlazerTrailMarkStackSaved",
+      "TrailBlazerTrailMarkStackSaved",
       -- "TrailBlazerTrailMarkStackDeleted",
       "TrailBlazerCurrentTrailMarkStackChanged",
       -- "TrailBlazerTrailMarkStackSortModeChanged"
@@ -103,7 +103,6 @@ function M.init()
     buf = buf or vim.api.nvim_buf_get_name(0)
     local file = require("trailblazer").options.custom_session_storage_dir .. vim.fn.sha256(vim.fn.expand(buf)) .. ".tbsv"
     require("trailblazer").save_trailblazer_state_to_file(file, nil, false)
-    print("Saved Session")
   end
 
   local autocmd = vim.api.nvim_create_autocmd
@@ -120,6 +119,13 @@ function M.init()
       end
 
       vim.opt.statusline = line
+    end,
+  })
+
+  autocmd("User", {
+    pattern = "TrailBlazerTrailMarkStackSaved",
+    callback = function(_)
+      print("Session saved.")
     end,
   })
 
