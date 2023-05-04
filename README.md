@@ -10,11 +10,11 @@ jklö centric navigation and vim moves for my german keyboard.
 nvim as a capable C/C++ debugging environment.
 color scheme consistency across all configurations.
 
-* neovim
-* skhd
-* nnn (personal fork)
-* yabai (personal fork)
-* sketchybar
+* [sketchybar](https://github.com/FelixKratz/SketchyBar)
+* [yabai](https://github.com/koekeishiya/yabai) (personal fork)
+* [skhd](https://github.com/koekeishiya/skhd)
+* [neovim](https://github.com/neovim/neovim)
+* [nnn](https://github.com/jarun/nnn) (personal fork)
 
 Most setup steps are in `.install.sh`
 
@@ -23,9 +23,9 @@ SketchyBar Features:
 
 * I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces.
 
-* Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled)
+* Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled; optional)
 
-* Mousing over the music icon in the center gives a small spotify player widget with player controls:
+* Mousing over the music icon in the center gives a small Spotify player widget with player controls:
 <img width="381" alt="spotify" src="https://user-images.githubusercontent.com/22680421/211197221-a3d6f8dd-4a72-4cc1-9224-78c1e7ebbb75.png">
 
 
