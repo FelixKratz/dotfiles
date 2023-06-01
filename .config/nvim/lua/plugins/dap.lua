@@ -13,7 +13,7 @@ dap.configurations.c = {
     request = "launch",
     program = function()
       local cwd = vim.fn.getcwd()
-      return cwd .. '/bin/' .. cwd.match(cwd, "/(%w+)$")
+      return cwd .. '/bin/debug'
     end,
     cwd = '${workspaceFolder}',
     stopOnEntry = false,

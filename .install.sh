@@ -70,6 +70,7 @@ brew install --cask hex-fiend
 brew install --cask cutter
 brew install --cask font-hack-nerd-font
 brew install --cask vlc
+brew install --cask wezterm
 
 # Mac App Store Apps
 echo "Installing Mac App Store Apps..."

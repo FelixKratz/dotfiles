@@ -36,7 +36,7 @@ require("lspconfig")["lua_ls"].setup {
   settings = {
     Lua = {
       diagnostics = {
-        globals = { "vim", "sbar", "on_attach" },
+        globals = { "vim", "on_attach" },
       },
     }
   }

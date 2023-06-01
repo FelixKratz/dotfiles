@@ -7,7 +7,7 @@ source $HOME/.config/.zsh-vi-mode/zsh-vi-mode.plugin.zsh
 [ -d "/opt/homebrew/share/zsh-syntax-highlighting/highlighters" ] && export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/opt/homebrew/share/zsh-syntax-highlighting/highlighters \
                                                                   || export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/usr/local/share/zsh-syntax-highlighting/highlighters
 
-[ -d "/opt/homebrew/share/zsh-autosuggestions/" ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+[ -d "/opt/homebrew/share/zsh-syntax-highlighting/" ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
                                                   || source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # Aliases for common dirs
@@ -15,6 +15,7 @@ alias home="cd ~"
 
 # System Aliases
 alias ..="cd .."
+alias x="exit"
 
 # Git Aliases
 alias add="git add"
@@ -71,5 +72,5 @@ function suyabai () {
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export EDITOR="$(which nvim)"
-export VISUAL="$HOME/.config/nnn/plugins/selnew.sh"
+export VISUAL="$(which nvim)"
 export XDG_CONFIG_HOME="$HOME/.config"

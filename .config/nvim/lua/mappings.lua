@@ -49,6 +49,9 @@ vim.keymap.set("v", "<leader>a", ":EasyAlign<CR>", opts)
 -- LSP
 vim.keymap.set("n", "gD", function() vim.lsp.buf.declaration() end, opts)
 vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+vim.keymap.set("n", "ga", function() vim.lsp.buf.code_action() end, opts)
+vim.keymap.set("n", "<leader>f", function() vim.lsp.buf.format { async = false } end, opts)
+
 
 -- Dap
 vim.keymap.set("n", "<leader>q", function() require"dap".close() end, opts)
