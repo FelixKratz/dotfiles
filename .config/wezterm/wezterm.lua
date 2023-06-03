@@ -11,13 +11,26 @@ config.window_decorations = "RESIZE"
 config.color_scheme = 'Catppuccin Mocha'
 config.enable_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = true
-config.font = wezterm.font('Liga SFMono Nerd Font', { weight = "Bold" })
+
+config.font = wezterm.font_with_fallback({
+  {
+    family = 'Liga SFMono Nerd Font',
+    weight = "Bold"
+  },
+  {
+    family = "Hack Nerd Font",
+    weight = "Bold"
+  }
+})
+
 config.harfbuzz_features = { 'calt=1', 'clig=1', 'liga=1' }
 config.send_composed_key_when_left_alt_is_pressed = true
 config.font_size = 14.0
-config.cell_width = 0.9
+config.cell_width = 0.88888888887 -- 8 / 9 rounded down
+config.front_end = "WebGpu"
+config.animation_fps = 1
 
-config.leader = { key = 'Space', mods = 'SHIFT' }
+config.leader = { key = 'Space', mods = 'SHIFT|CTRL' }
 
 config.keys = {
   {
@@ -40,33 +53,33 @@ config.keys = {
     mods = 'CTRL',
     action = action.ActivatePaneDirection "Right"
   },
+  -- {
+  --   key = 'UpArrow',
+  --   mods = 'CTRL',
+  --   action = action.AdjustPaneSize { "Up", 1 }
+  -- },
+  -- {
+  --   key = 'DownArrow',
+  --   mods = 'CTRL',
+  --   action = action.AdjustPaneSize { "Down", 1 }
+  -- },
+  -- {
+  --   key = 'LeftArrow',
+  --   mods = 'CTRL',
+  --   action = action.AdjustPaneSize { "Left", 1 }
+  -- },
+  -- {
+  --   key = 'RightArrow',
+  --   mods = 'CTRL',
+  --   action = action.AdjustPaneSize { "Right", 1 }
+  -- },
   {
-    key = 'UpArrow',
-    mods = 'CTRL',
-    action = action.AdjustPaneSize { "Up", 1 }
-  },
-  {
-    key = 'DownArrow',
-    mods = 'CTRL',
-    action = action.AdjustPaneSize { "Down", 1 }
-  },
-  {
-    key = 'LeftArrow',
-    mods = 'CTRL',
-    action = action.AdjustPaneSize { "Left", 1 }
-  },
-  {
-    key = 'RightArrow',
-    mods = 'CTRL',
-    action = action.AdjustPaneSize { "Right", 1 }
-  },
-  {
-    key = 's',
+    key = 'y',
     mods = 'CTRL',
     action = action.SplitHorizontal { domain = "CurrentPaneDomain" }
   },
   {
-    key = 'v',
+    key = 'x',
     mods = 'CTRL',
     action = action.SplitVertical { domain = "CurrentPaneDomain" }
   },
