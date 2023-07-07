@@ -5,7 +5,7 @@ if not vim.loop.fs_stat(lazypath) then
     "clone",
     "--filter=blob:none",
     "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", -- latest stable release
+    "--branch=stable",
     lazypath,
   })
 end
@@ -60,6 +60,7 @@ return require("lazy").setup(
   {
     "L3MON4D3/LuaSnip",
     dependencies = "onsails/lspkind.nvim",
+    run = "make install_jsregexp",
     config = function()
       require "plugins.luasnip"
     end,
@@ -155,14 +156,6 @@ return require("lazy").setup(
       require("telescope").setup()
     end
   },
-  -- {
-  --   event = "BufEnter *.ju.py",
-  --   "kiyoon/jupynium.nvim",
-  --   build = "pip3 install --user .",
-  --   config = function()
-  --     require "plugins.jupynium"
-  --   end
-  -- },
   {
     priority = 1000,
     "catppuccin/nvim",
@@ -179,4 +172,9 @@ return require("lazy").setup(
         require("plugins.trailblazer").init()
     end
   },
+  -- {
+  --   "m4xshen/hardtime.nvim",
+  --   event = "VeryLazy",
+  --   opts = require("plugins.hardtime")
+  -- },
 })

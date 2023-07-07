@@ -12,6 +12,12 @@ vim.keymap.set("", "ß", "$", opts)
 vim.keymap.set("", "Y", "y$", opts)
 vim.keymap.set("", "ä", "za", opts)
 vim.keymap.set("", "Ä", "zR", opts)
+vim.keymap.set("", "K", "<C-e>", opts)
+vim.keymap.set("", "L", "<C-y>", opts)
+
+-- Delete/change up to next )
+vim.keymap.set("n", "d)", "d])")
+vim.keymap.set("n", "c)", "c])")
 
 -- Save and quit
 vim.keymap.set("n", "s", ":w<CR>", opts)
@@ -51,12 +57,13 @@ vim.keymap.set("n", "gD", function() vim.lsp.buf.declaration() end, opts)
 vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
 vim.keymap.set("n", "ga", function() vim.lsp.buf.code_action() end, opts)
 vim.keymap.set("n", "<leader>f", function() vim.lsp.buf.format { async = false } end, opts)
-
+vim.keymap.set("n", "<leader>k", function() vim.diagnostic.open_float({scope="line"}) end, opts)
 
 -- Dap
 vim.keymap.set("n", "<leader>q", function() require"dap".close() end, opts)
 vim.keymap.set("n", "<leader>d", function() require"dapui".toggle({ reset = true }) end, opts)
 vim.keymap.set("n", "<leader>b", function() require"dap".toggle_breakpoint() end, opts)
+vim.keymap.set("n", "<leader>t", function() require"dap".terminate() end, opts)
 vim.keymap.set("n", "<leader>e", function() require("dapui").eval() end, opts)
 vim.keymap.set("n", "<C-c>", function() require"dap".continue() end, opts)
 vim.keymap.set("n", "<C-s>", function() require"dap".step_into() end, opts)
@@ -64,8 +71,8 @@ vim.keymap.set("n", "<C-o>", function() require"dap".step_over() end, opts)
 
 -- Trailblazer
 vim.keymap.set("n", "m", function() require("plugins.trailblazer").new_mark() end, opts)
-vim.keymap.set("n", "L", function() require("trailblazer").peek_move_previous_up() end, opts)
-vim.keymap.set("n", "K", function() require("trailblazer").peek_move_next_down() end, opts)
+vim.keymap.set("n", "<C-l>", function() require("trailblazer").peek_move_previous_up() end, opts)
+vim.keymap.set("n", "<C-k>", function() require("trailblazer").peek_move_next_down() end, opts)
 vim.keymap.set("n", "<Esc>c", function() require("trailblazer").move_to_trail_mark_cursor() end, opts)
 vim.keymap.set("n", "<Esc>b", function() require("trailblazer").track_back() end, opts)
 vim.keymap.set("n", "<Esc>l", function() require("plugins.trailblazer").load_session() end, opts)

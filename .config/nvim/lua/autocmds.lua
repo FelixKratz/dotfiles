@@ -3,13 +3,13 @@ local autocmd = vim.api.nvim_create_autocmd
 -- Use relative & absolute line numbers in 'n' & 'i' modes respectively
 autocmd("InsertEnter", {
   callback = function()
-    vim.opt.relativenumber = true
+    vim.opt.relativenumber = false
   end,
 })
 
 autocmd("InsertLeave", {
   callback = function()
-    vim.opt.relativenumber = false
+    vim.opt.relativenumber = true
   end,
 })
 

@@ -1,6 +1,7 @@
 vim.opt.clipboard = "unnamed"
 vim.opt.cul = false
 vim.opt.expandtab = true
+vim.opt.relativenumber = true
 vim.opt.shiftwidth = 2
 vim.opt.smartindent = true
 vim.opt.fillchars = { eob = " " }
