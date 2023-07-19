@@ -2,7 +2,7 @@
 
 source "$CONFIG_DIR/colors.sh"
 
-COUNT=$(brew outdated | wc -l | tr -d ' ')
+COUNT="$(brew outdated | wc -l | tr -d ' ')"
 
 COLOR=$RED
 
