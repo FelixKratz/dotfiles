@@ -45,6 +45,12 @@ vim.keymap.set("n", "<leader>N", ':lua require("nnn")<CR> :NnnExplorer<CR>', opt
 vim.keymap.set("n", "f", ':lua require("leap")<CR> <Plug>(leap-forward)', opts)
 vim.keymap.set("n", "F", ':lua require("leap")<CR> <Plug>(leap-backward)', opts)
 
+-- nvim-spider (w,e,b replacement)
+vim.keymap.set({"n", "o", "x"}, "w", "<cmd>lua require('spider').motion('w')<CR>", opts)
+vim.keymap.set({"n", "o", "x"}, "e", "<cmd>lua require('spider').motion('e')<CR>", opts)
+vim.keymap.set({"n", "o", "x"}, "b", "<cmd>lua require('spider').motion('b')<CR>", opts)
+vim.keymap.set({"n", "o", "x"}, "ge", "<cmd>lua require('spider').motion('ge')<CR>", opts)
+
 -- Comment
 vim.keymap.set("n", "<leader>c", "<cmd> :lua require('Comment.api').toggle.linewise.current()<CR>", opts)
 vim.keymap.set("v", "<leader>c", "<esc><cmd> :lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<CR>", opts)

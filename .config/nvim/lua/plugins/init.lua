@@ -157,6 +157,17 @@ return require("lazy").setup(
     end
   },
   {
+    lazy = true,
+    "LeonHeidelbach/trailblazer.nvim",
+    config = function()
+        require("plugins.trailblazer").init()
+    end
+  },
+  {
+    lazy = true,
+    "chrisgrieser/nvim-spider"
+  },
+  {
     priority = 1000,
     "catppuccin/nvim",
     name = "catppuccin",
@@ -165,16 +176,4 @@ return require("lazy").setup(
       require "plugins.catppuccin"
     end
   },
-  {
-    lazy = true,
-    "LeonHeidelbach/trailblazer.nvim",
-    config = function()
-        require("plugins.trailblazer").init()
-    end
-  },
-  -- {
-  --   "m4xshen/hardtime.nvim",
-  --   event = "VeryLazy",
-  --   opts = require("plugins.hardtime")
-  -- },
 })

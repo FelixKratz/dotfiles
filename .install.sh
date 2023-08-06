@@ -55,7 +55,6 @@ brew install btop
 # Brew Casks
 echo "Installing Brew Casks..."
 brew install --cask inkscape
-brew install --cask moonlight
 brew install --cask mumble
 brew install --cask libreoffice
 brew install --cask alacritty
@@ -71,6 +70,7 @@ brew install --cask cutter
 brew install --cask font-hack-nerd-font
 brew install --cask vlc
 brew install --cask wezterm
+brew install --cask kitty
 
 # Mac App Store Apps
 echo "Installing Mac App Store Apps..."
@@ -159,5 +159,5 @@ csrutil status
 echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
-echo "Installation complete...\nRun nvim +PackerSync and Restart..."
+echo "Installation complete...Restart."
 
