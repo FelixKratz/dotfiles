@@ -36,21 +36,9 @@ mouse_clicked() {
   osascript -e "set volume output volume $PERCENTAGE"
 }
 
-mouse_entered() {
-  sketchybar --set $NAME slider.knob.drawing=on
-}
-
-mouse_exited() {
-  sketchybar --set $NAME slider.knob.drawing=off
-}
-
 case "$SENDER" in
   "volume_change") volume_change
   ;;
   "mouse.clicked") mouse_clicked
-  ;;
-  "mouse.entered") mouse_entered
-  ;;
-  "mouse.exited") mouse_exited
   ;;
 esac
