@@ -55,8 +55,8 @@ windows_on_spaces () {
         while IFS= read -r app; do
           icon_strip+=" $($CONFIG_DIR/plugins/icon_map.sh "$app")"
         done <<< "$apps"
+        args+=(--set space.$space label="$icon_strip" label.drawing=on)
       fi
-      args+=(--set space.$space label="$icon_strip" label.drawing=on)
     done
   done <<< "$CURRENT_SPACES"
 
