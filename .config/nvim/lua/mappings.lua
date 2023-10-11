@@ -19,6 +19,11 @@ vim.keymap.set("", "L", "<C-y>", opts)
 vim.keymap.set("n", "d)", "d])")
 vim.keymap.set("n", "c)", "c])")
 
+-- Spell checking
+vim.keymap.set("n", "ns", "]s")
+vim.keymap.set("n", "ps", "[s")
+vim.keymap.set("n", "c)", "c])")
+
 -- Save and quit
 vim.keymap.set("n", "s", ":w<CR>", opts)
 vim.keymap.set("n", "Q", ":qa<CR>", opts)
