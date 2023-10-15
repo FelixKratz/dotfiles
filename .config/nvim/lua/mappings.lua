@@ -3,17 +3,14 @@ vim.g.maplocalleader = " "
 
 local opts = { silent = true, noremap = true }
 
+-- Globally remap h->j j->k k->l l->ö for commands
+vim.opt.langmap = "jklöJKLÖ;hjklHJKL"
+
 -- General movements
-vim.keymap.set("", "j", "h", opts)
-vim.keymap.set("", "k", "j", opts)
-vim.keymap.set("", "l", "k", opts)
-vim.keymap.set("", "ö", "l", opts)
 vim.keymap.set("", "ß", "$", opts)
 vim.keymap.set("", "Y", "y$", opts)
 vim.keymap.set("", "ä", "za", opts)
 vim.keymap.set("", "Ä", "zR", opts)
-vim.keymap.set("", "K", "<C-e>", opts)
-vim.keymap.set("", "L", "<C-y>", opts)
 
 -- Delete/change up to next )
 vim.keymap.set("n", "d)", "d])")
