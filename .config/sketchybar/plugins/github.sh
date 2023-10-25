@@ -60,7 +60,7 @@ update() {
       position=popup.github.bell
       icon.background.color=$COLOR
       drawing=on
-      click_script="open \"$URL\"; sketchybar --set github.bell popup.drawing=off"
+      click_script="open \"$URL\"; sketchybar --set github.bell popup.drawing=off; sleep 5; sketchybar --trigger github.update"
     )
 
     args+=(--clone github.notification.$COUNTER github.template \
@@ -79,7 +79,7 @@ popup() {
 }
 
 case "$SENDER" in
-  "routine"|"forced") update
+  "routine"|"forced"|"github.update") update
   ;;
   "mouse.entered") popup on
   ;;
