@@ -4,17 +4,18 @@
 echo "Installing commandline tools..."
 xcode-select --install
 
-# Install Brew
+# Homebrew
+## Install
 echo "Installing Brew..."
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew analytics off
 
-# Brew Taps
+## Taps
 echo "Installing Brew Formulae..."
 brew tap homebrew/cask-fonts
 brew tap FelixKratz/formulae
 
-# Brew Formulae
+## Formulae
 brew install gsl
 brew install llvm
 brew install ccls
@@ -39,25 +40,28 @@ brew install hdf5
 brew install mactex
 brew install starship
 brew install dooit
-brew install alfred
 brew install zsh-autosuggestions
 brew install zsh-syntax-highlighting
-brew install fskhd --head
-brew install fyabai --head
-brew install fnnn --head
-brew install sketchybar
 brew install svim
-brew install sf-symbols
 brew install switchaudio-osx
 brew install lazygit
 brew install btop
+brew install skhd
+brew install sketchybar
 
-# Brew Casks
+## Custom HEAD only forks (personal yabai and nnn forks)
+brew install fyabai --head
+brew install fnnn --head
+
+## Casks
 echo "Installing Brew Casks..."
+brew install --cask alfred
 brew install --cask inkscape
 brew install --cask mumble
 brew install --cask libreoffice
 brew install --cask alacritty
+brew install --cask kitty
+brew install --cask orion
 brew install --cask spotify
 brew install --cask monitorcontrol
 brew install --cask sloth
@@ -67,10 +71,11 @@ brew install --cask meetingbar
 brew install --cask machoview
 brew install --cask hex-fiend
 brew install --cask cutter
-brew install --cask font-hack-nerd-font
 brew install --cask vlc
-brew install --cask wezterm
-brew install --cask kitty
+brew install --cask font-hack-nerd-font
+brew install --cask font-jetbrains-mono
+brew install --cask font-fira-code
+brew install --cask sf-symbols
 
 # Mac App Store Apps
 echo "Installing Mac App Store Apps..."
@@ -159,5 +164,5 @@ csrutil status
 echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
-echo "Installation complete...Restart."
+echo "Installation complete...\n"
 
