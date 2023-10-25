@@ -60,7 +60,7 @@ update() {
       position=popup.github.bell
       icon.background.color=$COLOR
       drawing=on
-      click_script="open $URL; sketchybar --set github.bell popup.drawing=off"
+      click_script="open \"$URL\"; sketchybar --set github.bell popup.drawing=off"
     )
 
     args+=(--clone github.notification.$COUNTER github.template \

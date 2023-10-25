@@ -15,5 +15,4 @@ sketchybar --add event window_focus            \
            --subscribe yabai window_focus      \
                              space_change      \
                              windows_on_spaces \
-                             mouse.scrolled.global \
                              mouse.clicked
