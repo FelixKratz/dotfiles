@@ -39,5 +39,5 @@ sketchybar --add slider volume right            \
            --add item volume_icon right         \
            --set volume_icon "${volume_icon[@]}"
 
-sketchybar --add bracket status brew github.bell volume_icon \
+sketchybar --add bracket status brew github.bell wifi volume_icon \
            --set status "${status_bracket[@]}"

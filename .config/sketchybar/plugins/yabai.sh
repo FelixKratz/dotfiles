@@ -50,11 +50,15 @@ windows_on_spaces () {
     for space in $line
     do
       icon_strip=" "
-      apps=$(yabai -m query --windows --space $space | jq -r ".[].app")
-      if [ "$apps" != "" ]; then
-        while IFS= read -r app; do
+      raw_apps=$(yabai -m query --windows --space $space | jq -r ".[].app")
+      if [ "${raw_apps}" != "" ]; then
+        unique_apps="$(echo "${raw_apps}" | sort | uniq -i)"
+        while read -r app
+        do
           icon_strip+=" $($CONFIG_DIR/plugins/icon_map.sh "$app")"
-        done <<< "$apps"
+        done <<< "${unique_apps}"
+      else
+        icon_strip=" —"
       fi
       args+=(--set space.$space label="$icon_strip" label.drawing=on)
     done
