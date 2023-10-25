@@ -96,30 +96,15 @@ static inline void mach_receive_message(mach_port_t port, struct mach_buffer* bu
   }
 }
 
-mach_port_t g_response_port = 0;
 static inline char* mach_send_message(mach_port_t port, char* message, uint32_t len) {
   if (!message || !port) {
     return NULL;
   }
 
-  if (!g_response_port) {
-    mach_port_name_t task = mach_task_self();
-    if (mach_port_allocate(task, MACH_PORT_RIGHT_RECEIVE,
-                                 &g_response_port          ) != KERN_SUCCESS) {
-      return NULL;
-    }
-
-    if (mach_port_insert_right(task, g_response_port,
-                                     g_response_port,
-                                     MACH_MSG_TYPE_MAKE_SEND)!= KERN_SUCCESS) {
-      return NULL;
-    }
-  }
-
   struct mach_message msg = { 0 };
   msg.header.msgh_remote_port = port;
-  msg.header.msgh_local_port = g_response_port;
-  msg.header.msgh_id = g_response_port;
+  msg.header.msgh_local_port = 0;
+  msg.header.msgh_id = 0;
   msg.header.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND,
                                             MACH_MSG_TYPE_MAKE_SEND,
                                             0,
@@ -140,12 +125,6 @@ static inline char* mach_send_message(mach_port_t port, char* message, uint32_t 
            MACH_PORT_NULL,
            MACH_MSG_TIMEOUT_NONE,
            MACH_PORT_NULL              );
-
-  struct mach_buffer buffer = { 0 };
-  mach_receive_message(g_response_port, &buffer, true);
-  if (buffer.message.descriptor.address)
-    return (char*)buffer.message.descriptor.address;
-  mach_msg_destroy(&buffer.message.header);
 
   return NULL;
 }
