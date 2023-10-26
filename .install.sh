@@ -11,43 +11,48 @@ echo "Installing Brew..."
 brew analytics off
 
 ## Taps
-echo "Installing Brew Formulae..."
+echo "Tapping Brew..."
 brew tap homebrew/cask-fonts
 brew tap FelixKratz/formulae
+brew tap koekeishiya/formulae
 
 ## Formulae
+echo "Installing Brew Formulae..."
+### Essentials
 brew install gsl
 brew install llvm
-brew install ccls
 brew install boost
 brew install libomp
 brew install armadillo
-brew install mas
-brew install neovim
-brew install tree
 brew install wget
 brew install jq
-brew install gh
 brew install ripgrep
-brew install rename
 brew install bear
-brew install neofetch
-brew install wireguard-go
-brew install gnuplot
-brew install lulu
+brew install mas
+brew install gh
 brew install ifstat
-brew install hdf5
-brew install mactex
-brew install starship
-brew install dooit
-brew install zsh-autosuggestions
-brew install zsh-syntax-highlighting
-brew install svim
 brew install switchaudio-osx
-brew install lazygit
-brew install btop
 brew install skhd
 brew install sketchybar
+
+### Science
+brew install mactex
+brew install hdf5
+brew install gnuplot
+
+### Terminal
+brew install neovim
+brew install starship
+brew install zsh-autosuggestions
+brew install zsh-syntax-highlighting
+
+### Nice to have
+brew install lulu
+brew install btop
+brew install svim
+brew install lazygit
+brew install wireguard-go
+brew install dooit
 
 ## Custom HEAD only forks (personal yabai and nnn forks)
 brew install fyabai --head
@@ -55,27 +60,34 @@ brew install fnnn --head
 
 ## Casks
 echo "Installing Brew Casks..."
-brew install --cask alfred
-brew install --cask inkscape
-brew install --cask mumble
-brew install --cask libreoffice
+### Terminals & Browsers
 brew install --cask alacritty
 brew install --cask kitty
 brew install --cask orion
-brew install --cask spotify
-brew install --cask monitorcontrol
-brew install --cask sloth
+
+### Office
+brew install --cask inkscape
+brew install --cask libreoffice
 brew install --cask zoom
-brew install --cask skim
 brew install --cask meetingbar
+brew install --cask skim
+brew install --cask vlc
+
+### Reversing
 brew install --cask machoview
 brew install --cask hex-fiend
 brew install --cask cutter
-brew install --cask vlc
+brew install --cask sloth
+
+### Nice to have
+brew install --cask alfred
+brew install --cask spotify
+
+### Fonts
+brew install --cask sf-symbols
 brew install --cask font-hack-nerd-font
 brew install --cask font-jetbrains-mono
 brew install --cask font-fira-code
-brew install --cask sf-symbols
 
 # Mac App Store Apps
 echo "Installing Mac App Store Apps..."
@@ -136,7 +148,7 @@ curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.
 source $HOME/.zshrc
 cfg config --local status.showUntrackedFiles no
 
-# Python Packages
+# Python Packages (mainly for data science)
 echo "Installing Python Packages..."
 curl https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh | sh
 source $HOME/.zshrc
@@ -165,4 +177,3 @@ echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/key
 open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
 echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 echo "Installation complete...\n"
-
