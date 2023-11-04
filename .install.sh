@@ -34,6 +34,7 @@ brew install ifstat
 brew install switchaudio-osx
 brew install skhd
 brew install sketchybar
+brew install borders
 
 ### Science
 brew install mactex
@@ -170,6 +171,7 @@ echo "Starting Services (grant permissions)..."
 brew services start skhd
 brew services start fyabai
 brew services start sketchybar
+brew services start borders
 brew services start svim
 
 csrutil status

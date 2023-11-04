@@ -11,27 +11,21 @@ yabai -m signal --add event=window_destroyed action="sketchybar --trigger window
 $HOME/.config/yabai/create_spaces.sh
 
 yabai -m config external_bar               all:35:0     \
-                window_border              on           \
                 mouse_follows_focus        off          \
                 focus_follows_mouse        off          \
                 window_zoom_persist        off          \
                 window_placement           second_child \
                 window_topmost             off          \
                 window_shadow              float        \
-                window_opacity             off          \
-                window_opacity_duration    0.0          \
+                window_opacity             on           \
+                window_opacity_duration    0.2          \
                 active_window_opacity      1.0          \
-                normal_window_opacity      0.0          \
-                window_border_width        2            \
-                window_border_hidpi        off          \
-                window_border_radius       11           \
-                window_border_blur         off          \
+                normal_window_opacity      0.95         \
                 window_animation_duration  0.3          \
-                active_window_border_color 0xffe1e3e4   \
-                normal_window_border_color 0xff494d64   \
                 insert_feedback_color      0xff9dd274   \
                 split_ratio                0.50         \
                 auto_balance               off          \
+                auto_padding               on           \
                 mouse_modifier             fn           \
                 mouse_action1              move         \
                 mouse_action2              resize       \
@@ -42,7 +36,6 @@ yabai -m config external_bar               all:35:0     \
                 left_padding               4            \
                 right_padding              4            \
                 window_gap                 6
-
 # Exclude problematic apps from being managed:
 yabai -m rule --add app="^(LuLu|Calculator|Software Update|Dictionary|VLC|System Preferences|System Settings|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice|App Store|Steam|Alfred|Activity Monitor)$" manage=off
 yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off

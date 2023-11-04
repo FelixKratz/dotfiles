@@ -10,7 +10,8 @@ jklö centric navigation and vim moves for my german keyboard.
 nvim as a capable C/C++ debugging environment.
 color scheme consistency across all configurations.
 
-* [sketchybar](https://github.com/FelixKratz/SketchyBar)
+* [SketchyBar](https://github.com/FelixKratz/SketchyBar)
+* [JankyBorders](https://github.com/FelixKratz/JankyBorders)
 * [yabai](https://github.com/koekeishiya/yabai) (personal fork)
 * [skhd](https://github.com/koekeishiya/skhd)
 * [neovim](https://github.com/neovim/neovim)
