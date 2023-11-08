@@ -26,6 +26,8 @@ spotify_cover=(
   background.image.scale=0.2
   background.image.drawing=on
   background.drawing=on
+  background.image.corner_radius=9
+  shadow=on
 )
 
 spotify_title=(

@@ -81,6 +81,8 @@ popup() {
 case "$SENDER" in
   "routine"|"forced"|"github.update") update
   ;;
+  "system_woke") sleep 10 && update # Wait for network to connect
+  ;;
   "mouse.entered") popup on
   ;;
   "mouse.exited"|"mouse.exited.global") popup off

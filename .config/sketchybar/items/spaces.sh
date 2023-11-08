@@ -48,7 +48,7 @@ separator=(
   padding_right=8
   label.drawing=off
   associated_display=active
-  click_script='yabai -m space --create && sketchybar --trigger space_change'
+  click_script='yabai -m space --create'
   icon.color=$WHITE
 )
 
