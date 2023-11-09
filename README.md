@@ -12,6 +12,7 @@ color scheme consistency across all configurations.
 
 * [SketchyBar](https://github.com/FelixKratz/SketchyBar)
 * [JankyBorders](https://github.com/FelixKratz/JankyBorders)
+* [SketchyVim](https://github.com/FelixKratz/SketchyVim)
 * [yabai](https://github.com/koekeishiya/yabai) (personal fork)
 * [skhd](https://github.com/koekeishiya/skhd)
 * [neovim](https://github.com/neovim/neovim)
