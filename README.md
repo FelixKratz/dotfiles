@@ -20,32 +20,6 @@ color scheme consistency across all configurations.
 
 Most setup steps are in `.install.sh`
 
-SketchyBar Features:
-----------------------
-
-* I am using the excellent [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) to display the active applications in the spaces.
-
-* Left clicking a space will focus it, right clicking a space will destroy that space; clicking in the separator (>) will create a new space (all using yabai SIP disabled; optional)
-
-* Mousing over the music icon in the center gives a small Spotify player widget with player controls:
-<img width="381" alt="spotify" src="https://user-images.githubusercontent.com/22680421/211197221-a3d6f8dd-4a72-4cc1-9224-78c1e7ebbb75.png">
-
-
-* The volume icon on the right side can be clicked to toggle the volume slider and animates volume changes:
-
-https://user-images.githubusercontent.com/22680421/211197240-632582a1-7f88-4cf2-bec7-88587112b996.mp4
-
-* The volume icon on the right side can be right-clicked to show and select the audio output device:
-![Screenshot 2022-12-11 at 12 46 48](https://user-images.githubusercontent.com/22680421/206901837-f4f8793e-ba0f-465b-b3a5-72d4fea17de4.png)
-
-* The bell can be hovered to view github notifications
-
-* Clicking the date/time toggles a "zen" mode, hiding all distracting items in the bar:
-<img width="1512" alt="Screenshot 2022-11-11 at 18 01 32" src="https://user-images.githubusercontent.com/22680421/201391668-c4282435-9866-491d-a007-398942abdfb9.png">
-
-* The battery indicator is only shown when below 60%:
-<img width="552" alt="battery" src="https://user-images.githubusercontent.com/22680421/211197318-6b6b5164-3fa9-44a1-856b-391c3b233fe2.png">
-
 SketchyBar Setup
 ----------------------
 * Dependencies(`sf-symbols`, `jq`, `github-cli`, `switchaudio-osx`, [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font)):
