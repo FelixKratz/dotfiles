@@ -12,7 +12,7 @@ do
   sid=$(($i+1))
 
   space=(
-    associated_space=$sid
+    space=$sid
     icon="${SPACE_ICONS[i]}"
     icon.padding_left=10
     icon.padding_right=10
@@ -47,7 +47,7 @@ separator=(
   padding_left=10
   padding_right=8
   label.drawing=off
-  associated_display=active
+  display=active
   click_script='yabai -m space --create'
   icon.color=$WHITE
 )

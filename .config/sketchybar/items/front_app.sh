@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# FRONT_APP_SCRIPT='[ "$SENDER" = "front_app_switched" ] && sketchybar --set $NAME label="$INFO"'
-
 front_app=(
   label.font="$FONT:Black:12.0"
   icon.background.drawing=on
-  # icon.drawing=off
-  associated_display=active
-  # script="$FRONT_APP_SCRIPT"
+  display=active
   script="$PLUGIN_DIR/front_app.sh"
+  click_script="open -a 'Mission Control'"
 )
 
 sketchybar --add item front_app left         \

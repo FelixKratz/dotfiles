@@ -5,9 +5,8 @@ update_media() {
 
   if [ "$STATE" = "playing" ]; then
     APP=$(echo "$INFO" | jq -r '.app')
-    BUNDLE_ID="$(osascript -e "id of app \"$APP\"")"
     MEDIA="$(echo "$INFO" | jq -r '.title + " - " + .artist')"
-    sketchybar --set $NAME icon.background.image="app.$BUNDLE_ID" label="$MEDIA" drawing=on
+    sketchybar --set $NAME label="$MEDIA" drawing=on
   else
     sketchybar --set $NAME drawing=off
   fi
