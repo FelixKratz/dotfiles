@@ -32,18 +32,15 @@ curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v1.0.
 ```
 * (optional) `gh auth login` for GitHub notifications
 * (optional) If you don't use yabai you can safely remove the `yabai` item from `items/yabai.sh` or `sketchybarrc`
-* (optional; needed for yabai window state and running application icons) yabai events:
+* (optional; needed for yabai window state) yabai event:
 ```bash
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
-yabai -m signal --add event=window_created action="sketchybar --trigger windows_on_spaces"
-yabai -m signal --add event=window_destroyed action="sketchybar --trigger windows_on_spaces"
 ```
-* (optional; needed for yabai window state and running application icons) skhd shortcuts should trigger the sketchybar events, e.g.:
+* (optional; needed for yabai window state) skhd shortcuts should trigger the sketchybar event, e.g.:
 ```bash
 lalt - space : yabai -m window --toggle float; sketchybar --trigger window_focus
 shift + lalt - f : yabai -m window --toggle zoom-fullscreen; sketchybar --trigger window_focus
 lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger window_focus
-shift + lalt - 1 : yabai -m window --space 1 && sketchybar --trigger windows_on_spaces
 ```
 * (optional) update outdated packages after running brew commands (add to `.zshrc`):
 ```bash

@@ -3,12 +3,6 @@
 sudo yabai --load-sa
 yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
-yabai -m signal --add event=display_added action="sleep 2 && $HOME/.config/yabai/create_spaces.sh"
-yabai -m signal --add event=display_removed action="sleep 1 && $HOME/.config/yabai/create_spaces.sh"
-yabai -m signal --add event=window_created action="sketchybar --trigger windows_on_spaces"
-yabai -m signal --add event=window_destroyed action="sketchybar --trigger windows_on_spaces"
-
-$HOME/.config/yabai/create_spaces.sh
 
 yabai -m config external_bar               all:35:0     \
                 mouse_follows_focus        off          \
@@ -31,11 +25,11 @@ yabai -m config external_bar               all:35:0     \
                 mouse_action2              resize       \
                 mouse_drop_action          swap         \
                                                         \
-                top_padding                10           \
-                bottom_padding             4            \
-                left_padding               4            \
-                right_padding              4            \
-                window_gap                 6
+                top_padding                14           \
+                bottom_padding             8            \
+                left_padding               8            \
+                right_padding              8            \
+                window_gap                 10
 # Exclude problematic apps from being managed:
 yabai -m rule --add app="^(LuLu|Calculator|Software Update|Dictionary|VLC|System Preferences|System Settings|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice|App Store|Steam|Alfred|Activity Monitor)$" manage=off
 yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
