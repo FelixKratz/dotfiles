@@ -14,8 +14,19 @@ magenta = "#cba6f7"
 orange = "#f5a97f"
 
 BACKGROUND = bg
+BAR_BACKGROUND = bg
+WORKSPACES_BACKGROUND = bg
+TODOS_BACKGROUND = bg
+
 BORDER_DIM = white
-BORDER_LIT = cyan
+BORDER_LIT = blue
+
+BORDER_TITLE_DIM = grey, bg 
+BORDER_TITLE_LIT = black, blue
+
+SEARCH_COLOR = red # highlight color when searching
+YANK_COLOR = blue # a color flash for yanking a todo/workspace/description
+SAVE_ON_ESCAPE = True # whether to cancel the todo or save it when esc is pressed. `False` means cancel
 
 WORKSPACE =  {
     "dim": grey,
@@ -43,7 +54,7 @@ TODO = {
     "completed_icon": f"[{green}]✓[/{green}] ", # icon for completed todo
     "pending_icon": f"[{yellow}][/{yellow}] ", # icon for pending todo
     "overdue_icon": f"[{red}][/{red}] ", # icon for overdue todo
-    "urgency1_icon": "--", # icon for urgency 1 (lowest)
+    "urgency1_icon": "~", # icon for urgency 1 (lowest)
     "urgency2_icon": "", 
     "urgency3_icon": "",
     "urgency4_icon": "",
@@ -87,7 +98,7 @@ ART = f"""
                                        ||     ||[/{grey}]
 """
 
-dashboard = [ART]
+DASHBOARD = [ART]
 
 def time():
     return tag(" ", get_time(), yellow)
@@ -113,8 +124,12 @@ keybindings = {
         "move up": "l",
         "shift up": "L",
         "move to top": "gg",
-        "exit": "Q",
-        "switch pane": ["j", "ö"],
+        "exit": "q",
+        "switch pane": "<tab>",
+        "switch pane workspace": "j",
+        "switch pane todo": "ö",
+        "remove item": "dd",
+        "edit due": "t",
         "toggle expand": "ä",
         "toggle expand parent": "Ä"
 }
