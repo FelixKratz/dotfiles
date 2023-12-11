@@ -12,7 +12,7 @@ window_state() {
 
   if [ "$(echo "$WINDOW" | jq '.["is-floating"]')" = "true" ]; then
     ICON+=$YABAI_FLOAT
-    COLOR=$MAGENTA
+    COLOR=$RED
   elif [ "$(echo "$WINDOW" | jq '.["has-fullscreen-zoom"]')" = "true" ]; then
     ICON+=$YABAI_FULLSCREEN_ZOOM
     COLOR=$GREEN
@@ -23,7 +23,7 @@ window_state() {
     LAST_STACK_INDEX=$(yabai -m query --windows --window stack.last | jq '.["stack-index"]')
     ICON+=$YABAI_STACK
     LABEL="$(printf "[%s/%s]" "$STACK_INDEX" "$LAST_STACK_INDEX")"
-    COLOR=$RED
+    COLOR=$MAGENTA
   fi
 
   args=(--bar border_color=$COLOR --animate sin 10 --set $NAME icon.color=$COLOR)
