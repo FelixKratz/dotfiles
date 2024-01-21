@@ -155,7 +155,7 @@ function icon_map() {
   "Hyper")
     icon_result=":hyper:"
     ;;
-  "WhatsApp")
+  "‎WhatsApp")
     icon_result=":whats_app:"
     ;;
   "카카오톡")
@@ -484,4 +484,3 @@ function icon_map() {
 
 icon_map "$1"
 echo "$icon_result"
-
