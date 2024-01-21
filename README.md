@@ -22,6 +22,12 @@ Most setup steps are in `.install.sh`
 
 SketchyBar Setup
 ----------------------
+One-line install for sketchybar config (requires brew to be installed):
+```bash
+curl -L https://raw.githubusercontent.com/FelixKratz/dotfiles/master/install_sketchybar.sh | sh
+```
+
+### Manual Install Steps
 * Dependencies(`sf-symbols`, `jq`, `github-cli`, `switchaudio-osx`, [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font)):
 ```bash
 brew install --cask sf-symbols
