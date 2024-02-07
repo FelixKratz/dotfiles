@@ -40,12 +40,13 @@ brew install borders
 brew install mactex
 brew install hdf5
 brew install gnuplot
+brew install texlab
 
 ### Terminal
 brew install neovim
 brew install starship
 brew install zsh-autosuggestions
-brew install zsh-syntax-highlighting
+brew install zsh-fast-syntax-highlighting
 
 ### Nice to have
 brew install lulu
@@ -133,6 +134,10 @@ defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool 
 defaults write com.apple.Safari com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled -bool true
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
 defaults write com.apple.mail AddressesIncludeNameOnPasteboard -bool false
+defaults write -g NSWindowShouldDragOnGesture YES
+
+## Fix for MX Master 3S
+sudo defaults write /Library/Preferences/com.apple.airport.bt.plist bluetoothCoexMgmt Hybrid
 
 # Copying and checking out configuration files
 echo "Planting Configuration Files..."
