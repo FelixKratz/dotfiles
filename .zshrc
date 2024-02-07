@@ -1,14 +1,7 @@
 # Source zsh plugins
+source $(brew --prefix)/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
 source $HOME/.config/.zsh-vi-mode/zsh-vi-mode.plugin.zsh
-
-[ -d "/opt/homebrew/share/zsh-autosuggestions/" ] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
-                                                  || source /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-[ -d "/opt/homebrew/share/zsh-syntax-highlighting/highlighters" ] && export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/opt/homebrew/share/zsh-syntax-highlighting/highlighters \
-                                                                  || export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/usr/local/share/zsh-syntax-highlighting/highlighters
-
-[ -d "/opt/homebrew/share/zsh-syntax-highlighting/" ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-                                                  || source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 # Aliases for common dirs
 alias home="cd ~"
@@ -45,11 +38,11 @@ function brew() {
 
 alias n="nnn"
 function nnn () {
-    command nnn "$@"
+  command nnn "$@"
 
-    if [ -f "$NNN_TMPFILE" ]; then
-            . "$NNN_TMPFILE"
-    fi
+  if [ -f "$NNN_TMPFILE" ]; then
+          . "$NNN_TMPFILE"
+  fi
 }
 
 function zen () {
@@ -68,10 +61,15 @@ function suyabai () {
     echo "sudoers file does not exist yet"
   fi
 }
+
+source "$HOME/.cargo/env"
+
 # Only load conda into path but dont actually use the bloat that comes with it
-export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
+export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH:$(brew --prefix)/opt/llvm/bin"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export EDITOR="$(which nvim)"
 export VISUAL="$(which nvim)"
+export NNN_OPTS="AdHoU"
+export NNN_FCOLORS='c1e2272e006033f7c6d6abc4'
 export MANPAGER="$(which nvim) +Man!"
 export XDG_CONFIG_HOME="$HOME/.config"
