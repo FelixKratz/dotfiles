@@ -1,8 +1,6 @@
 #!/bin/bash
 
 if [ "$SENDER" = "space_windows_change" ]; then
-  args=(--animate sin 10)
-
   space="$(echo "$INFO" | jq -r '.space')"
   apps="$(echo "$INFO" | jq -r '.apps | keys[]')"
 
@@ -15,7 +13,6 @@ if [ "$SENDER" = "space_windows_change" ]; then
   else
     icon_strip=" —"
   fi
-  args+=(--set space.$space label="$icon_strip")
 
-  sketchybar -m "${args[@]}"
+  sketchybar --animate sin 10 --set space.$space label="$icon_strip"
 fi
