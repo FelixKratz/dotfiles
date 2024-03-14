@@ -16,13 +16,13 @@ lalt -    h : yabai -m window --focus first
 lalt - 0x27 : yabai -m window --focus  last
 
 # Float / Unfloat window: lalt - space
-lalt - space : yabai -m window --toggle float; sketchybar --trigger window_focus
+lalt - space : yabai -m window --toggle float
 
 # Make window zoom to fullscreen: shift + lalt - f
-shift + lalt - f : yabai -m window --toggle zoom-fullscreen; sketchybar --trigger window_focus
+shift + lalt - f : yabai -m window --toggle zoom-fullscreen
 
 # Make window zoom to parent node: lalt - f 
-lalt - f : yabai -m window --toggle zoom-parent; sketchybar --trigger window_focus
+lalt - f : yabai -m window --toggle zoom-parent
 
 ## Window Movement (shift + lalt - ...)
 # Moving windows in spaces: shift + lalt - {j, k, l, ö}
@@ -56,10 +56,10 @@ shift + lalt - y : yabai -m space --mirror y-axis
 
 ## Stacks (shift + ctrl - ...)
 # Add the active window to the window or stack to the {direction}: shift + ctrl - {j, k, l, ö}
-shift + ctrl - j    : yabai -m window  west --stack $(yabai -m query --windows --window | jq -r '.id') && sketchybar --trigger window_focus
-shift + ctrl - k    : yabai -m window south --stack $(yabai -m query --windows --window | jq -r '.id') && sketchybar --trigger window_focus
-shift + ctrl - l    : yabai -m window north --stack $(yabai -m query --windows --window | jq -r '.id') && sketchybar --trigger window_focus
-shift + ctrl - 0x29 : yabai -m window  east --stack $(yabai -m query --windows --window | jq -r '.id') && sketchybar --trigger window_focus
+shift + ctrl - j    : yabai -m window  west --stack $(yabai -m query --windows --window | jq -r '.id')
+shift + ctrl - k    : yabai -m window south --stack $(yabai -m query --windows --window | jq -r '.id')
+shift + ctrl - l    : yabai -m window north --stack $(yabai -m query --windows --window | jq -r '.id')
+shift + ctrl - 0x29 : yabai -m window  east --stack $(yabai -m query --windows --window | jq -r '.id')
 
 # Stack Navigation: shift + ctrl - {n, p}
 shift + ctrl - n : yabai -m window --focus stack.next
@@ -78,10 +78,6 @@ ctrl + lalt - e : yabai -m space --balance
 # Enable / Disable gaps in current workspace: ctrl + lalt - g
 ctrl + lalt - g : yabai -m space --toggle padding; yabai -m space --toggle gap
 
-# Enable / Disable gaps in current workspace: ctrl + lalt - g
-ctrl + lalt - b : yabai -m config window_border off 
-shift + ctrl + lalt - b : yabai -m config window_border on
-
 ## Insertion (shift + ctrl + lalt - ...)
 # Set insertion point for focused container: shift + ctrl + lalt - {j, k, l, ö, s}
 shift + ctrl + lalt - j : yabai -m window --insert west
@@ -90,14 +86,9 @@ shift + ctrl + lalt - l : yabai -m window --insert north
 shift + ctrl + lalt - 0x29 : yabai -m window --insert east
 shift + ctrl + lalt - s : yabai -m window --insert stack
 
-## Misc
-# Open new Alacritty window
-lalt - t : alacritty msg create-window
-
 # New window in hor./ vert. splits for all applications with yabai
 lalt - s : yabai -m window --insert east;  skhd -k "cmd - n"
 lalt - v : yabai -m window --insert south; skhd -k "cmd - n"
 
 # Toggle sketchybar
 shift + lalt - space : sketchybar --bar hidden=toggle
-shift + lalt - r : sketchybar --remove '/.*/' && sh -c 'export CONFIG_DIR=$HOME/.config/sketchybar && $CONFIG_DIR/sketchybarrc'

@@ -64,6 +64,7 @@ P = "paste_clipboard_before"
 y = "yank_to_clipboard"
 Y = "yank_joined_to_clipboard"
 R = "replace_selections_with_clipboard"
+"C-c" = ":write-quit"
 
 [keys.normal.g]
 j = "goto_line_start"
