@@ -18,7 +18,6 @@ yabai -m config external_bar               all:40:0       \
                 insert_feedback_color      0xff9dd274     \
                 split_ratio                0.50           \
                 auto_balance               off            \
-                auto_padding               on             \
                 mouse_modifier             fn             \
                 mouse_action1              move           \
                 mouse_action2              resize         \

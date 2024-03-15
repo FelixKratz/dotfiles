@@ -35,6 +35,7 @@ brew install switchaudio-osx
 brew install skhd
 brew install sketchybar
 brew install borders
+brew install yabai
 
 ### Science
 brew install mactex
@@ -58,9 +59,8 @@ brew install lazygit
 brew install wireguard-go
 brew install dooit
 
-## Custom HEAD only forks (personal yabai and nnn forks)
-brew install fyabai --head
-brew install fnnn --head
+### Custom HEAD only forks
+brew install fnnn --head # nnn fork (changed colors, keymappings)
 
 ## Casks
 echo "Installing Brew Casks..."
