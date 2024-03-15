@@ -188,7 +188,6 @@ brew services start borders
 brew services start svim
 
 csrutil status
-echo "Do not forget to disable SIP and reconfigure keyboard -> $HOME/.config/keyboard..."
-open "$HOME/.config/keyboard/KeyboardModifierKeySetup.png"
-echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
+echo "(optional) Disable SIP for advanced yabai features."
+echo "(optional) Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 echo "Installation complete...\n"
