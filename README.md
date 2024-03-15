@@ -34,5 +34,3 @@ https://github.com/FelixKratz/dotfiles/tree/6fbd917f745df1bac7f84ef930feecb67df0
 <img width="1512" alt="desktop" src="https://user-images.githubusercontent.com/22680421/211197150-f1ff3f18-4b1a-4c6c-8174-ff70997af0fd.png">
 
 
-https://github.com/FelixKratz/dotfiles/tree/88e0eff2fa3616d695fd5ae317a8582b636fb26a (shell-config):
-<img width="1512" alt="Screenshot 2022-11-11 at 17 33 00" src="https://user-images.githubusercontent.com/22680421/201389026-20255532-8c7a-4c48-a34c-e8e3b1cb03fa.png">
