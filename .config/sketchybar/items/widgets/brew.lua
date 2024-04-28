@@ -25,26 +25,26 @@ local brew = sbar.add("item", "widgets.brew", {
 	update_freq = 10,
 })
 
-function GetThresholdColor(count)
-	local thresholdKeys = {}
-	for key in pairs(thresholds) do
-		table.insert(thresholdKeys, key)
-	end
-
-	table.sort(thresholdKeys, function(a, b)
-		return a > b
-	end)
-
-	for _, threshold in ipairs(thresholdKeys) do
-		if tonumber(count) >= threshold then
-			return thresholds[threshold]
-		end
-	end
-	return colors.green
-end
-
 brew:subscribe({ "routine", "brew_update" }, function()
 	sbar.exec("brew outdated | wc -l | tr -d ' '", function(brew_outdated)
+		local function getThresholdColor(count)
+			local thresholdKeys = {}
+			for key in pairs(thresholds) do
+				table.insert(thresholdKeys, key)
+			end
+
+			table.sort(thresholdKeys, function(a, b)
+				return a > b
+			end)
+
+			for _, threshold in ipairs(thresholdKeys) do
+				if tonumber(count) >= threshold then
+					return thresholds[threshold]
+				end
+			end
+			return colors.green
+		end
+
 		local icon = icons.brew.empty
 		local color = colors.green
 		local label = "0"
@@ -54,7 +54,7 @@ brew:subscribe({ "routine", "brew_update" }, function()
 		if tonumber(count) > 0 then
 			icon = icons.brew.full
 			label = count
-			color = GetThresholdColor(count)
+			color = getThresholdColor(count)
 			drawing = "on"
 		end
 		--print("color: ", color, "count: ", count, "icon: ", icon, "label: ", label, "drawing: ", drawing)
