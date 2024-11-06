@@ -1,7 +1,0 @@
-[[sources]]
-name = "friendly-snippets"
-git = "https://github.com/rafamadriz/friendly-snippets.git"
-
-[[sources.paths]]
-scope = ["latex"]
-path = "snippets/latex/"
