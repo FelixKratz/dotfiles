@@ -8,6 +8,8 @@ alias home="cd ~"
 # System Aliases
 alias ..="cd .."
 alias x="exit"
+alias vi="nvim"
+
 
 # Git Aliases
 alias add="git add"
@@ -20,6 +22,9 @@ alias log="git log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d
 alias cfg="git --git-dir=$HOME/dotfiles/ --work-tree=$HOME"
 alias push="git push"
 alias g="lazygit"
+alias gaa="git add ."
+alias gac="git add .; git commit -m 'auto-commit'"
+
 
 eval "$(starship init zsh)"
 eval "$(zoxide init --cmd cd zsh)"
@@ -63,14 +68,12 @@ export BG0=0xff2c2e34
 export BG1=0xff363944
 export BG2=0xff414550
 
-source "$HOME/.cargo/env"
-
 # Only load conda into path but dont actually use the bloat that comes with it
-export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH:$(brew --prefix)/opt/llvm/bin"
+export PATH="/opt/homebrew/Caskroom/miniconda/base/bin:$PATH"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"
 export NNN_OPTS="AdHoU"
 export NNN_FCOLORS='c1e2272e006033f7c6d6abc4'
-export EDITOR="$(which hx)"
-export VISUAL="$(which hx)"
+export EDITOR="$(which nvim)"
+export VISUAL="$(which cursor)"
 export MANPAGER="$(which nvim) +Man!"
 export XDG_CONFIG_HOME="$HOME/.config"

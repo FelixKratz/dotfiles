@@ -9,11 +9,8 @@ yabai -m config external_bar               all:40:0       \
                 window_zoom_persist        off            \
                 window_placement           second_child   \
                 window_shadow              float          \
-                window_opacity             on             \
-                window_opacity_duration    0.2            \
-                active_window_opacity      1.0            \
-                normal_window_opacity      0.8            \
-                window_animation_duration  0.5            \
+                window_opacity             off             \
+                window_animation_duration  0.2            \
                 window_animation_easing    ease_out_quint \
                 insert_feedback_color      0xff9dd274     \
                 split_ratio                0.50           \
@@ -30,7 +27,7 @@ yabai -m config external_bar               all:40:0       \
                 window_gap                 10
 
 # Exclude problematic apps from being managed:
-yabai -m rule --add app="^(LuLu|Calculator|Software Update|Dictionary|VLC|System Preferences|System Settings|zoom.us|Photo Booth|Archive Utility|Python|LibreOffice|App Store|Steam|Alfred|Activity Monitor)$" manage=off
+yabai -m rule --add app="^(|Calculator|Software Update|Dictionary|VLC|System Preferences|System Settings|zoom.us|Photo Booth|Archive Utility|App Store|Alfred|Activity Monitor|Finder)$" manage=off
 yabai -m rule --add label="Finder" app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
 yabai -m rule --add label="Safari" app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off
 yabai -m rule --add label="About This Mac" app="System Information" title="About This Mac" manage=off
