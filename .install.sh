@@ -12,7 +12,6 @@ brew analytics off
 
 ## Taps
 echo "Tapping Brew..."
-brew tap homebrew/cask-fonts
 brew tap FelixKratz/formulae
 brew tap koekeishiya/formulae
 
@@ -89,6 +88,8 @@ brew install --cask spotify
 
 ### Fonts
 brew install --cask sf-symbols
+brew install --cask font-sf-mono
+brew install --cask font-sf-pro
 brew install --cask font-hack-nerd-font
 brew install --cask font-jetbrains-mono
 brew install --cask font-fira-code
@@ -151,7 +152,7 @@ git clone git@github.com:shaunsingh/SFMono-Nerd-Font-Ligaturized.git /tmp/SFMono
 mv /tmp/SFMono_Nerd_Font/* $HOME/Library/Fonts
 rm -rf /tmp/SFMono_Nerd_Font/
 
-curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v2.0.5/sketchybar-app-font.ttf -o $HOME/Library/Fonts/sketchybar-app-font.ttf
+curl -L https://github.com/kvndrsslr/sketchybar-app-font/releases/download/v2.0.28/sketchybar-app-font.ttf -o $HOME/Library/Fonts/sketchybar-app-font.ttf
 
 # Installing helix language server
 git clone https://github.com/estin/simple-completion-language-server.git /tmp/simple-completion-language-server
