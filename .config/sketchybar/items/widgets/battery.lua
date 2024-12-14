@@ -90,6 +90,10 @@ battery:subscribe("mouse.clicked", function(env)
   end
 end)
 
+battery:subscribe("mouse.exited.global", function()
+  battery:set( { popup = { drawing = "off" } })
+end)
+
 sbar.add("bracket", "widgets.battery.bracket", { battery.name }, {
   background = { color = colors.bg1 }
 })
