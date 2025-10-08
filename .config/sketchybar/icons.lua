@@ -34,6 +34,7 @@ local icons = {
       connected = "􀙇",
       disconnected = "􀙈",
       router = "􁓤",
+      vpn = "􀒲",
     },
     media = {
       back = "􀊊",

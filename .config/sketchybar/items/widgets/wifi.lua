@@ -183,6 +183,17 @@ wifi:subscribe({"wifi_change", "system_woke"}, function(env)
       },
     })
   end)
+  sbar.exec("scutil --nc list | grep 'Connected'", function(result)
+    local connected = not (result == "")
+    if connected then
+      wifi:set({
+        icon = {
+          string = icons.wifi.vpn,
+          color = colors.white,
+        },
+      })
+    end
+  end)
 end)
 
 local function hide_details()
