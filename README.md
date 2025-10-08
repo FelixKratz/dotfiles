@@ -22,6 +22,10 @@ One-line install for sketchybar config (requires brew to be installed):
 ```bash
 curl -L https://raw.githubusercontent.com/FelixKratz/dotfiles/master/install_sketchybar.sh | sh
 ```
+On MacOS Sequoia, due to Apple's recently updated Security protocols, you'll need to run with ```sudo```.
+```bash
+sudo curl -L https://raw.githubusercontent.com/FelixKratz/dotfiles/master/install_sketchybar.sh | sh
+```
 
 Previous Setups
 ----------------------
