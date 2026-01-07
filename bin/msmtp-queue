@@ -2,4 +2,5 @@
 # Wrapper for msmtp-queue with correct paths
 export MSMTPQ_Q=~/.msmtpq
 export MSMTPQ_LOG=~/.log/msmtpq.log
-exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtp-queue "$@"
+export EMAIL_QUEUE_QUIET=t
+exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq --q-mgmt "$1"
