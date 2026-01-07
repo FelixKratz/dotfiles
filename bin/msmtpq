@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper for msmtpq with correct paths
+export MSMTPQ_Q=~/.msmtpq
+export MSMTPQ_LOG=~/.log/msmtpq.log
+export EMAIL_QUEUE_QUIET=t
+exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq "$@"

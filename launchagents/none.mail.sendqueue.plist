@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>none.mail.sendqueue</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/timelimit</string>
+		<string>-t</string>
+		<string>60</string>
+		<string>__HOME__/.local/bin/msmtp-queue</string>
+		<string>-r</string>
+	</array>
+	<key>StandardOutPath</key>
+	<string>__HOME__/.log/msmtpq.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/.log/msmtpq.err</string>
+	<key>StartInterval</key>
+	<integer>300</integer>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+</dict>
+</plist>

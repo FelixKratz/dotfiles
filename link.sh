@@ -36,4 +36,13 @@ done
 ln -sfh $CODE_DIR/dotfiles/bin ~/bin
 echo "Linked bin → ~/bin"
 
+# msmtpq setup (wrappers in ~/bin set correct paths)
+mkdir -p ~/.msmtpq
+mkdir -p ~/.local/bin
+if [ -f ~/bin/msmtpq ]; then
+  ln -sf ~/bin/msmtpq ~/.local/bin/msmtpq
+  ln -sf ~/bin/msmtp-queue ~/.local/bin/msmtp-queue
+  echo "Linked msmtpq wrappers → ~/.local/bin/"
+fi
+
 echo "\nDone. Run 'doom sync' if Emacs config changed."

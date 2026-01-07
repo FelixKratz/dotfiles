@@ -1,0 +1,5 @@
+#!/bin/bash
+# Wrapper for msmtp-queue with correct paths
+export MSMTPQ_Q=~/.msmtpq
+export MSMTPQ_LOG=~/.log/msmtpq.log
+exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtp-queue "$@"

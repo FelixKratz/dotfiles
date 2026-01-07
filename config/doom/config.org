@@ -156,15 +156,164 @@ job, I usually just want to re-index. This inverts the prefix behavior:
             :around #'sf/mu4e-update-mail-and-index)
 #+end_src
 
-** Sending Mail
-Using msmtpq for queued sending - emails are queued locally and sent in background.
+** Default Identity
+Set default From address (used when composing new mail, not replying).
 #+begin_src emacs-lisp
-(setq mail-specify-envelope-from t
-      message-sendmail-f-is-evil nil
-      mail-envelope-from 'header
-      message-sendmail-envelope-from 'header
-      message-send-mail-function 'message-send-mail-with-sendmail
-      sendmail-program "/usr/local/share/msmtp/scripts/msmtpq/msmtpq")
+(setq user-full-name "Sebastian Funk"
+      user-mail-address "sebastian.funk@work.ac.uk")
+#+end_src
+
+** Notmuch Identities
+Auto-select From address based on the message being replied to.
+#+begin_src emacs-lisp
+(after! notmuch
+  ;; All identities
+  (setq notmuch-identities
+        '("Sebastian Funk <sebastian.funk@work.ac.uk>"
+          "Sebastian Funk <address-removed@example.invalid>"
+          "Sebastian Funk <joint@example.com>"
+          "Sebastian Funk <gmail2@example.com>"
+          "Sebastian Funk <gmail1@example.com>"
+          "Sebastian Funk <gmx@example.com>"
+          "Sebastian Funk <yahoo@example.com>"))
+
+  ;; Default identity
+  (setq notmuch-fcc-dirs
+        '(("sebastian.funk@work.ac.uk" . "work/Sent Items")
+          ("address-removed@example.invalid" . "private/[Gmail]/Sent Mail")
+          ("joint@example.com" . "joint/[Gmail]/Sent Mail")
+          ("gmx@example.com" . "gmx/Gesendet")
+          (".*" . "work/Sent Items")))
+
+  ;; Auto-detect identity from To/Cc when replying
+  (setq notmuch-always-prompt-for-sender nil)
+
+  ;; Function to detect identity from original message
+  (defun sf/notmuch-guess-identity ()
+    "Guess identity based on To/Cc of message being replied to."
+    (when-let* ((original-to (notmuch-show-get-to))
+                (original-cc (notmuch-show-get-cc))
+                (all-recipients (concat original-to " " original-cc)))
+      (seq-find (lambda (identity)
+                  (let ((addr (cadr (mail-extract-address-components identity))))
+                    (string-match-p (regexp-quote addr) all-recipients)))
+                notmuch-identities)))
+
+  ;; Set From when composing reply
+  (defun sf/notmuch-set-from-for-reply ()
+    "Set From header based on detected identity."
+    (when-let ((identity (sf/notmuch-guess-identity)))
+      (message-replace-header "From" identity)))
+
+  (add-hook 'notmuch-mua-reply-hook #'sf/notmuch-set-from-for-reply)
+
+  ;; Easy From switching: C-c C-f f cycles identities
+  (defun sf/notmuch-cycle-identity ()
+    "Cycle through notmuch identities for From header."
+    (interactive)
+    (let* ((current-from (message-fetch-field "from"))
+           (current-addr (and current-from
+                              (cadr (mail-extract-address-components current-from))))
+           (current-idx (or (seq-position notmuch-identities current-from #'string=)
+                            (seq-position notmuch-identities
+                                          current-addr
+                                          (lambda (id addr)
+                                            (string-match-p (regexp-quote addr) id)))
+                            -1))
+           (next-idx (mod (1+ current-idx) (length notmuch-identities)))
+           (next-identity (nth next-idx notmuch-identities)))
+      (message-replace-header "From" next-identity)
+      (message "From: %s" next-identity)))
+
+  (map! :map notmuch-message-mode-map
+        "C-c C-f f" #'sf/notmuch-cycle-identity)
+
+  ;; Address completion from notmuch database
+  (setq notmuch-address-command 'internal  ; use built-in completion
+        notmuch-address-use-company t)     ; integrate with company-mode
+
+  ;; Also complete in Cc/Bcc fields
+  (setq notmuch-address-selection-function
+        (lambda (prompt collection initial-input)
+          (completing-read prompt collection nil nil initial-input))))
+#+end_src
+
+** Sending Mail
+Use msmtpq for queue-based sending. Emails queue locally and send when connection is available.
+Handles flaky connections gracefully - never loses mail. Queue flushed periodically via launchd.
+Config in =~/.msmtprc=, queue in =~/.msmtpq/=, logs to =~/.log/msmtp.log=.
+
+*** Core Setup
+#+begin_src emacs-lisp
+(after! message
+  ;; Use msmtpq for queue-based sending
+  (setq sendmail-program "msmtpq"
+        message-send-mail-function #'message-send-mail-with-sendmail
+        message-sendmail-f-is-evil t
+        message-sendmail-extra-arguments '("--read-envelope-from")))
+#+end_src
+
+*** Queue Management
+#+begin_src emacs-lisp
+(defun sf/mail-queue-count ()
+  "Return number of messages in msmtpq queue."
+  (let ((queue-dir (expand-file-name "~/.msmtpq")))
+    (if (file-directory-p queue-dir)
+        (length (directory-files queue-dir nil "\\.mail$"))
+      0)))
+
+(defun sf/mail-queue-flush ()
+  "Flush the msmtpq queue."
+  (interactive)
+  (let ((count (sf/mail-queue-count)))
+    (if (zerop count)
+        (message "Mail queue empty")
+      (message "Flushing %d queued message(s)..." count)
+      (async-shell-command "msmtp-queue -r" "*msmtp-queue*"))))
+
+(defun sf/mail-queue-list ()
+  "Show queued messages."
+  (interactive)
+  (async-shell-command "msmtp-queue -d" "*msmtp-queue*"))
+#+end_src
+
+*** Logging
+Log sent messages from Emacs side (msmtp also logs to ~/.log/msmtp.log).
+#+begin_src emacs-lisp
+(defvar sf/mail-log-file "~/.log/emacs-mail.log"
+  "Log file for mail operations.")
+
+(defun sf/mail-log (format-string &rest args)
+  "Log a message to the mail log file."
+  (let ((msg (format "[%s] %s\n"
+                     (format-time-string "%Y-%m-%d %H:%M:%S")
+                     (apply #'format format-string args))))
+    (append-to-file msg nil sf/mail-log-file)
+    (message "Mail: %s" (string-trim msg))))
+
+(defun sf/mail-log-sent ()
+  "Log when a message is sent."
+  (sf/mail-log "SENT: To=%s Subject=%s"
+               (message-fetch-field "to")
+               (message-fetch-field "subject")))
+
+(add-hook 'message-sent-hook #'sf/mail-log-sent)
+
+;; Keybinding to view log
+(map! :leader
+      (:prefix ("o n" . "notmuch/mail")
+       :desc "Flush queue" "f" #'sf/mail-queue-flush
+       :desc "List queue" "q" #'sf/mail-queue-list
+       :desc "Queue count" "c" (cmd! (message "Mail queue: %d" (sf/mail-queue-count)))
+       :desc "View Emacs log" "l" (cmd! (find-file sf/mail-log-file))
+       :desc "View msmtp log" "L" (cmd! (find-file "~/.log/msmtp.log"))))
+#+end_src
+
+*** Credentials
+Use macOS Keychain for non-OAuth accounts (Gmail, etc).
+#+begin_src emacs-lisp
+;; Use macOS Keychain as primary auth source (same passwords as mbsync)
+(setq auth-sources '(macos-keychain-internet macos-keychain-generic "~/.authinfo.gpg"))
 #+end_src
 
 * ESS (Emacs Speaks Statistics)

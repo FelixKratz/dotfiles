@@ -71,8 +71,11 @@ brew install slack
 brew install emacs-plus
 brew install --HEAD sbfnk/formulae/isync
 brew install mu
-brew install oauth2ms
+brew install msmtp
 brew install timelimit
+
+### Python tools (m365auth for OAuth2)
+pipx install m365auth
 
 ## Casks
 echo "Installing Brew Casks..."
