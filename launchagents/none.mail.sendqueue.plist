@@ -8,7 +8,7 @@
 	<array>
 		<string>/opt/homebrew/bin/timelimit</string>
 		<string>-t</string>
-		<string>60</string>
+		<string>45</string>
 		<string>__HOME__/.local/bin/msmtp-queue</string>
 		<string>-r</string>
 	</array>
@@ -17,7 +17,7 @@
 	<key>StandardErrorPath</key>
 	<string>__HOME__/.log/msmtpq.err</string>
 	<key>StartInterval</key>
-	<integer>60</integer>
+	<integer>90</integer>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
 </dict>
