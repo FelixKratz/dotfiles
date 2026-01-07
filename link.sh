@@ -33,16 +33,16 @@ for file in $CODE_DIR/dotfiles/launchagents/*; do
   echo "Linked $file → ~/Library/LaunchAgents/$(basename $file)"
 done
 
+# Link scripts to ~/.local/bin
+mkdir -p ~/.local/bin
+mkdir -p ~/.msmtpq
+for file in $CODE_DIR/dotfiles/bin/*; do
+  ln -sf $file ~/.local/bin/
+  echo "Linked $file → ~/.local/bin/$(basename $file)"
+done
+
+# Keep ~/bin as symlink for backwards compatibility
 ln -sfh $CODE_DIR/dotfiles/bin ~/bin
 echo "Linked bin → ~/bin"
-
-# msmtpq setup (wrappers in ~/bin set correct paths)
-mkdir -p ~/.msmtpq
-mkdir -p ~/.local/bin
-if [ -f ~/bin/msmtpq ]; then
-  ln -sf ~/bin/msmtpq ~/.local/bin/msmtpq
-  ln -sf ~/bin/msmtp-queue ~/.local/bin/msmtp-queue
-  echo "Linked msmtpq wrappers → ~/.local/bin/"
-fi
 
 echo "\nDone. Run 'doom sync' if Emacs config changed."
