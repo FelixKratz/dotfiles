@@ -163,6 +163,26 @@ Set default From address (used when composing new mail, not replying).
       user-mail-address "sebastian.funk@work.ac.uk")
 #+end_src
 
+** Notmuch Saved Searches
+Bookmarks for quick access to inboxes and common searches.
+#+begin_src emacs-lisp
+(after! notmuch
+  (setq notmuch-saved-searches
+        '((:name "inbox"      :query "tag:inbox"                    :key "i")
+          (:name "unread"     :query "tag:unread"                   :key "u")
+          (:name "flagged"    :query "tag:flagged"                  :key "f")
+          (:name "sent"       :query "tag:sent"                     :key "s")
+          (:name "drafts"     :query "tag:draft"                    :key "d")
+          (:name "all"        :query "*"                            :key "a")
+          ;; Per-account inboxes
+          (:name "work"      :query "folder:work/INBOX"           :key "l")
+          (:name "private"    :query "folder:private/INBOX"         :key "p")
+          (:name "joint"      :query "folder:joint/INBOX"           :key "j")
+          (:name "gmx"        :query "folder:gmx/INBOX"             :key "g")
+          (:name "sbstnfnk"   :query "folder:sbstnfnk/INBOX"        :key "b")
+          (:name "sebfnk"     :query "folder:sebfnk/INBOX"          :key "k"))))
+#+end_src
+
 ** Notmuch Identities
 Auto-select From address based on the message being replied to.
 #+begin_src emacs-lisp
@@ -572,22 +592,8 @@ The buffer is still accessible via =SPC b B= (global buffer list).
 ** Directories
 #+begin_src emacs-lisp
 (setq org-directory "~/org")
-(setq org-agenda-files '("~/org-roam"))
-#+end_src
-
-** Org-roam
-Zettelkasten-style note-taking with backlinks.
-#+begin_src emacs-lisp
-(after! org-roam
-    :ensure t
-    :init
-    (setq org-roam-v2-ack t)
-    :custom
-    (setq org-roam-directory "~/org-roam")
-    (setq org-roam-complete-everywhere t)
-    :config)
-
-(org-roam-db-autosync-mode)
+;; org-agenda-files is dynamically updated by vulpea-agenda-files-update
+;; which includes all files with 'project' tag
 #+end_src
 
 ** Agenda Views

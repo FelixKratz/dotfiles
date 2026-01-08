@@ -1,41 +1,47 @@
 ;;; tools/vulpea/config.el -*- lexical-binding: t; -*-
 
+;; vulpea v2 configuration - standalone, no org-roam dependency
+
 (use-package! vulpea
-   :after org-capture
-   :hook ((org-roam-db-autosync-mode . vulpea-db-autosync-enable))
-   :init
-        (require 'vulpea-buffer)
-        (require 'vulpea-db)
-        (require 'vulpea-note)
-        (require 'vulpea-select)
-        (add-to-list 'org-tags-exclude-from-inheritance "project")
-        (defvar vulpea-capture-inbox-file
-          (format "inbox-%s.org" (system-name))
-          "The path to the inbox file.
+  :demand t
+  :init
+  ;; Sync directories (your org-roam directory)
+  (setq vulpea-db-sync-directories '("~/org-roam/"))
 
-           It is relative to `org-directory', unless it is absolute.")
-         (dolist (var '(vulpea-capture-inbox-file))
-          (set var (expand-file-name (symbol-value var) org-roam-directory)))
-        (unless org-default-notes-file
-          (setq org-default-notes-file vulpea-capture-inbox-file))
-        (setq
-         org-capture-templates
-         '(("t" "todo" plain (file vulpea-capture-inbox-file)
-            "* TODO %?\n%U\n" :clock-in t :clock-resume t)
-           ("m" "Meeting" entry
-            (function vulpea-capture-meeting-target)
-            (function vulpea-capture-meeting-template)
-            :clock-in t
-            :clock-resume t))))
+  ;; Inbox file for quick captures
+  (defvar vulpea-capture-inbox-file
+    (expand-file-name (format "inbox-%s.org" (system-name)) "~/org-roam/")
+    "The path to the inbox file.")
 
+  (unless org-default-notes-file
+    (setq org-default-notes-file vulpea-capture-inbox-file))
+
+  ;; Exclude 'project' tag from inheritance
+  (add-to-list 'org-tags-exclude-from-inheritance "project")
+
+  :config
+  ;; Enable autosync mode for background updates
+  (vulpea-db-autosync-mode +1)
+
+  ;; Capture templates
+  (setq org-capture-templates
+        '(("t" "todo" plain (file vulpea-capture-inbox-file)
+           "* TODO %?\n%U\n" :clock-in t :clock-resume t)
+          ("T" "todo with project" plain
+           (function vulpea-capture-project-task-target)
+           "* TODO %?\n%U\n" :clock-in t :clock-resume t)
+          ("m" "Meeting" entry
+           (function vulpea-capture-meeting-target)
+           (function vulpea-capture-meeting-template)
+           :clock-in t
+           :clock-resume t))))
+
+;; Agenda configuration
 (defvar vulpea-agenda-main-buffer-name "*agenda:main*"
-   "Name of the main agenda buffer.")
+  "Name of the main agenda buffer.")
 
 (defvar vulpea-agenda-hide-scheduled-and-waiting-next-tasks t
-  "Non-nil means to hide scheduled and waiting tasks.
-Affects the following commands:
-- `vulpea-agenda-cmd-focus'
-- `vulpea-agenda-cmd-waiting'")
+  "Non-nil means to hide scheduled and waiting tasks.")
 
 (defconst vulpea-agenda-cmd-refile
   '(tags
