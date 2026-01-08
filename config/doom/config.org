@@ -744,10 +744,13 @@ then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
   :bind-keymap ("C-c c" . claude-code-command-map))
 
 (use-package! claude-code-ide
-  :bind ("C-c C-'" . claude-code-ide-menu)
   :config
   (setq claude-code-ide-focus-on-open nil)
   (claude-code-ide-emacs-tools-setup))
+
+;; Doom-style keybinding for claude-code-ide
+(map! :leader
+      "'" #'claude-code-ide-menu)
 #+end_src
 
 ** Atomic Chrome

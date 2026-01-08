@@ -102,21 +102,26 @@ tasks."
      (lambda (h)
        (org-element-property :todo-type h)))))
 
-(defun vulpea-project-update-tag ()
-  "Update PROJECT tag in the current buffer."
+(defun vulpea-active-update-tag ()
+  "Update ACTIVE tag in the current buffer.
+Auto-managed tag for agenda optimization - added when file has
+active TODOs, removed when it doesn't."
   (when (and (not (active-minibuffer-window))
+             (not (bound-and-true-p org-capture-mode))  ; skip during capture
              (vulpea-buffer-p))
     (save-excursion
       (goto-char (point-min))
-      (let* ((tags (vulpea-buffer-tags-get))
-             (original-tags tags))
-        (if (vulpea-project-p)
-            (setq tags (cons "project" tags))
-          (setq tags (remove "project" tags)))
-        (setq tags (seq-uniq tags))
-        (when (or (seq-difference tags original-tags)
-                  (seq-difference original-tags tags))
-          (apply #'vulpea-buffer-tags-set tags))))))
+      ;; Ensure we're at file level, not inside a heading
+      (when (= 0 (org-outline-level))
+        (let* ((tags (vulpea-buffer-tags-get))
+               (original-tags tags))
+          (if (vulpea-project-p)
+              (setq tags (cons "active" tags))
+            (setq tags (remove "active" tags)))
+          (setq tags (seq-uniq tags))
+          (when (or (seq-difference tags original-tags)
+                    (seq-difference original-tags tags))
+            (apply #'vulpea-buffer-tags-set tags)))))))
 
 (defun vulpea-buffer-p ()
   "Return non-nil if the currently visited buffer is a vulpea note."
@@ -128,22 +133,82 @@ tasks."
            (file-truename buffer-file-name)))
         vulpea-db-sync-directories)))
 
-(defun vulpea-project-files ()
-  "Return a list of note files containing 'project' tag."
+(defun vulpea-active-files ()
+  "Return a list of note files containing 'active' tag.
+These are files with active TODOs, used for agenda."
   (seq-uniq
    (seq-map
     #'vulpea-note-path
-    (vulpea-db-query-by-tags-some '("project")))))
+    (vulpea-db-query-by-tags-some '("active")))))
 
 (defun vulpea-agenda-files-update (&rest _)
   "Update the value of `org-agenda-files'."
-  (setq org-agenda-files (vulpea-project-files)))
+  (setq org-agenda-files (vulpea-active-files)))
 
-(add-hook 'find-file-hook #'vulpea-project-update-tag)
-(add-hook 'before-save-hook #'vulpea-project-update-tag)
+(add-hook 'find-file-hook #'vulpea-active-update-tag)
+(add-hook 'before-save-hook #'vulpea-active-update-tag)
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
 (advice-add 'org-todo-list :before #'vulpea-agenda-files-update)
+
+;;; --- @mention handling ---
+
+(defvar vulpea-mention-regexp "@\\([A-Z][a-z]+\\(?: [A-Z][a-z]+\\)*\\)"
+  "Regexp to match @mentions.
+Matches @Firstname or @Firstname Lastname style mentions.
+Requires capitalized words to avoid matching too much text.")
+
+(defun vulpea--find-person-by-name (name)
+  "Find a person note matching NAME.
+Searches titles and aliases of notes tagged with 'people'."
+  (let ((people (vulpea-db-query-by-tags-some '("people"))))
+    (seq-find
+     (lambda (note)
+       (let ((title (vulpea-note-title note))
+             (aliases (vulpea-note-aliases note)))
+         (or (string-equal-ignore-case name title)
+             (seq-some (lambda (a) (string-equal-ignore-case name a)) aliases))))
+     people)))
+
+(defun vulpea--expand-mentions ()
+  "Expand @mentions in current buffer to vulpea links.
+Returns list of matched person notes for tag addition."
+  (let ((people-matched nil))
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward vulpea-mention-regexp nil t)
+        (let* ((name (match-string 1))
+               (match-beg (match-beginning 0))
+               (match-end (match-end 0))
+               (person (vulpea--find-person-by-name name)))
+          (when person
+            (push person people-matched)
+            (delete-region match-beg match-end)
+            (goto-char match-beg)
+            (insert (format "[[id:%s][%s]]"
+                            (vulpea-note-id person)
+                            (vulpea-note-title person)))))))
+    people-matched))
+
+(defun vulpea--add-people-tags (people)
+  "Add tags for PEOPLE to the current heading."
+  (when people
+    (save-excursion
+      (ignore-errors
+        (org-back-to-heading)
+        (let ((existing-tags (org-get-tags nil t))
+              (new-tags (seq-map
+                         (lambda (p) (vulpea--title-to-tag (vulpea-note-title p)))
+                         people)))
+          (org-set-tags (seq-uniq (append new-tags existing-tags))))))))
+
+;;;###autoload
+(defun vulpea-capture-expand-mentions ()
+  "Hook function to expand @mentions before capture is finalized.
+Add to `org-capture-before-finalize-hook'."
+  (when (org-capture-get :key)
+    (let ((people (vulpea--expand-mentions)))
+      (vulpea--add-people-tags people))))
 
 ;;; --- Capture functions ---
 
@@ -165,6 +230,7 @@ tasks."
   (interactive)
   (org-capture nil "m"))
 
+;;;###autoload
 (defun vulpea-capture-project-task-target ()
   "Return a target for a project task capture."
   (let ((project (vulpea-select
@@ -196,6 +262,7 @@ tasks."
         (org-capture-put-target-region-and-position)
         (widen)))))
 
+;;;###autoload
 (defun vulpea-capture-meeting-template ()
   "Return a template for a meeting capture."
   (let ((person (vulpea-select
@@ -210,6 +277,7 @@ tasks."
               (vulpea-note-title person)
               " on [%<%Y-%m-%d %a>] :MEETING:\n%U\n\n%?"))))
 
+;;;###autoload
 (defun vulpea-capture-meeting-target ()
   "Return a target for a meeting capture."
   (let ((person (org-capture-get :meeting-person)))
