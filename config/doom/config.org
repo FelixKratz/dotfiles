@@ -255,7 +255,71 @@ Auto-select From address based on the message being replied to.
   ;; Also complete in Cc/Bcc fields
   (setq notmuch-address-selection-function
         (lambda (prompt collection initial-input)
-          (completing-read prompt collection nil nil initial-input))))
+          (completing-read prompt collection nil nil initial-input)))
+
+  ;; Open HTML email in browser for complex formatting
+  (defun sf/notmuch-view-in-browser ()
+    "Open the current email in the system browser."
+    (interactive)
+    (let* ((msg-id (notmuch-show-get-message-id))
+           (html-file (make-temp-file "notmuch-email-" nil ".html")))
+      (with-temp-file html-file
+        (call-process "notmuch" nil t nil "show" "--format=raw" msg-id)
+        (goto-char (point-min))
+        ;; Try to extract HTML part, fallback to raw
+        (if (re-search-forward "Content-Type: text/html" nil t)
+            (progn
+              (re-search-forward "^$")
+              (delete-region (point-min) (point))
+              ;; Remove MIME boundary at end if present
+              (goto-char (point-max))
+              (when (re-search-backward "^--" nil t)
+                (delete-region (point) (point-max))))
+          ;; No HTML, wrap plain text
+          (goto-char (point-min))
+          (insert "<html><body><pre>")
+          (goto-char (point-max))
+          (insert "</pre></body></html>")))
+      (browse-url (concat "file://" html-file))))
+
+  ;; Fix evil-mode overriding notmuch navigation keys
+  (add-hook! 'notmuch-show-mode-hook
+    (defun sf/notmuch-show-evil-bindings ()
+      (evil-local-set-key 'normal "n" #'notmuch-show-next-open-message)
+      (evil-local-set-key 'normal "p" #'notmuch-show-previous-open-message)
+      (evil-local-set-key 'normal "N" #'notmuch-show-next-thread-show)
+      (evil-local-set-key 'normal "P" #'notmuch-show-previous-thread-show)
+      (evil-local-set-key 'normal "J" #'notmuch-jump-search)
+      (evil-local-set-key 'normal "V" #'sf/notmuch-view-in-browser)
+      (evil-local-set-key 'normal "q" #'notmuch-bury-or-kill-this-buffer)))
+
+  ;; Global keybinding for composing new email
+  (map! :leader
+        :desc "Compose email" "m" #'notmuch-mua-new-mail))
+#+end_src
+
+** HTML Email Composition with org-msg
+Compose emails in org-mode, send as HTML+text multipart.
+#+begin_src emacs-lisp
+(after! notmuch
+  (setq mail-user-agent 'notmuch-user-agent)
+  (require 'org-msg)
+  (setq org-msg-options "html-postamble:nil H:5 num:nil ^:{} toc:nil author:nil email:nil \\n:t"
+        org-msg-startup "hidestars indent inlineimages"
+        org-msg-greeting-fmt "\nHi%s,\n\n"
+        org-msg-greeting-name-limit 3
+        org-msg-default-alternatives '((new . (text html))
+                                       (reply-to-html . (text html))
+                                       (reply-to-text . (text)))
+        org-msg-convert-citation t
+        org-msg-signature "
+
+Best,
+Sebastian")
+  (org-msg-mode 1)
+  (map! :map org-msg-edit-mode-map
+        "C-c C-a" #'org-msg-attach)
+  (setq message-hidden-headers '("Fcc")))
 #+end_src
 
 ** Sending Mail
@@ -746,7 +810,18 @@ then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
 (use-package! claude-code-ide
   :config
   (setq claude-code-ide-focus-on-open nil)
-  (claude-code-ide-emacs-tools-setup))
+  (claude-code-ide-emacs-tools-setup)
+
+  ;; Scroll claude buffer to end after workspace switch
+  (defun sf/claude-scroll-after-workspace-switch (&rest _)
+    "Scroll any visible claude buffer to end after workspace switch."
+    (run-with-timer 0.1 nil
+      (lambda ()
+        (dolist (win (window-list))
+          (when (string-match-p "\\*claude-code" (buffer-name (window-buffer win)))
+            (with-selected-window win
+              (goto-char (point-max))))))))
+  (add-hook 'persp-activated-functions #'sf/claude-scroll-after-workspace-switch))
 
 ;; Doom-style keybinding for claude-code-ide
 (map! :leader
