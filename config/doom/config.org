@@ -288,6 +288,18 @@ Auto-select From address based on the message being replied to.
           (insert "</pre></body></html>")))
       (browse-url (concat "file://" html-file))))
 
+  ;; Toggle between preferring text/plain and text/html
+  (defun sf/notmuch-toggle-html-preference ()
+    "Toggle between preferring plain text and HTML in multipart emails."
+    (interactive)
+    (if (member "text/plain" notmuch-multipart/alternative-discouraged)
+        (progn
+          (setq notmuch-multipart/alternative-discouraged '("text/html"))
+          (message "Preferring text/plain"))
+      (setq notmuch-multipart/alternative-discouraged '("text/plain"))
+      (message "Preferring text/html"))
+    (notmuch-show-refresh-view))
+
   ;; Fix evil-mode overriding notmuch navigation keys
   (add-hook! 'notmuch-show-mode-hook
     (defun sf/notmuch-show-evil-bindings ()
@@ -296,8 +308,10 @@ Auto-select From address based on the message being replied to.
       (evil-local-set-key 'normal "N" #'notmuch-show-next-thread-show)
       (evil-local-set-key 'normal "P" #'notmuch-show-previous-thread-show)
       (evil-local-set-key 'normal "J" #'notmuch-jump-search)
+      (evil-local-set-key 'normal "H" #'sf/notmuch-toggle-html-preference)
       (evil-local-set-key 'normal "V" #'sf/notmuch-view-in-browser)
-      (evil-local-set-key 'normal "q" #'notmuch-bury-or-kill-this-buffer)))
+      (evil-local-set-key 'normal "q" #'notmuch-bury-or-kill-this-buffer)
+      (evil-local-set-key 'normal "gx" #'browse-url-at-point)))
 
   ;; Global keybinding for composing new email
   (map! :leader
