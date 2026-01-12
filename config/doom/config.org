@@ -386,9 +386,9 @@ Auto-select From address based on the message being replied to.
   (advice-add 'notmuch-search :around #'sf/notmuch-in-workspace)
   (advice-add 'notmuch-mua-new-mail :around #'sf/notmuch-in-workspace)
 
-  ;; Mail keybindings under SPC e (email)
+  ;; Mail keybindings under SPC m
   (map! :leader
-        (:prefix ("e" . "email")
+        (:prefix ("m" . "mail")
          :desc "Notmuch" "m" #'notmuch
          :desc "Compose" "c" #'notmuch-mua-new-mail
          :desc "Flush queue" "f" #'sf/mail-queue-flush
