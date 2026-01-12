@@ -368,6 +368,24 @@ Auto-select From address based on the message being replied to.
       (evil-local-set-key 'normal "go" #'sf/notmuch-open-part-externally)
       (evil-local-set-key 'normal "gx" #'browse-url-at-point)))
 
+  ;; Exclude spam/junk from searches
+  (setq notmuch-search-hide-excluded t
+        notmuch-excluded-tags '("spam" "junk" "deleted"))
+
+  ;; Dedicated mail workspace
+  (defun sf/switch-to-mail-workspace ()
+    "Switch to or create the mail workspace."
+    (+workspace-switch "mail" t))
+
+  (defun sf/notmuch-in-workspace (orig-fun &rest args)
+    "Run notmuch command in dedicated mail workspace."
+    (sf/switch-to-mail-workspace)
+    (apply orig-fun args))
+
+  (advice-add 'notmuch :around #'sf/notmuch-in-workspace)
+  (advice-add 'notmuch-search :around #'sf/notmuch-in-workspace)
+  (advice-add 'notmuch-mua-new-mail :around #'sf/notmuch-in-workspace)
+
   ;; Global keybinding for composing new email
   (map! :leader
         :desc "Compose email" "m" #'notmuch-mua-new-mail))
