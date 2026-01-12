@@ -183,8 +183,8 @@ Bookmarks for quick access to inboxes and common searches.
           ;; Per-account inboxes
           (:name "work"      :query "folder:work/INBOX"           :key "l")
           (:name "private"    :query "folder:private/INBOX"         :key "p")
-          (:name "joint"      :query "folder:joint/INBOX"           :key "j")
-          (:name "gmx"        :query "folder:gmx/INBOX"             :key "g")
+          (:name "joint"      :query "folder:joint/inbox"           :key "j")
+          (:name "gmx"        :query "folder:gmx/inbox"             :key "g")
           (:name "sbstnfnk"   :query "folder:sbstnfnk/INBOX"        :key "b")
           (:name "sebfnk"     :query "folder:sebfnk/INBOX"          :key "k"))))
 #+end_src
