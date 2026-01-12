@@ -913,15 +913,25 @@ then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
   (claude-code-ide-emacs-tools-setup)
 
   ;; Scroll claude buffer to end after workspace switch
+  (defun sf/claude-scroll-to-end ()
+    "Scroll any visible claude buffer to end."
+    (dolist (win (window-list))
+      (when (string-match-p "\\*claude-code" (buffer-name (window-buffer win)))
+        (with-selected-window win
+          (goto-char (point-max))
+          (recenter -1)))))
+
   (defun sf/claude-scroll-after-workspace-switch (&rest _)
-    "Scroll any visible claude buffer to end after workspace switch."
-    (run-with-timer 0.1 nil
-      (lambda ()
-        (dolist (win (window-list))
-          (when (string-match-p "\\*claude-code" (buffer-name (window-buffer win)))
-            (with-selected-window win
-              (goto-char (point-max))))))))
-  (add-hook 'persp-activated-functions #'sf/claude-scroll-after-workspace-switch))
+    "Schedule claude buffer scroll after workspace switch."
+    (run-with-idle-timer 0.2 nil #'sf/claude-scroll-to-end))
+
+  (add-hook 'persp-activated-functions #'sf/claude-scroll-after-workspace-switch)
+  (add-hook 'window-configuration-change-hook
+            (lambda ()
+              (when (cl-some (lambda (w)
+                              (string-match-p "\\*claude-code" (buffer-name (window-buffer w))))
+                            (window-list))
+                (run-with-idle-timer 0.1 nil #'sf/claude-scroll-to-end)))))
 
 ;; Doom-style keybinding for claude-code-ide
 (map! :leader
