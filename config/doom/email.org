@@ -1,0 +1,1 @@
+__HOME__/code/dotfiles_private/config/doom-private/email.org
