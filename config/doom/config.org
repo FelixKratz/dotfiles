@@ -745,8 +745,19 @@ The buffer is still accessible via =SPC b B= (global buffer list).
 ** Directories
 #+begin_src emacs-lisp
 (setq org-directory "~/org")
-;; org-agenda-files is dynamically updated by vulpea-agenda-files-update
-;; which includes all files with 'project' tag
+
+;; Dedicated org workspace (like mail)
+(defun sf/switch-to-org-workspace ()
+  "Switch to or create the org workspace."
+  (+workspace-switch "org" t))
+
+(defun sf/org-in-workspace (orig-fun &rest args)
+  "Run org command in dedicated org workspace."
+  (sf/switch-to-org-workspace)
+  (apply orig-fun args))
+
+(advice-add 'org-agenda :around #'sf/org-in-workspace)
+(advice-add 'org-todo-list :around #'sf/org-in-workspace)
 #+end_src
 
 ** Agenda Views
