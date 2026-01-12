@@ -163,6 +163,12 @@ Set default From address (used when composing new mail, not replying).
       user-mail-address "sebastian.funk@work.ac.uk")
 #+end_src
 
+** Load Notmuch at Startup
+Load notmuch eagerly so all keybindings work immediately.
+#+begin_src emacs-lisp
+(require 'notmuch)
+#+end_src
+
 ** Notmuch Saved Searches
 Bookmarks for quick access to inboxes and common searches.
 #+begin_src emacs-lisp
