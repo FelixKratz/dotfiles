@@ -760,60 +760,11 @@ The buffer is still accessible via =SPC b B= (global buffer list).
 (advice-add 'org-todo-list :around #'sf/org-in-workspace)
 #+end_src
 
-** Active Tag for Agenda Files
-Files with TODOs get "active" filetag. Agenda only includes active files.
-Scans ~/org-roam where vulpea/org-roam notes live.
+** Dynamic Agenda Files
+Agenda includes only files with :active: filetag from ~/org-roam.
 #+begin_src emacs-lisp
 (defvar sf/notes-directory "~/org-roam"
   "Directory containing org-roam/vulpea notes.")
-
-(defun sf/org-buffer-has-todos-p ()
-  "Return non-nil if current buffer has any active TODO entries."
-  (save-excursion
-    (goto-char (point-min))
-    (re-search-forward "^\\*+ TODO[ \t\n[]" nil t)))
-
-(defun sf/org-add-active-tag ()
-  "Add 'active' to #+filetags if not present."
-  (save-excursion
-    (goto-char (point-min))
-    (cond
-     ;; Has filetags line - append active
-     ((re-search-forward "^#\\+filetags:.*:\\([^:]*\\):?$" nil t)
-      (goto-char (match-end 0))
-      (unless (save-excursion
-                (beginning-of-line)
-                (looking-at ".*:active:"))
-        (if (looking-back ":" 1)
-            (insert "active:")
-          (insert ":active:"))))
-     ;; Has title - add filetags after it
-     ((re-search-forward "^#\\+title:" nil t)
-      (end-of-line)
-      (insert "\n#+filetags: :active:"))
-     ;; No title - add at top
-     (t
-      (goto-char (point-min))
-      (insert "#+filetags: :active:\n")))))
-
-(defun sf/org-scan-active-all ()
-  "Scan all org files and add 'active' tag to those with TODOs."
-  (interactive)
-  (let ((files (directory-files sf/notes-directory nil "\\.org$"))
-        (count 0))
-    (dolist (file files)
-      (let ((filepath (expand-file-name file sf/notes-directory)))
-        (with-current-buffer (find-file-noselect filepath)
-          (when (and (sf/org-buffer-has-todos-p)
-                     (save-excursion
-                       (goto-char (point-min))
-                       (not (re-search-forward "^#\\+filetags:.*:active:" nil t))))
-            (sf/org-add-active-tag)
-            (save-buffer)
-            (cl-incf count))
-          (unless (buffer-modified-p)
-            (kill-buffer)))))
-    (message "Added 'active' tag to %d files" count)))
 
 (defun sf/org-active-files ()
   "Return list of org files with 'active' filetag."
