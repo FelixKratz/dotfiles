@@ -300,6 +300,55 @@ Auto-select From address based on the message being replied to.
       (message "Preferring text/html"))
     (notmuch-show-refresh-view))
 
+  ;; Link navigation
+  (defvar sf/notmuch-link-regex
+    "\\(https?://\\|mailto:\\)[^ \t\n\r<>\"()]+"
+    "Regex to match URLs in emails.")
+
+  (defun sf/notmuch-next-link ()
+    "Jump to next URL in the buffer."
+    (interactive)
+    (when (looking-at sf/notmuch-link-regex)
+      (goto-char (match-end 0)))
+    (if (re-search-forward sf/notmuch-link-regex nil t)
+        (goto-char (match-beginning 0))
+      (message "No more links")))
+
+  (defun sf/notmuch-prev-link ()
+    "Jump to previous URL in the buffer."
+    (interactive)
+    (if (re-search-backward sf/notmuch-link-regex nil t)
+        (goto-char (match-beginning 0))
+      (message "No previous links")))
+
+  ;; Attachment navigation
+  (defun sf/notmuch-next-attachment ()
+    "Jump to next attachment in the message."
+    (interactive)
+    (let ((regex "\\[ [^]:]+: \\(application\\|image\\|audio\\|video\\)/"))
+      (forward-char 1)
+      (if (re-search-forward regex nil t)
+          (goto-char (match-beginning 0))
+        (message "No more attachments"))))
+
+  (defun sf/notmuch-prev-attachment ()
+    "Jump to previous attachment in the message."
+    (interactive)
+    (let ((regex "\\[ [^]:]+: \\(application\\|image\\|audio\\|video\\)/"))
+      (if (re-search-backward regex nil t)
+          (goto-char (match-beginning 0))
+        (message "No previous attachments"))))
+
+  (defun sf/notmuch-open-part-externally ()
+    "Save current part to temp file and open with system default app."
+    (interactive)
+    (let* ((handle (notmuch-show-current-part-handle))
+           (filename (or (mm-handle-filename handle) "attachment"))
+           (temp-dir (make-temp-file "notmuch-" t))
+           (temp-file (expand-file-name filename temp-dir)))
+      (mm-save-part-to-file handle temp-file)
+      (call-process "open" nil 0 nil temp-file)))
+
   ;; Fix evil-mode overriding notmuch navigation keys
   (add-hook! 'notmuch-show-mode-hook
     (defun sf/notmuch-show-evil-bindings ()
@@ -311,6 +360,12 @@ Auto-select From address based on the message being replied to.
       (evil-local-set-key 'normal "H" #'sf/notmuch-toggle-html-preference)
       (evil-local-set-key 'normal "V" #'sf/notmuch-view-in-browser)
       (evil-local-set-key 'normal "q" #'notmuch-bury-or-kill-this-buffer)
+      ;; Navigation
+      (evil-local-set-key 'normal "gl" #'sf/notmuch-next-link)
+      (evil-local-set-key 'normal "gL" #'sf/notmuch-prev-link)
+      (evil-local-set-key 'normal "ga" #'sf/notmuch-next-attachment)
+      (evil-local-set-key 'normal "gA" #'sf/notmuch-prev-attachment)
+      (evil-local-set-key 'normal "go" #'sf/notmuch-open-part-externally)
       (evil-local-set-key 'normal "gx" #'browse-url-at-point)))
 
   ;; Global keybinding for composing new email
