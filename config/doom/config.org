@@ -771,7 +771,7 @@ Scans ~/org-roam where vulpea/org-roam notes live.
   "Return non-nil if current buffer has any active TODO entries."
   (save-excursion
     (goto-char (point-min))
-    (re-search-forward "^\\*+ TODO " nil t)))
+    (re-search-forward "^\\*+ TODO[ \t\n[]" nil t)))
 
 (defun sf/org-add-active-tag ()
   "Add 'active' to #+filetags if not present."
