@@ -386,9 +386,14 @@ Auto-select From address based on the message being replied to.
   (advice-add 'notmuch-search :around #'sf/notmuch-in-workspace)
   (advice-add 'notmuch-mua-new-mail :around #'sf/notmuch-in-workspace)
 
-  ;; Global keybinding for composing new email
+  ;; Mail keybindings under SPC e (email)
   (map! :leader
-        :desc "Compose email" "m" #'notmuch-mua-new-mail))
+        (:prefix ("e" . "email")
+         :desc "Notmuch" "m" #'notmuch
+         :desc "Compose" "c" #'notmuch-mua-new-mail
+         :desc "Flush queue" "f" #'sf/mail-queue-flush
+         :desc "Queue list" "q" #'sf/mail-queue-list
+         :desc "View log" "l" (cmd! (find-file "~/.log/msmtp.log")))))
 #+end_src
 
 ** HTML Email Composition with org-msg
@@ -475,15 +480,6 @@ Log sent messages from Emacs side (msmtp also logs to ~/.log/msmtp.log).
                (message-fetch-field "subject")))
 
 (add-hook 'message-sent-hook #'sf/mail-log-sent)
-
-;; Keybinding to view log
-(map! :leader
-      (:prefix ("o n" . "notmuch/mail")
-       :desc "Flush queue" "f" #'sf/mail-queue-flush
-       :desc "List queue" "q" #'sf/mail-queue-list
-       :desc "Queue count" "c" (cmd! (message "Mail queue: %d" (sf/mail-queue-count)))
-       :desc "View Emacs log" "l" (cmd! (find-file sf/mail-log-file))
-       :desc "View msmtp log" "L" (cmd! (find-file "~/.log/msmtp.log"))))
 #+end_src
 
 *** Credentials
