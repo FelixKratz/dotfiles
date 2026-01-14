@@ -440,6 +440,41 @@ Custom agenda with vulpea integration.
       ((org-agenda-buffer-name vulpea-agenda-main-buffer-name)))))
 #+end_src
 
+** Capture Templates
+Todo capture with vulpea auto-tagging. Prompts for person/project and files todo in their node.
+#+begin_src emacs-lisp
+(defun sf/capture-select-person ()
+  "Select a person node and return its file path."
+  (let ((note (vulpea-select-from "Person"
+                :filter-fn (lambda (note)
+                             (let ((tags (vulpea-note-tags note)))
+                               (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))))
+    (if note
+        (vulpea-note-path note)
+      (user-error "No person selected"))))
+
+(defun sf/capture-select-project ()
+  "Select a project node and return its file path."
+  (let ((note (vulpea-select-from "Project"
+                :filter-fn (lambda (note)
+                             (member "project" (vulpea-note-tags note))))))
+    (if note
+        (vulpea-note-path note)
+      (user-error "No project selected"))))
+
+(after! org
+  (setq org-capture-templates
+        '(("t" "Todo (person)" entry
+           (file+headline sf/capture-select-person "Tasks")
+           "* TODO %?\n%U\n" :prepend t)
+          ("T" "Todo (project)" entry
+           (file+headline sf/capture-select-project "Tasks")
+           "* TODO %?\n%U\n" :prepend t)
+          ("n" "Note" entry
+           (file+headline "~/org-roam/inbox.org" "Notes")
+           "* %?\n%U\n"))))
+#+end_src
+
 ** Babel
 Auto-confirm R code execution (don't prompt every time).
 #+begin_src emacs-lisp
