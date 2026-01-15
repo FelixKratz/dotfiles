@@ -156,6 +156,7 @@ git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
 echo "Planting Configuration Files..."
 git clone git@github.com:sbfnk/dotfiles.git $CODE_DIR/dotfiles
 git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private
+git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config
 
 # linking dot files
 $CODE_DIR/dotfiles/link.sh

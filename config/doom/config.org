@@ -445,20 +445,21 @@ Todo capture with vulpea auto-tagging. Prompts for person/project and files todo
 #+begin_src emacs-lisp
 (defun sf/capture-select-person ()
   "Select a person node and return its file path."
-  (let ((note (vulpea-select-from "Person"
+  (let ((note (vulpea-select "Person"
                 :filter-fn (lambda (note)
                              (let ((tags (vulpea-note-tags note)))
-                               (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))))
-    (if note
+                               (or (member "people" tags)
+                                   (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags)))))))
+    (if (vulpea-note-id note)
         (vulpea-note-path note)
       (user-error "No person selected"))))
 
 (defun sf/capture-select-project ()
   "Select a project node and return its file path."
-  (let ((note (vulpea-select-from "Project"
+  (let ((note (vulpea-select "Project"
                 :filter-fn (lambda (note)
                              (member "project" (vulpea-note-tags note))))))
-    (if note
+    (if (vulpea-note-id note)
         (vulpea-note-path note)
       (user-error "No project selected"))))
 
@@ -592,43 +593,32 @@ AI pair programming tool. =SPC c A= opens the transient menu.
 #+end_src
 
 ** Claude Code
-Two packages for Claude Code integration:
-- =claude-code.el= - Terminal interface (=C-c c=)
-- =claude-code-ide.el= - IDE integration with MCP tools (=C-c C-'=)
+=claude-code-ide.el= provides IDE integration with Claude Code CLI via MCP.
+=SPC '= opens the menu.
 
 *Tip:* In the Claude Code vterm buffer, use =C-c C-t= to enter copy mode for scrolling,
 then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
 #+begin_src emacs-lisp
-(use-package claude-code
-  :vc (:url "https://github.com/stevemolitor/claude-code.el" :rev :newest)
-  :config (claude-code-mode)
-  :bind-keymap ("C-c c" . claude-code-command-map))
-
 (use-package! claude-code-ide
   :config
   (setq claude-code-ide-focus-on-open nil)
   (claude-code-ide-emacs-tools-setup)
 
-  ;; Scroll claude buffer to end after workspace switch
-  (defun sf/claude-scroll-to-end ()
-    "Scroll any visible claude buffer to end."
+  ;; Minimal scroll intervention - let vterm handle it
+  ;; Only intervene after workspace switches
+  (defun sf/claude-scroll-bottom ()
+    "Scroll claude buffer to bottom."
+    (interactive)
     (dolist (win (window-list))
       (when (string-match-p "\\*claude-code" (buffer-name (window-buffer win)))
         (with-selected-window win
-          (goto-char (point-max))
-          (recenter -1)))))
+          (goto-char (point-max))))))
 
-  (defun sf/claude-scroll-after-workspace-switch (&rest _)
-    "Schedule claude buffer scroll after workspace switch."
-    (run-with-idle-timer 0.2 nil #'sf/claude-scroll-to-end))
+  (map! :leader "C" #'sf/claude-scroll-bottom)
 
-  (add-hook 'persp-activated-functions #'sf/claude-scroll-after-workspace-switch)
-  (add-hook 'window-configuration-change-hook
-            (lambda ()
-              (when (cl-some (lambda (w)
-                              (string-match-p "\\*claude-code" (buffer-name (window-buffer w))))
-                            (window-list))
-                (run-with-idle-timer 0.1 nil #'sf/claude-scroll-to-end)))))
+  (add-hook 'persp-activated-functions
+            (lambda (&rest _)
+              (run-with-idle-timer 0.3 nil #'sf/claude-scroll-bottom))))
 
 ;; Doom-style keybinding for claude-code-ide
 (map! :leader

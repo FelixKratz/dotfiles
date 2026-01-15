@@ -158,10 +158,20 @@ These are files with active TODOs, used for agenda."
 Matches @Firstname or @Firstname Lastname style mentions.
 Requires capitalized words to avoid matching too much text.")
 
+;;;###autoload
+(defun vulpea--person-note-p (note)
+  "Return non-nil if NOTE is a person note.
+A person note has either 'people' tag or any tag starting with '@'."
+  (let ((tags (vulpea-note-tags note)))
+    (or (seq-contains-p tags "people")
+        (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))
+
 (defun vulpea--find-person-by-name (name)
   "Find a person note matching NAME.
-Searches titles and aliases of notes tagged with 'people'."
-  (let ((people (vulpea-db-query-by-tags-some '("people"))))
+Searches titles and aliases of person notes (tagged 'people' or '@Name')."
+  (let ((people (vulpea-db-query
+                 (lambda (note)
+                   (vulpea--person-note-p note)))))
     (seq-find
      (lambda (note)
        (let ((title (vulpea-note-title note))

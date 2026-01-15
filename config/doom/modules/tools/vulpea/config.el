@@ -44,18 +44,29 @@
                :clock-in t
                :clock-resume t))))))
 
+;; Consult integration for better fuzzy search and preview
+(use-package! consult-vulpea
+  :after vulpea
+  :config
+  (consult-vulpea-mode 1))
+
+;; Note: vulpea-journal is a v2 feature, not yet available
+
 ;; Quick insert for people (filtered vulpea-insert)
 (defun vulpea-insert-person ()
   "Insert a link to a person note with completion."
   (interactive)
   (vulpea-insert :filter-fn (lambda (note)
-                              (seq-contains-p (vulpea-note-tags note) "people"))))
+                              (let ((tags (vulpea-note-tags note)))
+                                (or (member "people" tags)
+                                    (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))))
 
 ;; Keybindings - mirror old org-roam bindings under SPC n r
 (map! :leader
       (:prefix ("n" . "notes")
        (:prefix ("r" . "roam")
         :desc "Find note" "f" #'vulpea-find
+        :desc "Grep notes" "g" #'consult-vulpea-grep
         :desc "Insert link" "i" #'vulpea-insert
         :desc "Insert person" "p" #'vulpea-insert-person
         :desc "Find backlink" "b" #'vulpea-find-backlink

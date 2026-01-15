@@ -45,4 +45,10 @@ done
 ln -sfh $CODE_DIR/dotfiles/bin ~/bin
 echo "Linked bin → ~/bin"
 
+# Email config generator (accounts.yaml is in dotfiles_private/config/email)
+if [ -d $CODE_DIR/email-config ]; then
+  ln -sf $CODE_DIR/email-config/generate.py $HOME/.config/email/
+  echo "Linked generate.py → ~/.config/email/"
+fi
+
 echo "\nDone. Run 'doom sync' if Emacs config changed."
