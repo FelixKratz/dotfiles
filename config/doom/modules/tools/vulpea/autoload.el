@@ -243,11 +243,7 @@ Add to `org-capture-before-finalize-hook'."
 ;;;###autoload
 (defun vulpea-capture-project-task-target ()
   "Return a target for a project task capture."
-  (let ((project (vulpea-select
-                  "Project"
-                  :filter-fn
-                  (lambda (note)
-                    (seq-contains-p (vulpea-note-tags note) "project")))))
+  (let ((project (vulpea-select "Note")))  ; show all notes, not just projects
     (if (vulpea-note-id project)
         (let ((path (vulpea-note-path project))
               (headline "Tasks"))
