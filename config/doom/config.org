@@ -102,6 +102,14 @@ so it works across different themes.
   '(mode-line-inactive :inherit shadow :box nil))
 #+end_src
 
+** Vterm Popup
+Open vterm on the right side, full height, instead of bottom.
+#+begin_src emacs-lisp
+(set-popup-rule! "^\\*vterm" :side 'right :size 0.45 :select t :quit nil :ttl nil)
+(set-popup-rule! "^\\*doom:vterm" :side 'right :size 0.45 :select t :quit nil :ttl nil)
+(set-popup-rule! "^\\*claude-code" :side 'right :size 0.45 :select t :quit nil :ttl nil)
+#+end_src
+
 ** macOS Modifier Keys
 This makes Emacs feel more natural on macOS:
 - *Command* (⌘) → Meta (M-) for Emacs commands
