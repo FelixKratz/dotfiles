@@ -297,5 +297,6 @@ apps            < m         : open /Applications/Mailmate.app; skhd -k "escape"
 apps            < s         : open /Applications/Slack.app; skhd -k "escape"
 apps            < p         : open /Applications/Spotify.app; skhd -k "escape"
 apps            < v         : open /Applications/Visual\ Studio\ Code.app; skhd -k "escape"
+apps            < z         : open /Applications/Zen.app; skhd -k "escape"
 apps            < space     : open /Applications/Kitty.app; skhd -k "escape"
 
