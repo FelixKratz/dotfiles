@@ -29,7 +29,7 @@ for dir in $CODE_DIR/dotfiles*; do
       echo "Linked $file → ~/.$(basename $file)"
     done
   fi
-  if [ -d "$dir/Application Support" ]; then
+  if [[ "$(uname)" == "Darwin" ]] && [ -d "$dir/Application Support" ]; then
     for file in "$dir/Application Support"/*; do
       ln $LN_FLAG "$file" "$HOME/Library/Application Support"
       echo "Linked $file → ~/Library/Application Support/$(basename "$file")"
