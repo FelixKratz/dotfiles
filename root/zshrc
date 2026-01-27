@@ -164,6 +164,22 @@ PERL_MM_OPT="INSTALL_BASE=__HOME__/perl5"; export PERL_MM_OPT;
 # Added by Windsurf
 export PATH="__HOME__/.codeium/windsurf/bin:$PATH"
 
+# Set tmux window name to git repo name when inside a repo
+_tmux_set_window_name() {
+  if [[ -n "$TMUX" ]]; then
+    local repo
+    repo=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [[ -n "$repo" ]]; then
+      tmux rename-window "$(basename "$repo")"
+    else
+      # Reset to automatic naming
+      tmux set-option -w automatic-rename on >/dev/null
+    fi
+  fi
+}
+chpwd_functions+=(_tmux_set_window_name)
+_tmux_set_window_name  # Run once at shell start
+
 eval "$(zoxide init zsh)"
 source <(fzf --zsh)
 
