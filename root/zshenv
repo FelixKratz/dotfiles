@@ -3,6 +3,27 @@
 skip_global_compinit=1
 
 # PATH setup (zsh doesn't source ~/.profile)
-[ -d "$HOME/bin" ] && path=($HOME/bin $path)
-[ -d "$HOME/.local/bin" ] && path=($HOME/.local/bin $path)
-[ -d "$HOME/.juliaup/bin" ] && path=($HOME/.juliaup/bin $path)
+# Only add directories that exist
+for p in \
+  "$HOME/bin" \
+  "$HOME/.local/bin" \
+  "$HOME/.juliaup/bin" \
+  "$HOME/.config/emacs/bin" \
+  "$HOME/.bun/bin" \
+  "$HOME/.codeium/windsurf/bin" \
+  "$HOME/perl5/bin" \
+  "/usr/sbin" \
+; do
+  [ -d "$p" ] && path=($p $path)
+done
+
+# Perl (only if installed)
+if [ -d "$HOME/perl5" ]; then
+  export PERL5LIB="$HOME/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"
+  export PERL_LOCAL_LIB_ROOT="$HOME/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"
+  export PERL_MB_OPT="--install_base \"$HOME/perl5\""
+  export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
+fi
+
+# Bun
+[ -d "$HOME/.bun" ] && export BUN_INSTALL="$HOME/.bun"

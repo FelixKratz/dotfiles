@@ -135,7 +135,6 @@ alias la="ls -al"
 alias r="radian"
 alias nv="nvim"
 
-export PATH="$PATH:/usr/sbin:$PATH:$HOME/.config/emacs/bin:$HOME/.local/bin"
 
 function suyabai () {
   SHA256=$(shasum -a 256 /opt/homebrew/bin/yabai | awk "{print \$1;}")
@@ -155,14 +154,6 @@ alias kssh="kitty +kitten ssh"  # For ad-hoc servers
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/homebrew/lib
 
-PATH="__HOME__/perl5/bin${PATH:+:${PATH}}"; export PATH;
-PERL5LIB="__HOME__/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
-PERL_LOCAL_LIB_ROOT="__HOME__/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
-PERL_MB_OPT="--install_base \"__HOME__/perl5\""; export PERL_MB_OPT;
-PERL_MM_OPT="INSTALL_BASE=__HOME__/perl5"; export PERL_MM_OPT;
-
-# Added by Windsurf
-export PATH="__HOME__/.codeium/windsurf/bin:$PATH"
 
 # Set tmux window name to git repo name when inside a repo
 _tmux_set_window_name() {
@@ -185,8 +176,4 @@ source <(fzf --zsh)
 
 
 # bun completions
-[ -s "__HOME__/.bun/_bun" ] && source "__HOME__/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
