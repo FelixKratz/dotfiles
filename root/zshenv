@@ -1,3 +1,8 @@
 # Prevent system scripts from calling compinit before Zim
 # See https://github.com/zimfw/zimfw/wiki/Troubleshooting
 skip_global_compinit=1
+
+# PATH setup (zsh doesn't source ~/.profile)
+[ -d "$HOME/bin" ] && path=($HOME/bin $path)
+[ -d "$HOME/.local/bin" ] && path=($HOME/.local/bin $path)
+[ -d "$HOME/.juliaup/bin" ] && path=($HOME/.juliaup/bin $path)
