@@ -3,3 +3,8 @@ config/doom/config.el
 config/doom/email.el
 config/doom/packages.el
 config/doom/custom.el
+
+# Build artefacts
+__pycache__/
+*.alfredworkflow
+
