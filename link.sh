@@ -53,8 +53,17 @@ for file in $CODE_DIR/dotfiles/bin/*; do
 done
 
 # Keep ~/bin as symlink for backwards compatibility
-ln $LN_FLAG $CODE_DIR/dotfiles/bin ~/bin
-echo "Linked bin → ~/bin"
+if [ -d ~/bin ] && [ ! -L ~/bin ]; then
+  echo "Warning: ~/bin is a directory, not a symlink. Moving contents to dotfiles/bin/"
+  for file in ~/bin/*; do
+    [ -e "$file" ] && mv "$file" $CODE_DIR/dotfiles/bin/
+  done
+  rmdir ~/bin 2>/dev/null || echo "Warning: ~/bin not empty after move, skipping symlink"
+fi
+if [ ! -d ~/bin ] || [ -L ~/bin ]; then
+  ln $LN_FLAG $CODE_DIR/dotfiles/bin ~/bin
+  echo "Linked bin → ~/bin"
+fi
 
 # Email config generator (accounts.yaml is in dotfiles_private/config/email)
 if [ -d $CODE_DIR/email-config ]; then
