@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.sbfnk.cal-entry</string>
+	<key>category</key>
+	<string>Productivity</string>
+	<key>connections</key>
+	<dict>
+		<key>E8F2D3A1-1234-5678-9ABC-DEF012345678</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>A1B2C3D4-5678-9ABC-DEF0-123456789ABC</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoalitonouae</key>
+				<integer>0</integer>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Sebastian Funk</string>
+	<key>description</key>
+	<string>Keyboard-first calendar entry with natural language parsing</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Calendar Quick Entry</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>0</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>cal</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyaliaftwypingss</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Parsing...</string>
+				<key>script</key>
+				<string>python3 cal_filter.py "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string>Create calendar event from natural text</string>
+				<key>title</key>
+				<string>Calendar Quick Entry</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>E8F2D3A1-1234-5678-9ABC-DEF012345678</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>python3 cal_action.py "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>A1B2C3D4-5678-9ABC-DEF0-123456789ABC</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>## Calendar Quick Entry
+
+Create calendar events using natural language.
+
+### Usage
+
+Type `cal` followed by your event details:
+
+```
+cal Meet John Fri 14:00-15:00 /Work
+cal Seminar tomorrow 09:00-11:00 NYC-LON zoom
+cal wfh Fri /Work
+cal Write grant
+```
+
+### Syntax
+
+- **Title**: Any text not recognised as date/time/etc
+- **Date**: today, tomorrow, Mon-Sun, yyyy-mm-dd, dd/mm, dd.mm
+- **Time**: HH:MM-HH:MM, HH-HH, or "HH:MM to HH:MM"
+- **Timezone**: CET, NYC, LON, PT-ET, NYC-LON, etc
+- **Calendar**: /Work, @Personal
+- **Location**: loc:"Some Place" or loc:Place
+- **Flags**: zoom, meet, teams, tentative, wfh
+
+### Modifiers
+
+- **Enter**: Create event
+- **Option+Enter**: Create as tentative
+- **Cmd+Enter**: Copy to clipboard and open Calendar
+</string>
+	<key>uidata</key>
+	<dict>
+		<key>E8F2D3A1-1234-5678-9ABC-DEF012345678</key>
+		<dict>
+			<key>xpos</key>
+			<integer>100</integer>
+			<key>ypos</key>
+			<integer>100</integer>
+		</dict>
+		<key>A1B2C3D4-5678-9ABC-DEF0-123456789ABC</key>
+		<dict>
+			<key>xpos</key>
+			<integer>350</integer>
+			<key>ypos</key>
+			<integer>100</integer>
+		</dict>
+	</dict>
+	<key>version</key>
+	<string>1.0.0</string>
+	<key>webaddress</key>
+	<string></string>
+</dict>
+</plist>

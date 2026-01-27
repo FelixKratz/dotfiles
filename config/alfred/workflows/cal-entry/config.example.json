@@ -1,0 +1,10 @@
+{
+  "calendar_aliases": {
+    "work": "Calendar",
+    "personal": "Personal",
+    "kids": "Family"
+  },
+  "default_calendar": "Work",
+  "zoom_url": "https://zoom.us/j/YOUR_PERSONAL_ROOM",
+  "outlook_calendars": ["Calendar"]
+}
