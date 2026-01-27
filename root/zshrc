@@ -170,9 +170,9 @@ _tmux_set_window_name() {
     local repo
     repo=$(git rev-parse --show-toplevel 2>/dev/null)
     if [[ -n "$repo" ]]; then
+      tmux set-option -w automatic-rename off >/dev/null
       tmux rename-window "$(basename "$repo")"
     else
-      # Reset to automatic naming
       tmux set-option -w automatic-rename on >/dev/null
     fi
   fi
