@@ -1,0 +1,3 @@
+# Prevent system scripts from calling compinit before Zim
+# See https://github.com/zimfw/zimfw/wiki/Troubleshooting
+skip_global_compinit=1
