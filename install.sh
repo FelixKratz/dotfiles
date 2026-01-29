@@ -165,17 +165,23 @@ elif [[ "$OS" == "Linux" ]]; then
   if command -v apt-get &> /dev/null; then
     sudo apt-get update
     sudo apt-get install -y \
-      git zsh tmux neovim ripgrep jq wget curl \
+      git zsh tmux neovim ripgrep jq wget curl htop btop \
+      fzf zoxide fd-find bat \
+      gh openconnect \
       emacs isync mu4e msmtp \
       python3 python3-pip pipx
   elif command -v dnf &> /dev/null; then
     sudo dnf install -y \
-      git zsh tmux neovim ripgrep jq wget curl \
+      git zsh tmux neovim ripgrep jq wget curl htop btop \
+      fzf zoxide fd-find bat \
+      gh openconnect \
       emacs isync maildir-utils msmtp \
       python3 python3-pip pipx
   elif command -v pacman &> /dev/null; then
     sudo pacman -Syu --noconfirm \
-      git zsh tmux neovim ripgrep jq wget curl \
+      git zsh tmux neovim ripgrep jq wget curl htop btop \
+      fzf zoxide fd bat \
+      github-cli openconnect \
       emacs isync mu msmtp \
       python python-pip python-pipx
   else
