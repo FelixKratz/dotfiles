@@ -52,6 +52,7 @@ if [[ "$OS" == "Darwin" ]]; then
   brew install yabai
   brew install nnn
   brew install jq
+  brew install node
 
   ## sudo
   brew install --cask git-credential-manager
