@@ -177,3 +177,6 @@ source <(fzf --zsh)
 
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# Created by `pipx` on 2026-01-28 15:13:53
+export PATH="$PATH:__HOME__/.local/bin"

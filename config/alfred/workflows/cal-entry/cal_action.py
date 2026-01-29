@@ -1,13 +1,223 @@
 #!/usr/bin/env python3
 """
 Alfred Action for calendar quick entry.
-Takes JSON payload and creates event via AppleScript.
+Takes JSON payload and creates event via Graph API (Outlook) or AppleScript (Apple Calendar).
 """
 
 import json
 import subprocess
 import sys
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
+
+# Debug logging
+LOG_FILE = os.path.expanduser("~/.log/alfred-cal.log")
+
+def log(msg):
+    os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+    with open(LOG_FILE, "a") as f:
+        f.write(f"{datetime.now().isoformat()} {msg}\n")
+
+
+def parse_recurrence_rule(rrule: str, start_dt: datetime) -> dict:
+    """Convert RRULE string to Graph API recurrence format."""
+    # Parse components from rrule like "FREQ=WEEKLY;BYDAY=MO"
+    parts = dict(p.split('=') for p in rrule.split(';'))
+    freq = parts.get('FREQ', 'WEEKLY')
+    byday = parts.get('BYDAY')
+
+    # Map frequency to Graph API pattern type
+    pattern_type_map = {
+        'DAILY': 'daily',
+        'WEEKLY': 'weekly',
+        'MONTHLY': 'absoluteMonthly',
+        'YEARLY': 'absoluteYearly',
+    }
+
+    pattern = {
+        'type': pattern_type_map.get(freq, 'weekly'),
+        'interval': 1,
+    }
+
+    # Add days of week for weekly recurrence
+    if freq == 'WEEKLY' and byday:
+        day_map = {
+            'MO': 'monday', 'TU': 'tuesday', 'WE': 'wednesday',
+            'TH': 'thursday', 'FR': 'friday', 'SA': 'saturday', 'SU': 'sunday'
+        }
+        days = [day_map.get(d, 'monday') for d in byday.split(',')]
+        pattern['daysOfWeek'] = days
+        pattern['firstDayOfWeek'] = 'monday'
+
+    # Set a reasonable end date (1 year from start)
+    end_date = start_dt + timedelta(days=365)
+
+    return {
+        'pattern': pattern,
+        'range': {
+            'type': 'endDate',
+            'startDate': start_dt.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+        }
+    }
+
+
+def create_event_graph_api(event: dict) -> dict:
+    """Create event via Microsoft Graph API using m365auth."""
+    import urllib.request
+    import urllib.error
+
+    # Get access token via refresh-token CLI (pipx-installed m365auth)
+    # Use full path since Alfred doesn't have ~/.local/bin in PATH
+    refresh_token_paths = [
+        os.path.expanduser('~/.local/bin/refresh-token'),
+        '/usr/local/bin/refresh-token',
+        'refresh-token',  # fallback to PATH
+    ]
+
+    refresh_token_cmd = None
+    for path in refresh_token_paths:
+        if os.path.exists(path) or path == 'refresh-token':
+            refresh_token_cmd = path
+            break
+
+    try:
+        result = subprocess.run(
+            [refresh_token_cmd, '--profile', 'calendar'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        token = result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to get access token: {e.stderr}")
+    except FileNotFoundError:
+        raise RuntimeError("refresh-token command not found. Install m365auth: pipx install m365auth")
+
+    if not token:
+        raise RuntimeError("Empty access token returned")
+
+    title = event.get('title', 'Event')
+    flags = event.get('flags', [])
+
+    # Determine showAs status
+    if 'wfh' in flags:
+        show_as = 'workingElsewhere'
+    elif 'ooo' in flags or 'outofoffice' in flags:
+        show_as = 'oof'
+    elif 'tentative' in flags or event.get('tentative'):
+        show_as = 'tentative'
+    elif 'free' in flags:
+        show_as = 'free'
+    else:
+        show_as = 'busy'
+
+    # Build event data
+    if event.get('all_day'):
+        dt = datetime.fromisoformat(event.get('date'))
+        event_data = {
+            'subject': title,
+            'isAllDay': True,
+            'start': {
+                'dateTime': dt.strftime('%Y-%m-%dT00:00:00'),
+                'timeZone': 'Europe/London'
+            },
+            'end': {
+                'dateTime': (dt + timedelta(days=1)).strftime('%Y-%m-%dT00:00:00'),
+                'timeZone': 'Europe/London'
+            },
+            'showAs': show_as
+        }
+        start_dt = dt
+    else:
+        date_iso = event.get('date')
+        start_time = event.get('start_time', '09:00')
+        end_time = event.get('end_time', '09:30')
+
+        dt = datetime.fromisoformat(date_iso)
+        start_h, start_m = map(int, start_time.split(':'))
+        end_h, end_m = map(int, end_time.split(':'))
+
+        start_dt = dt.replace(hour=start_h, minute=start_m)
+        end_dt = dt.replace(hour=end_h, minute=end_m)
+
+        # Handle overnight events
+        if end_dt <= start_dt:
+            end_dt = end_dt + timedelta(days=1)
+
+        event_data = {
+            'subject': title,
+            'start': {
+                'dateTime': start_dt.strftime('%Y-%m-%dT%H:%M:%S'),
+                'timeZone': 'Europe/London'
+            },
+            'end': {
+                'dateTime': end_dt.strftime('%Y-%m-%dT%H:%M:%S'),
+                'timeZone': 'Europe/London'
+            },
+            'showAs': show_as
+        }
+
+    # Add location if specified
+    if event.get('location'):
+        event_data['location'] = {'displayName': event['location']}
+
+    # Build body content from notes and URL
+    body_parts = []
+    url = event.get('url')
+    notes = event.get('notes')
+
+    if notes:
+        body_parts.append(notes)
+    if url:
+        body_parts.append(f"\n\nMeeting link: {url}")
+        event_data['onlineMeetingUrl'] = url
+    elif 'zoom' in flags and ZOOM_URL:
+        body_parts.append(f"\n\nMeeting link: {ZOOM_URL}")
+        event_data['onlineMeetingUrl'] = ZOOM_URL
+
+    if body_parts:
+        event_data['body'] = {
+            'contentType': 'text',
+            'content': ''.join(body_parts).strip()
+        }
+
+    # Add recurrence if specified
+    if event.get('recurrence'):
+        event_data['recurrence'] = parse_recurrence_rule(event['recurrence'], start_dt)
+
+    # Add reminders/alerts
+    alerts = event.get('alerts')
+    if alerts:
+        event_data['isReminderOn'] = True
+        # Graph API only supports one reminder, use the earliest
+        event_data['reminderMinutesBeforeStart'] = min(alerts)
+
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+
+    log(f"Graph API event_data: {event_data}")
+
+    # Use urllib (stdlib) instead of requests
+    data = json.dumps(event_data).encode('utf-8')
+    req = urllib.request.Request(
+        'https://graph.microsoft.com/v1.0/me/calendar/events',
+        data=data,
+        headers=headers,
+        method='POST'
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            response_data = response.read().decode('utf-8')
+            log(f"Graph API response: {response.status} {response_data[:500]}")
+            return json.loads(response_data)
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        log(f"Graph API error: {e.code} {error_body}")
+        raise RuntimeError(f"Graph API error {e.code}: {error_body}")
 
 
 def tz_offset_hours(tz: str) -> int:
@@ -157,11 +367,25 @@ def build_text_summary(event: dict) -> str:
 
 def notify(title: str, message: str, sound: bool = True):
     """Show macOS notification."""
-    sound_str = 'with sound name "default"' if sound else ''
-    # Escape quotes
+    # Escape quotes and truncate
     message = message.replace('"', '\\"').replace('\n', ' ')[:100]
+    title = title.replace('"', '\\"')
+
+    # Try terminal-notifier first (more reliable in Alfred context)
+    terminal_notifier = '/opt/homebrew/bin/terminal-notifier'
+    if os.path.exists(terminal_notifier):
+        args = [terminal_notifier, '-title', title, '-message', message, '-group', 'alfred-cal']
+        if sound:
+            args.extend(['-sound', 'default'])
+        result = subprocess.run(args, capture_output=True)
+        log(f"terminal-notifier result: {result.returncode}")
+        return
+
+    # Fallback to AppleScript
+    sound_str = 'sound name "default"' if sound else ''
     script = f'display notification "{message}" with title "{title}" {sound_str}'
-    subprocess.run(['osascript', '-e', script], capture_output=True)
+    result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True)
+    log(f"osascript notify result: {result.returncode} stderr={result.stderr}")
 
 
 def get_available_calendars() -> list:
@@ -244,7 +468,8 @@ def build_outlook_applescript(event: dict) -> str:
         dt = datetime.fromisoformat(event.get('date'))
         return f'''
 tell application "Microsoft Outlook"
-    set newEvent to make new calendar event with properties {{subject:"{title}", start time:date "{dt.strftime("%A, %d %B %Y")} 00:00:00", end time:date "{dt.strftime("%A, %d %B %Y")} 23:59:59", all day flag:true, free busy status:{show_as}{location_prop}{url_prop}}}
+    set targetCal to calendar "{calendar}"
+    make new calendar event at targetCal with properties {{subject:"{title}", start time:date "{dt.strftime("%A, %d %B %Y")} 00:00:00", end time:date "{dt.strftime("%A, %d %B %Y")} 23:59:59", all day flag:true, free busy status:{show_as}{location_prop}{url_prop}}}
 end tell
 '''
     else:
@@ -280,7 +505,8 @@ end tell
 
         return f'''
 tell application "Microsoft Outlook"
-    set newEvent to make new calendar event with properties {{subject:"{title}", start time:date "{start_str}", end time:date "{end_str}", free busy status:{show_as}{location_prop}{url_prop}}}
+    set targetCal to calendar "{calendar}"
+    make new calendar event at targetCal with properties {{subject:"{title}", start time:date "{start_str}", end time:date "{end_str}", free busy status:{show_as}{location_prop}{url_prop}}}
 end tell
 '''
 
@@ -326,13 +552,18 @@ def find_calendar(requested: str, available: list) -> str:
 
 
 def main():
+    log(f"=== Starting cal_action ===")
+    log(f"argv: {sys.argv}")
+
     if len(sys.argv) < 2:
         notify("Calendar Error", "No event data provided", sound=True)
         return
 
     try:
         event = json.loads(sys.argv[1])
+        log(f"Parsed event: {event}")
     except json.JSONDecodeError as e:
+        log(f"JSON decode error: {e}")
         notify("Calendar Error", f"Invalid JSON: {e}", sound=True)
         return
 
@@ -346,31 +577,44 @@ def main():
 
     # Find matching calendar
     available_calendars = get_available_calendars()
+    log(f"Available calendars: {available_calendars}")
     requested_calendar = event.get('calendar', 'Calendar')
     matched_calendar = find_calendar(requested_calendar, available_calendars)
+    log(f"Requested: {requested_calendar} -> Matched: {matched_calendar}")
     event['calendar'] = matched_calendar
 
     # Choose calendar app based on calendar name
     use_outlook = matched_calendar in OUTLOOK_CALENDARS
-    if use_outlook:
-        script = build_outlook_applescript(event)
-    else:
-        script = build_applescript(event)
+    log(f"OUTLOOK_CALENDARS: {OUTLOOK_CALENDARS}, use_outlook: {use_outlook}")
 
     try:
-        result = subprocess.run(
-            ['osascript', '-e', script],
-            capture_output=True,
-            text=True,
-            check=True
-        )
         title = event.get('title', 'Event')
         date_str = datetime.fromisoformat(event.get('date')).strftime('%a %d %b')
+
+        if use_outlook:
+            # Use Microsoft Graph API for Outlook calendars
+            log("Using Graph API for Outlook calendar")
+            result = create_event_graph_api(event)
+            log(f"Graph API result: {result.get('id', 'no id')}")
+        else:
+            # Use AppleScript for Apple Calendar
+            script = build_applescript(event)
+            log(f"AppleScript:\n{script}")
+            result = subprocess.run(
+                ['osascript', '-e', script],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            log(f"osascript stdout: {result.stdout}")
+            log(f"osascript stderr: {result.stderr}")
+
         if event.get('all_day'):
             details = f"{title}\n{date_str} (all day) • {matched_calendar}"
         else:
             time_str = f"{event.get('start_time')}-{event.get('end_time')}"
             details = f"{title}\n{date_str} {time_str} • {matched_calendar}"
+        log(f"Success: {details}")
         notify("Event Created", details, sound=False)
 
         # Open Calendar if requested (e.g., to add invitees)
@@ -379,8 +623,11 @@ def main():
             subprocess.run(['open', '-a', app], check=True)
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr.strip() if e.stderr else "Unknown error"
+        log(f"CalledProcessError: {e.returncode} - {error_msg}")
+        log(f"stdout: {e.stdout}")
         notify("Calendar Error", error_msg, sound=True)
     except Exception as e:
+        log(f"Exception: {type(e).__name__}: {e}")
         notify("Calendar Error", str(e), sound=True)
 
 
