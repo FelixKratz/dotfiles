@@ -188,6 +188,12 @@ elif [[ "$OS" == "Linux" ]]; then
     echo "Warning: Unknown package manager. Please install packages manually."
   fi
 
+  # Install tpm (tmux plugin manager)
+  if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+    echo "Installing tmux plugin manager..."
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+  fi
+
   mkdir -p $HOME/.log
 
 else
