@@ -778,16 +778,21 @@ def parse_input(query: str) -> dict:
             end_m = 59
         end_time = f"{end_h:02d}:{end_m:02d}"
 
-    # Timed event with no time specified
+    # No time specified = all-day event
     if not start_time:
-        start_dt = next_quarter_hour()
-        if start_dt.date() > date.date():
-            start_dt = date.replace(hour=9, minute=0)
-        else:
-            start_dt = date.replace(hour=start_dt.hour, minute=start_dt.minute)
-        end_dt = start_dt + timedelta(minutes=30)
-        start_time = start_dt.strftime('%H:%M')
-        end_time = end_dt.strftime('%H:%M')
+        return {
+            'title': title,
+            'date': date,
+            'all_day': True,
+            'calendar': calendar or 'Work',
+            'flags': flags,
+            'tentative': 'tentative' in flags,
+            'location': location,
+            'url': url,
+            'notes': notes,
+            'recurrence': recurrence,
+            'alerts': sorted(set(alerts)) if alerts else None,
+        }
 
     return {
         'title': title,
