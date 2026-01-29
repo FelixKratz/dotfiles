@@ -7,6 +7,7 @@ skip_global_compinit=1
 for p in \
   "$HOME/bin" \
   "$HOME/.local/bin" \
+  "$HOME/.npm-global/bin" \
   "$HOME/.juliaup/bin" \
   "$HOME/.config/emacs/bin" \
   "$HOME/.bun/bin" \
