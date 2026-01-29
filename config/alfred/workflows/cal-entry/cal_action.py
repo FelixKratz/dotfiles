@@ -163,23 +163,20 @@ def create_event_graph_api(event: dict) -> dict:
         event_data['location'] = {'displayName': event['location']}
 
     # Build body content from notes and URL
-    body_parts = []
     url = event.get('url')
     notes = event.get('notes')
 
-    if notes:
-        body_parts.append(notes)
+    # Set online meeting URL (Outlook displays this automatically)
     if url:
-        body_parts.append(f"\n\nMeeting link: {url}")
         event_data['onlineMeetingUrl'] = url
     elif 'zoom' in flags and ZOOM_URL:
-        body_parts.append(f"\n\nMeeting link: {ZOOM_URL}")
         event_data['onlineMeetingUrl'] = ZOOM_URL
 
-    if body_parts:
+    # Only add notes to body (URL is shown via onlineMeetingUrl)
+    if notes:
         event_data['body'] = {
             'contentType': 'text',
-            'content': ''.join(body_parts).strip()
+            'content': notes
         }
 
     # Add recurrence if specified

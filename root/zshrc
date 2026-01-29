@@ -175,6 +175,11 @@ eval "$(zoxide init zsh)"
 source <(fzf --zsh)
 
 
+# SSH and attach to tmux
+ssht() {
+    ssh -t "$@" "tmux attach || tmux new"
+}
+
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
