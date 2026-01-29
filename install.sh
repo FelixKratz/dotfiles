@@ -168,6 +168,7 @@ elif [[ "$OS" == "Linux" ]]; then
       git zsh tmux neovim ripgrep jq wget curl htop btop \
       fzf zoxide fd-find bat \
       gh openconnect \
+      nodejs npm \
       emacs isync mu4e msmtp \
       python3 python3-pip pipx
   elif command -v dnf &> /dev/null; then
@@ -175,6 +176,7 @@ elif [[ "$OS" == "Linux" ]]; then
       git zsh tmux neovim ripgrep jq wget curl htop btop \
       fzf zoxide fd-find bat \
       gh openconnect \
+      nodejs npm \
       emacs isync maildir-utils msmtp \
       python3 python3-pip pipx
   elif command -v pacman &> /dev/null; then
@@ -182,6 +184,7 @@ elif [[ "$OS" == "Linux" ]]; then
       git zsh tmux neovim ripgrep jq wget curl htop btop \
       fzf zoxide fd bat \
       github-cli openconnect \
+      nodejs npm \
       emacs isync mu msmtp \
       python python-pip python-pipx
   else
