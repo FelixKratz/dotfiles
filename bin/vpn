@@ -1,0 +1,72 @@
+#!/bin/bash
+# Connect to GlobalProtect VPN using openconnect + 1Password
+# Usage: vpn [connect|disconnect|status]
+
+# Load config from dotfiles_private
+CONFIG_FILE="$HOME/.config/vpn/config.json"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Config file not found: $CONFIG_FILE"
+    echo "Create it with: portal, username, op_item"
+    exit 1
+fi
+
+PORTAL=$(jq -r '.portal' "$CONFIG_FILE")
+VPN_USER=$(jq -r '.username' "$CONFIG_FILE")
+OP_ITEM=$(jq -r '.op_item' "$CONFIG_FILE")
+
+case "${1:-connect}" in
+    connect|c)
+        # Check if already connected
+        if pgrep -x openconnect > /dev/null; then
+            echo "VPN already connected"
+            exit 0
+        fi
+
+        echo "Connecting to $PORTAL as $VPN_USER..."
+
+        # Pipe password and TOTP directly to openconnect
+        {
+            op read "op://Private/$OP_ITEM/password"
+            op read "op://Private/$OP_ITEM/one-time password?attribute=otp"
+        } | sudo openconnect \
+            --protocol=gp \
+            --user="$VPN_USER" \
+            --passwd-on-stdin \
+            --background \
+            "$PORTAL"
+
+        sleep 2
+        if pgrep -x openconnect > /dev/null; then
+            echo "Connected to VPN"
+        else
+            echo "Failed to connect"
+            exit 1
+        fi
+        ;;
+
+    disconnect|d)
+        if pgrep -x openconnect > /dev/null; then
+            sudo pkill -SIGINT openconnect
+            echo "Disconnected from VPN"
+        else
+            echo "VPN not connected"
+        fi
+        ;;
+
+    status|s)
+        if pgrep -x openconnect > /dev/null; then
+            echo "VPN connected"
+            ifconfig | grep -A1 "utun" | head -4
+        else
+            echo "VPN not connected"
+        fi
+        ;;
+
+    *)
+        echo "Usage: vpn [connect|disconnect|status]"
+        echo "  connect (c)    - Connect to VPN"
+        echo "  disconnect (d) - Disconnect from VPN"
+        echo "  status (s)     - Check VPN status"
+        exit 1
+        ;;
+esac
