@@ -28,6 +28,8 @@ install packages from MELPA, ELPA, or directly from git repos.
 #+begin_src emacs-lisp
 (package! org-ref)                 ; citations and cross-references
 (package! vulpea)                  ; org-roam workflow helpers
+(package! consult-vulpea
+  :recipe (:host github :repo "d12frosted/consult-vulpea"))
 #+end_src
 
 ** Communication
