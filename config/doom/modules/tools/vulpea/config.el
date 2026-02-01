@@ -29,6 +29,14 @@
   ;; Enable @mention expansion in captures
   (add-hook 'org-capture-before-finalize-hook #'vulpea-capture-expand-mentions))
 
+;; org-roam capture templates (used by vulpea-find for new notes)
+(after! (:all vulpea org)
+  (setq org-roam-capture-templates
+        '(("d" "default" plain "%?"
+           :target (file+head "${slug}.org"
+                              "#+title: ${title}\n#+filetags:\n\n")
+           :unnarrowed t))))
+
 ;; Capture templates - defined outside use-package to avoid timing issues
 (after! (:all vulpea org)
   (setq org-capture-templates
