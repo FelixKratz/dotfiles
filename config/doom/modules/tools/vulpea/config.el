@@ -34,7 +34,7 @@
   (setq vulpea-create-default-template
         '(:file-name "${slug}.org"
           :head "#+title: ${title}\n#+filetags:\n\n"
-          :body "%?"))))
+          :body "%?")))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
 (after! (:all vulpea org)
