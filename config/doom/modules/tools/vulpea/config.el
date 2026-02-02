@@ -23,6 +23,8 @@
     (add-to-list 'org-tags-exclude-from-inheritance "active"))
 
   :config
+  ;; Scan all files when autosync is enabled (needed after db clear/creation)
+  (setq vulpea-db-sync-scan-on-enable t)
   ;; Enable autosync mode for background updates
   (vulpea-db-autosync-mode +1)
 
