@@ -37,8 +37,10 @@
   ;; Template for new notes - vulpea adds #+title: automatically, so :head is extra content
   (setq vulpea-create-default-template
         '(:file-name "%<%Y%m%d%H%M%S>-${slug}.org"
-          :head "#+filetags:\n\n"
-          :body "%?")))
+          :head "#+filetags:\n\n"))
+
+  ;; Allow vulpea-find to create new notes when no match found
+  (setq vulpea-find-require-match nil))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
 (after! (:all vulpea org)
