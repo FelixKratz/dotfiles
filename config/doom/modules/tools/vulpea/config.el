@@ -119,7 +119,9 @@
     (setq sf/vulpea-context context
           vulpea-db-sync-directories dirs
           vulpea-db-location (expand-file-name db)
-          vulpea-capture-inbox-file (expand-file-name inbox))
+          vulpea-capture-inbox-file (expand-file-name inbox)
+          ;; Critical: update default notes directory for new note creation
+          vulpea-default-notes-directory (car dirs))
     ;; Force DB initialization (creates if doesn't exist)
     (vulpea-db)
     ;; Restart autosync with new context
