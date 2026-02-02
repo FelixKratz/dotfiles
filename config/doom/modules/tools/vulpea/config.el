@@ -110,14 +110,17 @@
          (dirs (plist-get config :directories))
          (db (plist-get config :db))
          (inbox (plist-get config :inbox)))
+    ;; Stop autosync and close db connection before switching
+    (when vulpea-db-autosync-mode
+      (vulpea-db-autosync-mode -1))
+    (vulpea-db-close)
+    ;; Update settings for new context
     (setq sf/vulpea-context context
           vulpea-db-sync-directories dirs
           vulpea-db-location (expand-file-name db)
           vulpea-capture-inbox-file (expand-file-name inbox))
-    ;; Only restart autosync if already enabled - avoid triggering full scan
-    (when vulpea-db-autosync-mode
-      (vulpea-db-autosync-mode -1)
-      (vulpea-db-autosync-mode +1))
+    ;; Restart autosync (will scan if db empty due to scan-on-enable)
+    (vulpea-db-autosync-mode +1)
     (message "Switched to %s notes" context)))
 
 (defun sf/vulpea-work ()
