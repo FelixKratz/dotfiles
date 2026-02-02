@@ -132,6 +132,14 @@
   (interactive)
   (sf/vulpea-switch-context 'private))
 
+(defun sf/vulpea-create-note ()
+  "Interactively create a new vulpea note.
+Prompts for title, creates file with slug, and opens it."
+  (interactive)
+  (let* ((title (read-string "Note title: "))
+         (note (vulpea-create title)))
+    (find-file (vulpea-note-path note))))
+
 ;;; === Private diary (daily files) ===
 
 (defvar sf/diary-directory "~/private/journal/"

@@ -504,7 +504,7 @@ Keybindings for vulpea note-taking under =SPC n r= (roam) and =SPC n d= (diary/p
         :desc "Yesterday" "y" #'sf/diary-yesterday
         :desc "Pick date" "c" #'sf/diary-calendar
         :desc "Find private note" "f" (cmd! (sf/vulpea-private) (vulpea-find))
-        :desc "New private note" "n" (cmd! (sf/vulpea-private) (vulpea-create))
+        :desc "New private note" "n" (cmd! (sf/vulpea-private) (sf/vulpea-create-note))
         :desc "Switch to private" "p" #'sf/vulpea-private
         :desc "Switch to work" "w" #'sf/vulpea-work)))
 #+end_src
