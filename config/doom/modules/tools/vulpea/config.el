@@ -33,11 +33,11 @@
   (add-hook 'org-capture-before-finalize-hook #'vulpea-capture-expand-mentions))
 
 ;; vulpea note creation template
+;; Note: vulpea adds #+title: automatically, :head is for additional content
 (after! vulpea
   (setq vulpea-create-default-template
-        '(:file-name "${slug}.org"
-          :head "#+title: ${title}\n#+filetags:\n\n"
-          :body "%?")))
+        '(:file-name "%<%Y%m%d%H%M%S>-${slug}.org"
+          :head "#+filetags:\n")))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
 (after! (:all vulpea org)
