@@ -31,9 +31,13 @@
 
 ;; vulpea note creation template
 (after! vulpea
+  ;; Set default directory (dynamically based on context)
+  (setq vulpea-default-notes-directory (car vulpea-db-sync-directories))
+
+  ;; Template for new notes - vulpea adds #+title: automatically, so :head is extra content
   (setq vulpea-create-default-template
-        '(:file-name "${slug}.org"
-          :head "#+title: ${title}\n#+filetags:\n\n"
+        '(:file-name "%<%Y%m%d%H%M%S>-${slug}.org"
+          :head "#+filetags:\n\n"
           :body "%?")))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
