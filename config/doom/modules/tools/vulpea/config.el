@@ -31,16 +31,10 @@
 
 ;; vulpea note creation template
 (after! vulpea
-  ;; Set default directory (dynamically based on context)
-  (setq vulpea-default-notes-directory (car vulpea-db-sync-directories))
-
-  ;; Template for new notes - vulpea adds #+title: automatically, so :head is extra content
   (setq vulpea-create-default-template
-        '(:file-name "%<%Y%m%d%H%M%S>-${slug}.org"
-          :head "#+filetags:\n\n"))
-
-  ;; Allow vulpea-find to create new notes when no match found
-  (setq vulpea-find-require-match nil))
+        '(:file-name "${slug}.org"
+          :head "#+title: ${title}\n#+filetags:\n\n"
+          :body "%?")))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
 (after! (:all vulpea org)
@@ -114,21 +108,15 @@
          (dirs (plist-get config :directories))
          (db (plist-get config :db))
          (inbox (plist-get config :inbox)))
-    ;; Close existing connection before switching
-    (vulpea-db-close)
     (setq sf/vulpea-context context
           vulpea-db-sync-directories dirs
           vulpea-db-location (expand-file-name db)
-          vulpea-capture-inbox-file (expand-file-name inbox)
-          ;; Critical: update default notes directory for new note creation
-          vulpea-default-notes-directory (car dirs))
-    ;; Force DB initialization (creates if doesn't exist)
-    (vulpea-db)
-    ;; Restart autosync with new context
+          vulpea-capture-inbox-file (expand-file-name inbox))
+    ;; Only restart autosync if already enabled - avoid triggering full scan
     (when vulpea-db-autosync-mode
       (vulpea-db-autosync-mode -1)
       (vulpea-db-autosync-mode +1))
-    (message "Switched to %s notes (%s)" context db)))
+    (message "Switched to %s notes" context)))
 
 (defun sf/vulpea-work ()
   "Switch to work notes."
@@ -139,14 +127,6 @@
   "Switch to private notes."
   (interactive)
   (sf/vulpea-switch-context 'private))
-
-(defun sf/vulpea-create-note ()
-  "Interactively create a new vulpea note.
-Prompts for title, creates file with slug, and opens it."
-  (interactive)
-  (let* ((title (read-string "Note title: "))
-         (note (vulpea-create title)))
-    (find-file (vulpea-note-path note))))
 
 ;;; === Private diary (daily files) ===
 

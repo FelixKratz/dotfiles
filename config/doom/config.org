@@ -494,7 +494,6 @@ Switch context with =SPC n r p= (private) or =SPC n r w= (work).
       (:prefix ("n" . "notes")
        (:prefix ("r" . "roam")
         :desc "Find note" "f" #'vulpea-find
-        :desc "New note" "n" #'sf/vulpea-create-note
         :desc "Grep notes" "g" #'consult-vulpea-grep
         :desc "Insert link" "i" #'vulpea-insert
         :desc "Find backlink" "b" #'vulpea-find-backlink
