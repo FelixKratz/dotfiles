@@ -486,6 +486,29 @@ Todo capture with vulpea auto-tagging. Prompts for person/project and files todo
            "* %?\n%U\n"))))
 #+end_src
 
+** Vulpea Keybindings
+Keybindings for vulpea note-taking under =SPC n r= (roam) and =SPC n d= (diary/private).
+#+begin_src emacs-lisp
+(map! :leader
+      (:prefix ("n" . "notes")
+       (:prefix ("r" . "roam")
+        :desc "Find note" "f" #'vulpea-find
+        :desc "Grep notes" "g" #'consult-vulpea-grep
+        :desc "Insert link" "i" #'vulpea-insert
+        :desc "Find backlink" "b" #'vulpea-find-backlink
+        :desc "Add tag" "a" #'vulpea-buffer-tags-add
+        :desc "Remove tag" "d" #'vulpea-buffer-tags-remove
+        :desc "Sync database" "s" #'vulpea-db-sync-full-scan)
+       (:prefix ("d" . "diary/private")
+        :desc "Today's diary" "d" #'sf/diary
+        :desc "Yesterday" "y" #'sf/diary-yesterday
+        :desc "Pick date" "c" #'sf/diary-calendar
+        :desc "Find private note" "f" (cmd! (sf/vulpea-private) (vulpea-find))
+        :desc "New private note" "n" (cmd! (sf/vulpea-private) (vulpea-create))
+        :desc "Switch to private" "p" #'sf/vulpea-private
+        :desc "Switch to work" "w" #'sf/vulpea-work)))
+#+end_src
+
 ** Babel
 Auto-confirm R code execution (don't prompt every time).
 #+begin_src emacs-lisp
