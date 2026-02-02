@@ -179,11 +179,10 @@ Creates file with template if it doesn't exist."
                                     (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))))
 
 ;; Keybindings - mirror old org-roam bindings under SPC n r
-(after! vulpea
-  (map! :leader
-        (:prefix ("n" . "notes")
-         ;; Work notes (default)
-         (:prefix ("r" . "roam")
+(map! :leader
+      :after vulpea
+      (:prefix ("n" . "notes")
+       (:prefix ("r" . "roam")
         :desc "Find note" "f" #'vulpea-find
         :desc "Grep notes" "g" #'consult-vulpea-grep
         :desc "Insert link" "i" #'vulpea-insert
@@ -192,7 +191,6 @@ Creates file with template if it doesn't exist."
         :desc "Add tag" "a" #'vulpea-buffer-tags-add
         :desc "Remove tag" "d" #'vulpea-buffer-tags-remove
         :desc "Sync database" "s" #'vulpea-db-sync-full-scan)
-       ;; Private notes / diary
        (:prefix ("d" . "diary/private")
         :desc "Today's diary" "d" #'sf/diary
         :desc "Yesterday" "y" #'sf/diary-yesterday
@@ -202,9 +200,10 @@ Creates file with template if it doesn't exist."
         :desc "Switch to private" "p" #'sf/vulpea-private
         :desc "Switch to work" "w" #'sf/vulpea-work)))
 
-  ;; Insert-mode keybinding for quick person insertion while typing
-  (map! :map org-mode-map
-        :i "C-c @" #'vulpea-insert-person))
+;; Insert-mode keybinding for quick person insertion while typing
+(map! :after vulpea
+      :map org-mode-map
+      :i "C-c @" #'vulpea-insert-person)
 
 ;; Agenda configuration
 (defvar vulpea-agenda-main-buffer-name "*agenda:main*"
