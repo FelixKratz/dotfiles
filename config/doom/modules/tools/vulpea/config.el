@@ -35,8 +35,10 @@
 ;; vulpea note creation template
 ;; Note: vulpea adds #+title: automatically, :head is for additional content
 (after! vulpea
+  ;; Set default directory for new notes (first sync directory)
+  (setq vulpea-default-notes-directory (car vulpea-db-sync-directories))
   (setq vulpea-create-default-template
-        '(:file-name "%<%Y%m%d%H%M%S>-${slug}.org"
+        '(:file-name "${timestamp}-${slug}.org"
           :head "#+filetags:\n")))
 
 ;; Capture templates - defined outside use-package to avoid timing issues
@@ -119,7 +121,8 @@
     (setq sf/vulpea-context context
           vulpea-db-sync-directories dirs
           vulpea-db-location (expand-file-name db)
-          vulpea-capture-inbox-file (expand-file-name inbox))
+          vulpea-capture-inbox-file (expand-file-name inbox)
+          vulpea-default-notes-directory (car dirs))
     ;; Restart autosync (will scan if db empty due to scan-on-enable)
     (vulpea-db-autosync-mode +1)
     (message "Switched to %s notes" context)))
