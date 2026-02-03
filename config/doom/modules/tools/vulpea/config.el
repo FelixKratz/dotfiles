@@ -100,9 +100,9 @@
   "Configuration for work notes.")
 
 (defvar sf/vulpea-private-config
-  '(:directories ("~/private/")
+  '(:directories ("~/private/notes/")
     :db "~/.config/vulpea/private.db"
-    :inbox "~/private/inbox.org")
+    :inbox "~/private/notes/inbox.org")
   "Configuration for private notes.")
 
 (defun sf/vulpea-switch-context (context)
