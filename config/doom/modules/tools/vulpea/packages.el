@@ -4,6 +4,6 @@
 ;; vulpea v2 - standalone, no org-roam dependency
 (package! vulpea)
 
-;; Disabled: causes empty title/slug when creating new notes
-;; (package! consult-vulpea
-;;   :recipe (:host github :repo "d12frosted/consult-vulpea"))
+;; Enhanced selection with consult (use upstream, not stale d12frosted fork)
+(package! consult-vulpea
+  :recipe (:host github :repo "fabcontigiani/consult-vulpea"))

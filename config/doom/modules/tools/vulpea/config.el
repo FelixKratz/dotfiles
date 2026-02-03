@@ -82,13 +82,11 @@
           "#+filetags: :review:\n\n"
           "%?"))
 
-;; Consult integration disabled - causes empty title/slug when creating
-;; new notes in contexts with few existing notes. See:
-;; https://github.com/d12frosted/vulpea (may need to file bug report)
-;; (use-package! consult-vulpea
-;;   :after vulpea
-;;   :config
-;;   (consult-vulpea-mode 1))
+;; Consult integration for better fuzzy search and preview
+(use-package! consult-vulpea
+  :after vulpea
+  :config
+  (consult-vulpea-mode 1))
 
 ;;; === Dual context: Work / Private ===
 
