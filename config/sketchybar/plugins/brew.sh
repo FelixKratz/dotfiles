@@ -2,7 +2,11 @@
 
 source "$CONFIG_DIR/colors.sh"
 
-COUNT="$(brew outdated | wc -l | tr -d ' ')"
+# Read from cache file - update via: brew outdated | wc -l > /tmp/brew_outdated_count
+# Or add to .zshrc: brew() { command brew "$@"; command brew outdated 2>/dev/null | wc -l | tr -d ' ' > /tmp/brew_outdated_count; }
+CACHE_FILE="/tmp/brew_outdated_count"
+COUNT=$(cat "$CACHE_FILE" 2>/dev/null)
+[[ -z "$COUNT" ]] && COUNT="?"
 
 COLOR=$RED
 

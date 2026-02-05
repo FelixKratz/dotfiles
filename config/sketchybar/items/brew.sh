@@ -8,6 +8,8 @@ brew=(
   label=?
   padding_right=10
   script="$PLUGIN_DIR/brew.sh"
+  update_freq=1800
+  updates=on
 )
 
 sketchybar --add event brew_update \

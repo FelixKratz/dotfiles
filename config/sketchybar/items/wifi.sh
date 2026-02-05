@@ -7,6 +7,7 @@ wifi=(
   label.width=0
   icon="$WIFI_DISCONNECTED"
   script="$PLUGIN_DIR/wifi.sh"
+  update_freq=30
 )
 
 sketchybar --add item wifi right \

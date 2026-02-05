@@ -77,6 +77,9 @@ Adjust =:size= if text is too small/large on your display.
 #+begin_src emacs-lisp
 (setq doom-font (font-spec :family "Fira Code" :size 12 :weight 'semi-light)
       doom-variable-pitch-font (font-spec :family "Source Sans 3" :size 13))
+
+;; Emoji font fallback
+(set-fontset-font t 'emoji "Apple Color Emoji" nil 'prepend)
 #+end_src
 
 ** Theme and UI
