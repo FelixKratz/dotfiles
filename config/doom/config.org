@@ -652,7 +652,36 @@ then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
 
   (add-hook 'persp-activated-functions
             (lambda (&rest _)
-              (run-with-idle-timer 0.3 nil #'sf/claude-scroll-bottom))))
+              (run-with-idle-timer 0.3 nil #'sf/claude-scroll-bottom)))
+
+  ;; Open diffs in the workspace containing the specific Claude Code session,
+  ;; then restore the original workspace so the user isn't disrupted.
+  (defadvice! +claude-code-ide--diff-in-workspace-a (orig-fn &rest args)
+    :around #'claude-code-ide-mcp-handle-open-diff
+    (let* ((orig-ws (when (fboundp '+workspace-current-name)
+                      (+workspace-current-name)))
+           ;; Find the session's buffer from the file path in arguments
+           (target-buf
+            (when-let* ((arguments (car args))
+                        (file-path (alist-get 'old_file_path arguments))
+                        (session (claude-code-ide-mcp--find-session-for-file file-path))
+                        (project-dir (claude-code-ide-mcp-session-project-dir session)))
+              (get-buffer (claude-code-ide--get-buffer-name project-dir))))
+           ;; Find which workspace contains that buffer
+           (claude-ws
+            (when (and target-buf (fboundp '+workspace-list-names))
+              (cl-loop for ws-name in (+workspace-list-names)
+                       for persp = (+workspace-get ws-name t)
+                       when (and persp (memq target-buf (persp-buffers persp)))
+                       return ws-name))))
+      (when (and claude-ws orig-ws (not (equal claude-ws orig-ws))
+                 (fboundp '+workspace-switch))
+        (+workspace-switch claude-ws))
+      (unwind-protect
+          (apply orig-fn args)
+        (when (and orig-ws (fboundp '+workspace-switch)
+                   (not (equal orig-ws (+workspace-current-name))))
+          (+workspace-switch orig-ws))))))
 
 ;; Doom-style keybinding for claude-code-ide
 (map! :leader
