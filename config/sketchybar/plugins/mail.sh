@@ -3,9 +3,8 @@
 source "$CONFIG_DIR/icons.sh"
 source "$CONFIG_DIR/colors.sh"
 
-MU=/opt/homebrew/bin/mu
-WORK=$($MU find 'flag:unread AND maildir:/work/INBOX' 2>/dev/null | wc -l | tr -d ' ')
-PERSONAL=$($MU find 'flag:unread AND (maildir:/personal/INBOX OR maildir:/public/INBOX OR maildir:/joint/INBOX OR maildir:/sbstnfnk/INBOX OR maildir:/sebfnk/INBOX)' 2>/dev/null | wc -l | tr -d ' ')
+WORK=$(notmuch count 'tag:unread AND folder:work/INBOX' 2>/dev/null || echo 0)
+PERSONAL=$(notmuch count 'tag:unread AND (folder:personal/INBOX OR folder:public/INBOX OR folder:joint/INBOX OR folder:sbstnfnk/INBOX OR folder:sebfnk/INBOX)' 2>/dev/null || echo 0)
 TOTAL=$((WORK + PERSONAL))
 
 if [ "$TOTAL" -gt 0 ]; then
