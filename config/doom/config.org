@@ -36,6 +36,7 @@ install packages from MELPA, ELPA, or directly from git repos.
 #+begin_src emacs-lisp
 (package! telega)                  ; Telegram client
 (package! mastodon)                ; Mastodon client
+(package! mu4e-column-faces)       ; coloured columns in mu4e headers
 #+end_src
 
 ** AI Tools
