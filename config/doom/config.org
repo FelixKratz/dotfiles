@@ -134,7 +134,7 @@ Allow Emacs to prompt for GPG passphrase in minibuffer.
 #+end_src
 
 * Email
-Email configuration is in a separate file (in doom-private, tangled from email.org).
+Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
 #+begin_src emacs-lisp
 (load! "email" "~/.config/doom-private")
 #+end_src
@@ -234,6 +234,17 @@ ESS-Julia gives us the same workflow as R:
 (after! ess
   ;; Julia executable (adjust path if needed)
   (setq inferior-julia-program "julia")
+
+  ;; Enable colours in Julia REPL
+  (setq inferior-julia-args "--color=yes")
+
+  ;; Strip OSC title-setting sequences from Julia output
+  (add-hook 'inferior-ess-mode-hook
+            (lambda ()
+              (add-hook 'comint-preoutput-filter-functions
+                        (lambda (output)
+                          (replace-regexp-in-string "\e\\]0;[^\a]*\a" "" output))
+                        nil t)))
 
   ;; Window placement for Julia REPL - right side, 45% width
   (set-popup-rule! "^\\*julia.*\\*$"
