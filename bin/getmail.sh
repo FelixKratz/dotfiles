@@ -14,5 +14,5 @@ fi
 # Update notmuch index (always works, no server dependency)
 /opt/homebrew/bin/notmuch new 2>/dev/null
 
-# Tell mu4e to reindex (mu server holds the database lock)
-/opt/homebrew/bin/emacsclient -e '(mu4e-update-index)' 2>/dev/null || /opt/homebrew/bin/mu index 2>&1
+# Tell mu4e to reindex if loaded (mu server holds the database lock)
+/opt/homebrew/bin/emacsclient -e '(when (fboundp (quote mu4e-update-index)) (mu4e-update-index))' 2>/dev/null || /opt/homebrew/bin/mu index 2>/dev/null
