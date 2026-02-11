@@ -4,19 +4,17 @@ source "$CONFIG_DIR/icons.sh"
 source "$CONFIG_DIR/colors.sh"
 
 WORK=$(notmuch count 'tag:unread AND folder:work/INBOX' 2>/dev/null || echo 0)
-PERSONAL=$(notmuch count 'tag:unread AND (folder:personal/INBOX OR folder:public/INBOX OR folder:joint/INBOX OR folder:sbstnfnk/INBOX OR folder:sebfnk/INBOX)' 2>/dev/null || echo 0)
-TOTAL=$((WORK + PERSONAL))
+GITHUB=$(notmuch count 'tag:unread AND folder:work/GitHub' 2>/dev/null || echo 0)
+NONWORK=$(notmuch count 'tag:unread AND (folder:/INBOX/ OR folder:/inbox/) AND NOT folder:work/INBOX AND NOT tag:spam AND NOT tag:junk' 2>/dev/null || echo 0)
+TOTAL=$((WORK + GITHUB + NONWORK))
 
 if [ "$TOTAL" -gt 0 ]; then
   ICON=$MAIL_UNREAD
-  # Show "work/personal" format, omit zeros
-  if [ "$WORK" -gt 0 ] && [ "$PERSONAL" -gt 0 ]; then
-    LABEL="$WORK/$PERSONAL"
-  elif [ "$WORK" -gt 0 ]; then
-    LABEL="w:$WORK"
-  else
-    LABEL="$PERSONAL"
-  fi
+  PARTS=""
+  [ "$WORK" -gt 0 ] && PARTS="w:$WORK"
+  [ "$GITHUB" -gt 0 ] && PARTS="${PARTS:+$PARTS }g:$GITHUB"
+  [ "$NONWORK" -gt 0 ] && PARTS="${PARTS:+$PARTS }n:$NONWORK"
+  LABEL="$PARTS"
   COLOR=$BLUE
 else
   ICON=$MAIL
