@@ -80,7 +80,7 @@ yabai -m rule --add label="WebEx" app="Cisco Webex Meetings" manage=off sub-laye
 yabai -m rule --add label="Inkscape" title!="Inkscape$" app="Inkscape" manage=off sub-layer=normal
 
 # Clean up empty spaces with no windows on them.
-yabai -m signal --add event=space_changed action="sh ~/bin/cleanEmptySpaces.sh"
+yabai -m signal --add event=space_changed action="sh ~/.local/bin/cleanEmptySpaces.sh"
 # source "$ITEM_DIR/media.sh"
 
 yabai -m signal --add event=window_focused action="sketchybar --trigger window_focus"
