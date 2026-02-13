@@ -133,6 +133,13 @@ Allow Emacs to prompt for GPG passphrase in minibuffer.
 (setf epa-pinentry-mode 'loopback)
 #+end_src
 
+** Completion
+Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so multi-selection works in vertico.
+#+begin_src emacs-lisp
+(after! embark
+  (define-key vertico-map (kbd "C-;") #'embark-select))
+#+end_src
+
 * Email
 Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
 #+begin_src emacs-lisp
