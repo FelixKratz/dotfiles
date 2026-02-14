@@ -92,7 +92,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 
     # Enter service/apps modes
     alt-shift-semicolon = 'mode service'
-    alt-shift-a = 'mode apps'
+    alt-a = 'mode apps'
 
 # === Service mode (for less common operations) ===
 [mode.service.binding]
