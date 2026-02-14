@@ -20,6 +20,10 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 automatically-unhide-macos-hidden-apps = false
 
+# Notify sketchybar on workspace change
+exec-on-workspace-change = ['/bin/bash', '-c',
+    'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE']
+
 # 7 persistent workspaces (matching old yabai labels)
 persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 
