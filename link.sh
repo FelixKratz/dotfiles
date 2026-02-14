@@ -19,8 +19,20 @@ fi
 for dir in $CODE_DIR/dotfiles*; do
   if [ -d $dir/config ]; then
     for file in $dir/config/*; do
-      ln $LN_FLAG $file $HOME/.config
-      echo "Linked $file → ~/.config/$(basename $file)"
+      case "$(basename $file)" in
+        claude)
+          # Claude Code config: symlink individual files into ~/.claude
+          mkdir -p $HOME/.claude
+          for cf in $file/*; do
+            ln $LN_FLAG $cf $HOME/.claude/
+            echo "Linked $cf → ~/.claude/$(basename $cf)"
+          done
+          ;;
+        *)
+          ln $LN_FLAG $file $HOME/.config
+          echo "Linked $file → ~/.config/$(basename $file)"
+          ;;
+      esac
     done
   fi
   if [ -d $dir/root ]; then
