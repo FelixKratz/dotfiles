@@ -25,7 +25,7 @@ if [[ "$OS" == "Darwin" ]]; then
   echo "Tapping Brew..."
   brew tap homebrew/cask-fonts
   brew tap FelixKratz/formulae
-  brew tap koekeishiya/formulae
+  brew tap nikitabobko/tap
   brew tap d12frosted/emacs-plus
   brew tap artginzburg/tap
   brew tap sbfnk/formulae
@@ -49,7 +49,6 @@ if [[ "$OS" == "Darwin" ]]; then
   brew install switchaudio-osx
   brew install sketchybar
   brew install borders
-  brew install yabai
   brew install nnn
   brew install jq
   brew install node
@@ -100,7 +99,8 @@ if [[ "$OS" == "Darwin" ]]; then
   brew install --cask skim
   brew install --cask busycal
 
-  ### Essential
+  ### Window management & essentials
+  brew install --cask nikitabobko/tap/aerospace
   brew install --cask karabiner-elements
 
   ### Nice to have
@@ -255,14 +255,10 @@ if [[ "$OS" == "Darwin" ]]; then
 
   # Start Services
   echo "Starting Services (grant permissions)..."
-  yabai --start-service
-  skhd --start-service
+  open /Applications/AeroSpace.app
   brew services start sketchybar
   brew services start borders
   brew services start svim
-
-  csrutil status
-  echo "Add sudoer manually:\n '$(whoami) ALL = (root) NOPASSWD: sha256:$(shasum -a 256 $(which yabai) | awk "{print \$1;}") $(which yabai) --load-sa' to '/private/etc/sudoers.d/yabai'"
 fi
 
 cd $SAVE_DIR

@@ -86,8 +86,13 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     # Move workspace to another monitor
     alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 
-    # Enter service mode
+    # Fullscreen and float
+    alt-f = 'fullscreen'
+    alt-shift-space = 'layout floating tiling'
+
+    # Enter service/apps modes
     alt-shift-semicolon = 'mode service'
+    alt-shift-a = 'mode apps'
 
 # === Service mode (for less common operations) ===
 [mode.service.binding]
@@ -100,6 +105,22 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
+
+# === Apps mode (quick launcher) ===
+[mode.apps.binding]
+    esc = 'mode main'
+    a = ['exec-and-forget open /Applications/Arc.app', 'mode main']
+    b = ['exec-and-forget open /Applications/zoom.us.app', 'mode main']
+    c = ['exec-and-forget open /System/Applications/Calendar.app', 'mode main']
+    e = ['exec-and-forget open /Applications/Emacs.app', 'mode main']
+    f = ['exec-and-forget open /Applications/Firefox.app', 'mode main']
+    g = ['exec-and-forget open /Applications/Google\ Chrome.app', 'mode main']
+    m = ['exec-and-forget open /Applications/Microsoft\ Outlook.app', 'mode main']
+    p = ['exec-and-forget open /Applications/Spotify.app', 'mode main']
+    s = ['exec-and-forget open /Applications/Slack.app', 'mode main']
+    v = ['exec-and-forget open /Applications/Visual\ Studio\ Code.app', 'mode main']
+    z = ['exec-and-forget open /Applications/Zen.app', 'mode main']
+    space = ['exec-and-forget open /Applications/kitty.app', 'mode main']
 
 # === Window rules ===
 # Workspace assignments (1=emacs, 2=terminal, 3=mail, 4=web, 5=calendar, 6=social, 7=media)
