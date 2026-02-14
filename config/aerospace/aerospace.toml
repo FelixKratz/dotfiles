@@ -42,6 +42,10 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 # === Main keybindings ===
 [mode.main.binding]
 
+    # Terminal
+    ctrl-cmd-quote = 'workspace 2'
+    ctrl-cmd-enter = 'exec-and-forget open -na kitty'
+
     # Layout
     alt-slash = 'layout tiles horizontal vertical'
     alt-comma = 'layout accordion horizontal vertical'
