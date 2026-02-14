@@ -100,3 +100,122 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
+
+# === Window rules ===
+# Workspace assignments (1=emacs, 2=terminal, 3=mail, 4=web, 5=calendar, 6=social, 7=media)
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Emacs$'
+run = 'move-node-to-workspace 1'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^kitty$'
+check-further-callbacks = true
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Mail'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Microsoft Outlook$'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Safari$'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Firefox$'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Arc$'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Google Chrome$'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Zen$'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Busycal$'
+run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Slack$'
+run = 'move-node-to-workspace 6'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Spotify$'
+run = 'move-node-to-workspace 7'
+
+# Floating windows (manage=off equivalent)
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Finder$'
+if.window-title-regex-substring = '(Co(py|nnect)|Move|Info|Pref)'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^macfeh$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^System (Preferences|Settings)$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^App Store$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Activity Monitor$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^mpv$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.window-title-regex-substring = 'Software Update'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^GlobalProtect$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Telegram$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Microsoft Teams$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^zoom.us$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^BlueJeans$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Messages$'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'WhatsApp'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'Cisco Webex'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = '^Inkscape$'
+run = 'layout floating'
