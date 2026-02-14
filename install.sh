@@ -97,11 +97,9 @@ if [[ "$OS" == "Darwin" ]]; then
   brew install --cask inkscape
   brew install --cask zoom
   brew install --cask skim
-  brew install --cask busycal
 
-  ### Window management & essentials
+  ### Window management
   brew install --cask nikitabobko/tap/aerospace
-  brew install --cask karabiner-elements
 
   ### Nice to have
   brew install --cask alfred

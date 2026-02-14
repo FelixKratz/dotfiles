@@ -163,7 +163,8 @@ if.app-name-regex-substring = '^Zen$'
 run = 'move-node-to-workspace 4'
 
 [[on-window-detected]]
-if.app-name-regex-substring = '^Busycal$'
+if.app-name-regex-substring = '^Microsoft Outlook$'
+if.window-title-regex-substring = 'Calendar'
 run = 'move-node-to-workspace 5'
 
 [[on-window-detected]]
