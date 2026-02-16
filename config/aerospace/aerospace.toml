@@ -43,8 +43,8 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 [mode.main.binding]
 
     # Terminal
-    ctrl-cmd-quote = 'workspace 2'
-    ctrl-cmd-enter = 'exec-and-forget open -na kitty'
+    cmd-shift-semicolon = 'workspace 2'
+    cmd-shift-enter = 'exec-and-forget kitty @ --to "unix:$(ls -t /tmp/kitty-* | head -1)" launch --type=os-window --cwd=~'
 
     # Layout
     alt-slash = 'layout tiles horizontal vertical'
@@ -135,6 +135,7 @@ run = 'move-node-to-workspace 1'
 
 [[on-window-detected]]
 if.app-name-regex-substring = '^kitty$'
+if.during-aerospace-startup = true
 check-further-callbacks = true
 run = 'move-node-to-workspace 2'
 
