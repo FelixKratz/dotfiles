@@ -2,7 +2,8 @@
 
 source "$CONFIG_DIR/colors.sh"
 
-COUNT=$(/opt/homebrew/bin/brew outdated 2>/dev/null | wc -l | tr -d ' ')
+/opt/homebrew/bin/brew update &>/dev/null
+COUNT=$(HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew outdated 2>/dev/null | grep -cv 'backtrace\|Error\|Warning')
 [[ -z "$COUNT" ]] && COUNT="?"
 
 COLOR=$RED

@@ -173,6 +173,10 @@ if.window-title-regex-substring = 'Calendar'
 run = 'move-node-to-workspace 5'
 
 [[on-window-detected]]
+if.app-name-regex-substring = '^Calendar$'
+run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
 if.app-name-regex-substring = '^Slack$'
 run = 'move-node-to-workspace 6'
 
