@@ -73,7 +73,7 @@ source "$ITEM_DIR/spotify.sh"
 
 # Right
 source "$ITEM_DIR/calendar.sh"
-source "$ITEM_DIR/brew.sh"
+source "$ITEM_DIR/event.sh"
 source "$ITEM_DIR/wifi.sh"
 source "$ITEM_DIR/mail.sh"
 source "$ITEM_DIR/battery.sh"
