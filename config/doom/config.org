@@ -358,7 +358,7 @@ This means =SPC g g ~/code/new-project= instantly sets up a complete workspace.
   (add-hook 'magit-post-clone-hook #'my/magit-setup-workspace)
 
   ;; Restore gt/gT for workspace switching (evil-collection overrides these)
-  (evil-define-key 'normal magit-mode-map
+  (evil-define-key 'normal magit-status-mode-map
     "gt" #'+workspace/switch-right
     "gT" #'+workspace/switch-left))
 #+end_src

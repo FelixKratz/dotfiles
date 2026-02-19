@@ -178,11 +178,10 @@ ssht() {
 # Created by `pipx` on 2026-01-28 15:13:53
 export PATH="$PATH:__HOME__/.local/bin"
 
-# Update sketchybar brew count after brew commands
+# Refresh sketchybar brew count after manual brew commands
 brew() {
   command brew "$@"
   local ret=$?
-  command brew outdated 2>/dev/null | wc -l | tr -d ' ' > /tmp/brew_outdated_count
   sketchybar --trigger brew_update 2>/dev/null
   return $ret
 }
