@@ -8,6 +8,7 @@ next_event=(
   update_freq=60
   updates=on
   script="$PLUGIN_DIR/event.sh"
+  click_script="$PLUGIN_DIR/event_click.sh"
 )
 
 sketchybar --add item next_event right \

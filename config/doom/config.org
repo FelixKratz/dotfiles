@@ -37,6 +37,9 @@ install packages from MELPA, ELPA, or directly from git repos.
 (package! telega)                  ; Telegram client
 (package! mastodon)                ; Mastodon client
 (package! mu4e-column-faces)       ; coloured columns in mu4e headers
+(package! org-msg)                 ; org-mode email composition
+(package! bluesky
+  :recipe (:host github :repo "ahyatt/emacs-bluesky"))
 #+end_src
 
 ** AI Tools
@@ -144,6 +147,19 @@ Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so multi-selecti
 Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
 #+begin_src emacs-lisp
 (load! "email" "~/.config/doom-private")
+#+end_src
+
+* Bluesky
+Credentials stored in =~/.authinfo.gpg= as:
+: machine bsky.social login sbfnk.bsky.social password APP-PASSWORD
+Use an [[https://bsky.app/settings/app-passwords][app password]], not your main password.
+#+begin_src emacs-lisp
+(after! bluesky
+  (setq bluesky-handle "sbfnk.bsky.social"
+        bluesky-password (lambda ()
+                           (auth-source-pick-first-password
+                            :host "bsky.social"
+                            :user "sbfnk.bsky.social"))))
 #+end_src
 
 * ESS (Emacs Speaks Statistics)
@@ -361,6 +377,31 @@ This means =SPC g g ~/code/new-project= instantly sets up a complete workspace.
   (evil-define-key 'normal magit-status-mode-map
     "gt" #'+workspace/switch-right
     "gT" #'+workspace/switch-left))
+#+end_src
+
+** Forge Topic Buffers
+PR/issue view buffers inherit magit-mode-map which shadows standard evil keys.
+Restore normal evil navigation and add comment binding.
+#+begin_src emacs-lisp
+(after! forge
+  (evil-define-key 'normal forge-topic-mode-map
+    "C" #'forge-create-post
+    "f" #'evil-find-char
+    "F" #'evil-find-char-backward
+    "b" #'evil-backward-word-begin
+    "w" #'evil-forward-word-begin
+    "e" #'evil-forward-word-end
+    "j" #'evil-next-line
+    "k" #'evil-previous-line
+    "gg" #'evil-goto-first-line
+    "G" #'evil-goto-line
+    "gt" #'+workspace/switch-right
+    "gT" #'+workspace/switch-left
+    "/" #'evil-search-forward
+    "?" #'evil-search-backward
+    "n" #'evil-search-next
+    "N" #'evil-search-previous
+    "q" #'kill-current-buffer))
 #+end_src
 
 * Workspaces and Projectile
