@@ -13,4 +13,4 @@ next_event=(
 
 sketchybar --add item next_event right \
            --set next_event "${next_event[@]}" \
-           --subscribe next_event system_woke
+           --subscribe next_event system_woke mouse.entered mouse.exited

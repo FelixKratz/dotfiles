@@ -2,6 +2,12 @@
 
 source "$CONFIG_DIR/colors.sh"
 
+# Hide label immediately on mouse exit
+if [ "$SENDER" = "mouse.exited" ]; then
+  sketchybar --set "$NAME" label.drawing=off
+  exit 0
+fi
+
 WORK_CAL="Calendar"
 
 RAW=$(icalbuddy -ic "$WORK_CAL" -ea -li 1 -n -nc -nrd -npn -b "" \
@@ -42,8 +48,10 @@ else
   COLOR=$WHITE
 fi
 
-sketchybar --set "$NAME" \
-  label="${TIMERANGE} ${TITLE}" \
-  label.drawing=on \
-  label.color=$COLOR \
-  icon.color=$COLOR
+LABEL="${TIMERANGE} ${TITLE}"
+
+if [ "$SENDER" = "mouse.entered" ]; then
+  sketchybar --set "$NAME" label="$LABEL" label.drawing=on label.color=$COLOR icon.color=$COLOR
+else
+  sketchybar --set "$NAME" label="$LABEL" label.drawing=off icon.color=$COLOR
+fi
