@@ -60,14 +60,7 @@ function kill () {
   command kill -KILL $(pidof "$@")
 }
 
-function suyabai () {
-  SHA256=$(shasum -a 256 /opt/homebrew/bin/yabai | awk "{print \$1;}")
-  if [ -f "/private/etc/sudoers.d/yabai" ]; then
-    sudo sed -i '' -e 's/sha256:[[:alnum:]]*/sha256:'${SHA256}'/' /private/etc/sudoers.d/yabai
-  else
-    echo "sudoers file does not exist yet"
-  fi
-}
+
 # Only load conda into path but dont actually use the bloat that comes with it
 export PATH="$HOME/miniforge3/bin:/usr/local/anaconda3/bin:$PATH"
 export NNN_TMPFILE="$HOME/.config/nnn/.lastd"

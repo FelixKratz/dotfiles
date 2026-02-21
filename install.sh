@@ -48,7 +48,7 @@ if [[ "$OS" == "Darwin" ]]; then
   brew install ifstat
   brew install switchaudio-osx
   brew install sketchybar
-  brew install borders
+  brew install ical-buddy
   brew install nnn
   brew install jq
   brew install node
@@ -255,7 +255,6 @@ if [[ "$OS" == "Darwin" ]]; then
   echo "Starting Services (grant permissions)..."
   open /Applications/AeroSpace.app
   brew services start sketchybar
-  brew services start borders
   brew services start svim
 fi
 
