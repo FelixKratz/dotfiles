@@ -176,7 +176,7 @@ ssht() {
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # Created by `pipx` on 2026-01-28 15:13:53
-export PATH="$PATH:__HOME__/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
 
 # Refresh sketchybar brew count after manual brew commands
 brew() {
@@ -185,3 +185,11 @@ brew() {
   sketchybar --trigger brew_update 2>/dev/null
   return $ret
 }
+# >>> juliaup initialize >>>
+
+# !! Contents within this block are managed by juliaup !!
+
+path=("$HOME/.juliaup/bin" $path)
+export PATH
+
+# <<< juliaup initialize <<<
