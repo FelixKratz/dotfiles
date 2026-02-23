@@ -72,6 +72,18 @@ This file lives in the private dotfiles repo and is symlinked to =~/.config/doom
 (load! "private.el" "~/.config/doom-private" t)
 #+end_src
 
+* Workarounds
+** Guard doom-create-missing-directories-h
+The iCloud symlink chain (~/org-roam → ~/iCloud/org-roam → iCloud Drive) can
+cause =buffer-file-name= to be nil when Doom's hook fires during =find-file=.
+#+begin_src emacs-lisp
+(defadvice! sf/guard-doom-create-dirs (fn)
+  "Skip doom-create-missing-directories-h when buffer-file-name is nil."
+  :around #'doom-create-missing-directories-h
+  (when buffer-file-name
+    (funcall fn)))
+#+end_src
+
 * Basic Configuration
 ** Fonts
 - =Fira Code= - monospace font with ligatures for code
