@@ -1,14 +1,3 @@
-# Source zsh plugins
-source $HOME/.config/.zsh-vi-mode/zsh-vi-mode.plugin.zsh
-
-[ -d "/opt/homebrew/share/zsh-autosuggestions/" ] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
-                                                  || source /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-[ -d "/opt/homebrew/share/zsh-syntax-highlighting/highlighters" ] && export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/opt/homebrew/share/zsh-syntax-highlighting/highlighters \
-                                                                  || export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/usr/local/share/zsh-syntax-highlighting/highlighters
-
-[ -d "/opt/homebrew/share/zsh-syntax-highlighting/" ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-                                                  || source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # Aliases for common dirs
 alias home="cd ~"
@@ -68,3 +57,6 @@ export EDITOR="$(which nvim)"
 export VISUAL="$(which nvim)"
 export MANPAGER="$(which nvim) +Man!"
 export XDG_CONFIG_HOME="$HOME/.config"
+
+# Handy du summary: depth 1, sorted by size
+alias du1='du -hd 1 | sort -h'

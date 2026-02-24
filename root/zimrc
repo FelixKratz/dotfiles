@@ -16,6 +16,8 @@ zmodule git
 zmodule input
 # Sets a custom terminal title.
 zmodule termtitle
+# Vi mode for zsh command line.
+zmodule jeffreytse/zsh-vi-mode
 # Utility aliases and functions. Adds colour to ls, grep and less.
 zmodule utility
 
