@@ -1,3 +1,5 @@
+# Terminal title: show current directory basename
+zstyle ':zim:termtitle' format '%1~'
 
 # Aliases for common dirs
 alias home="cd ~"

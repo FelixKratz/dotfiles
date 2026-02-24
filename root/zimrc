@@ -20,6 +20,8 @@ zmodule termtitle
 zmodule jeffreytse/zsh-vi-mode
 # Utility aliases and functions. Adds colour to ls, grep and less.
 zmodule utility
+# eza/exa aliases and defaults.
+zmodule exa
 
 #
 # Prompt
