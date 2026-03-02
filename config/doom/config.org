@@ -512,6 +512,15 @@ Agenda includes only files with :active: filetag from ~/org-roam.
 (advice-add 'org-todo-list :before #'sf/org-update-agenda-files)
 #+end_src
 
+** Restore gt/gT in Org Agenda
+evil-org-agenda binds =gt= to =org-agenda-show-tags=, shadowing workspace switching.
+#+begin_src emacs-lisp
+(after! evil-org-agenda
+  (evil-define-key 'motion evil-org-agenda-mode-map
+    "gt" #'+workspace/switch-right
+    "gT" #'+workspace/switch-left))
+#+end_src
+
 ** Agenda Views
 Custom agenda with vulpea integration.
 #+begin_src emacs-lisp
