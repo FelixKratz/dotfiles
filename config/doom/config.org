@@ -388,7 +388,25 @@ This means =SPC g g ~/code/new-project= instantly sets up a complete workspace.
   ;; Restore gt/gT for workspace switching (evil-collection overrides these)
   (evil-define-key 'normal magit-status-mode-map
     "gt" #'+workspace/switch-right
-    "gT" #'+workspace/switch-left))
+    "gT" #'+workspace/switch-left)
+
+  ;; q in a single-window magit workspace: kill buffer and delete workspace
+  (defun my/magit-quit-workspace (&optional kill-buffer)
+    "Quit magit. If this is a dedicated magit workspace with one window, delete it."
+    (interactive "P")
+    (let ((ws (+workspace-current-name))
+          (one-win (one-window-p)))
+      (+magit/quit kill-buffer)
+      (when (and one-win
+                 (not (derived-mode-p 'magit-mode))
+                 (not (cl-find-if (lambda (b)
+                                    (with-current-buffer b
+                                      (derived-mode-p 'magit-mode)))
+                                  (+workspace-buffer-list))))
+        (+workspace/delete ws))))
+
+  (evil-define-key 'normal magit-status-mode-map
+    "q" #'my/magit-quit-workspace))
 #+end_src
 
 ** Forge Topic Buffers
