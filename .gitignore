@@ -4,6 +4,10 @@ config/doom/email.el
 config/doom/packages.el
 config/doom/custom.el
 
+# Kitty - theme files modified by ctrl+shift+l/d toggle
+config/kitty/solarized-dark.conf
+config/kitty/solarized-light.conf
+
 # Build artefacts
 __pycache__/
 *.alfredworkflow
