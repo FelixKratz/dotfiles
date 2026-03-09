@@ -2,8 +2,8 @@
 
 # AeroSpace workspace items for sketchybar
 
-WORKSPACE_IDS=("1" "2" "3" "4" "5" "6" "7")
-WORKSPACE_NAMES=("emacs" "terminal" "mail" "web" "calendar" "social" "media")
+WORKSPACE_IDS=("1" "2" "3" "4" "5" "6" "7" "8" "9")
+WORKSPACE_NAMES=("emacs" "terminal" "mail" "web" "calendar" "social" "media" "misc" "misc")
 
 # Register the custom event from AeroSpace
 sketchybar --add event aerospace_workspace_change
