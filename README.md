@@ -16,31 +16,30 @@ separate `dotfiles_private` repo with the same structure.
 
 ## Setup
 
-### Fresh machine
+### Fresh desktop machine
 
 ```bash
 git clone <repo> ~/code/dotfiles
 git clone <private-repo> ~/code/dotfiles_private
 cd ~/code/dotfiles
-./install.sh   # macOS only: installs Homebrew packages, fonts, etc.
-./link.sh      # symlinks configs (works on macOS and Linux)
+./install.sh --full   # installs packages, fonts, emacs, email tools, etc.
+./link.sh --full      # symlinks all configs
 ```
 
-### Remote/Linux machine
-
-Only `link.sh` is needed. It detects the OS and skips macOS-specific paths
-(LaunchAgents, Application Support).
+### Production/remote machine
 
 ```bash
 git clone <repo> ~/code/dotfiles
 git clone <private-repo> ~/code/dotfiles_private  # optional
-cd ~/code/dotfiles && ./link.sh
+cd ~/code/dotfiles
+./install.sh --minimal  # just shell essentials (zsh, tmux, nvim, ripgrep, etc.)
+./link.sh --minimal     # skips desktop configs (emacs, email, window manager)
 ```
 
 ### Updating
 
 ```bash
-cd ~/code/dotfiles && git pull && ./link.sh
+cd ~/code/dotfiles && git pull && ./link.sh --full    # or --minimal
 cd ~/code/dotfiles_private && git pull  # if using private configs
 ```
 

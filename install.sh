@@ -1,12 +1,22 @@
 #!/bin/zsh
 
 # Usage:
-#   ./install.sh          # full desktop setup (default)
-#   ./install.sh minimal  # shell, tmux, nvim, starship, claude only
+#   ./install.sh --full     # full desktop setup
+#   ./install.sh --minimal  # shell, tmux, nvim, starship, claude only
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
-PROFILE="${1:-full}"
+
+case "${1:-}" in
+  --full)    PROFILE=full ;;
+  --minimal) PROFILE=minimal ;;
+  *)
+    echo "Usage: ./install.sh --full|--minimal"
+    echo "  --full     Full desktop setup (emacs, email, window manager, etc.)"
+    echo "  --minimal  Shell, tmux, nvim, starship, claude only"
+    exit 1
+    ;;
+esac
 
 mkdir -p $CODE_DIR
 
@@ -130,7 +140,7 @@ echo "Cloning dotfiles..."
 [ ! -d "$CODE_DIR/dotfiles_private" ] && git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private
 [[ "$PROFILE" != "minimal" ]] && [ ! -d "$CODE_DIR/email-config" ] && git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config
 
-$CODE_DIR/dotfiles/link.sh $PROFILE
+$CODE_DIR/dotfiles/link.sh --$PROFILE
 
 # macOS-only post-installation (full mode)
 if [[ "$OS" == "Darwin" ]] && [[ "$PROFILE" != "minimal" ]]; then

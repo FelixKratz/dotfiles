@@ -3,12 +3,22 @@
 # Re-link dotfiles (safe to run multiple times, works on macOS and Linux)
 #
 # Usage:
-#   ./link.sh          # full desktop setup (default)
-#   ./link.sh minimal  # shell, tmux, nvim, starship, claude only
+#   ./link.sh --full     # full desktop setup
+#   ./link.sh --minimal  # shell, tmux, nvim, starship, claude only
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
-PROFILE="${1:-full}"
+
+case "${1:-}" in
+  --full)    PROFILE=full ;;
+  --minimal) PROFILE=minimal ;;
+  *)
+    echo "Usage: ./link.sh --full|--minimal"
+    echo "  --full     Full desktop setup (emacs, email, window manager, etc.)"
+    echo "  --minimal  Shell, tmux, nvim, starship, claude only"
+    exit 1
+    ;;
+esac
 
 # macOS ln uses -h, GNU ln uses -n to avoid following existing symlinks
 [[ "$OS" == "Darwin" ]] && LN_FLAG="-sfh" || LN_FLAG="-sfn"
