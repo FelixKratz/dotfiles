@@ -31,7 +31,7 @@ if [[ "$OS" == "Darwin" ]]; then
   brew analytics off
 
   echo "Installing essential packages..."
-  brew install git wget tmux ripgrep gh jq node neovim btop python
+  brew install git wget tmux ripgrep gh jq node neovim btop python zoxide fzf
 
   if [[ "$PROFILE" != "minimal" ]]; then
     echo "Tapping Brew..."
