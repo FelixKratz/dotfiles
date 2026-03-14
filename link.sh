@@ -92,4 +92,5 @@ if [[ "$PROFILE" != "minimal" ]] && [ -d $CODE_DIR/email-config ]; then
   echo "Linked generate.py → ~/.config/email/"
 fi
 
-echo "\nDone. Run 'doom sync' if Emacs config changed."
+echo "\nDone."
+[[ "$PROFILE" != "minimal" ]] && echo "Run 'doom sync' if Emacs config changed."
