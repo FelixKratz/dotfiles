@@ -16,14 +16,13 @@ separate `dotfiles_private` repo with the same structure.
 
 ## Setup
 
-### Fresh desktop machine
+### Desktop machine
 
 ```bash
 git clone <repo> ~/code/dotfiles
 git clone <private-repo> ~/code/dotfiles_private
 cd ~/code/dotfiles
-./install.sh --full   # installs packages, fonts, emacs, email tools, etc.
-./link.sh --full      # symlinks all configs
+./install.sh --full   # installs packages, links configs, sets up services
 ```
 
 ### Production/remote machine
@@ -33,13 +32,15 @@ git clone <repo> ~/code/dotfiles
 git clone <private-repo> ~/code/dotfiles_private  # optional
 cd ~/code/dotfiles
 ./install.sh --minimal  # just shell essentials (zsh, tmux, nvim, ripgrep, etc.)
-./link.sh --minimal     # skips desktop configs (emacs, email, window manager)
 ```
 
 ### Updating
 
+Safe to re-run — brew/apt skip already-installed packages, links are
+overwritten.
+
 ```bash
-cd ~/code/dotfiles && git pull && ./link.sh --full    # or --minimal
+cd ~/code/dotfiles && git pull && ./install.sh --full    # or --minimal
 cd ~/code/dotfiles_private && git pull  # if using private configs
 ```
 
