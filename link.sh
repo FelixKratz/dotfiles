@@ -24,7 +24,7 @@ esac
 [[ "$OS" == "Darwin" ]] && LN_FLAG="-sfh" || LN_FLAG="-sfn"
 
 # Desktop-only configs (skipped in minimal mode)
-DESKTOP_ONLY=(aerospace alfred doom kitty sketchybar svim email doom-private)
+DESKTOP_ONLY=(aerospace alfred doom kitty sketchybar svim email doom-private goimapnotify oauth2ms github-copilot)
 
 mkdir -p $HOME/.config
 [[ "$OS" == "Darwin" ]] && mkdir -p $HOME/Library/LaunchAgents
