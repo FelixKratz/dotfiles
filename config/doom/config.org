@@ -15,11 +15,16 @@ After editing this file, run =doom sync= to regenerate config.el and packages.el
 These package declarations are tangled to =packages.el=. Doom uses these to
 install packages from MELPA, ELPA, or directly from git repos.
 
-** ESS Extensions
+** Theme
 #+begin_src emacs-lisp
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
+(package! catppuccin-theme)        ; catppuccin colour theme
+#+end_src
+
+** ESS Extensions
+#+begin_src emacs-lisp
 (package! ess-smart-equals)        ; context-aware = key in ESS
 (package! tree-sitter-ess-r)       ; tree-sitter support for R
 #+end_src
@@ -100,7 +105,7 @@ Adjust =:size= if text is too small/large on your display.
 
 ** Theme and UI
 #+begin_src emacs-lisp
-(setq doom-theme 'doom-one)
+(setq doom-theme 'catppuccin)
 (setq display-line-numbers-type t)
 #+end_src
 

@@ -12,3 +12,4 @@ config/kitty/solarized-light.conf
 __pycache__/
 *.alfredworkflow
 
+config/kitty/current-theme.conf
