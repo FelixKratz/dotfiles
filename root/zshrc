@@ -56,13 +56,25 @@ WORDCHARS=${WORDCHARS//[\/]}
 #zstyle ':zim:input' double-dot-expand yes
 
 #
-# termtitle
+# termtitle — show git repo name or current directory
 #
 
-# Set a custom terminal title format using prompt expansion escape sequences.
-# See http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html#Simple-Prompt-Escapes
-# If none is provided, the default '%n@%m: %~' is used.
-#zstyle ':zim:termtitle' format '%1~'
+# Custom precmd hook replaces zim termtitle for tmux windows
+_tmux_title_precmd() {
+  local name
+  if name=$(git rev-parse --show-toplevel 2>/dev/null); then
+    name=${name:t}  # basename
+  else
+    name=${(%):-%1~}  # current dir
+  fi
+  if [[ "$TERM" == screen* ]]; then
+    print -Pn "\Ek${name}\E\\"
+  else
+    print -Pn "\E]0;${name}\a"
+  fi
+}
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _tmux_title_precmd
 
 #
 # zsh-autosuggestions
