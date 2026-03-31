@@ -1,0 +1,48 @@
+#!/bin/bash
+# Toggle tmux theme between Solarized dark and light
+
+# Check current theme from tmux variable
+CURRENT_THEME=$(tmux show-options -gv '@theme' 2>/dev/null)
+
+# If empty or unset, default to dark
+if [ -z "$CURRENT_THEME" ]; then
+    CURRENT_THEME="dark"
+fi
+
+if [ "$CURRENT_THEME" = "dark" ]; then
+    NEW_THEME="light"
+
+    # Update tmux status bar for light mode
+    tmux set-option -g status-style "bg=#eee8d5,fg=#657b83"
+    tmux set-option -g status-left-style "fg=#268bd2,bold"
+    tmux set-option -g status-right-style "fg=#859900"
+
+    # Update tmux window status for light mode
+    tmux set-window-option -g window-status-current-format '#[fg=#cb4b16,bg=#fdf6e3,bold] #I:#W #[default]'
+    tmux set-window-option -g window-status-format '#[fg=#93a1a1] #I:#W '
+
+    # Update Kitty theme to light
+    ln -sf ~/.config/kitty/solarized-light.conf ~/.config/kitty/current-theme.conf
+    killall -SIGUSR1 kitty 2>/dev/null
+else
+    NEW_THEME="dark"
+
+    # Update tmux status bar for dark mode
+    tmux set-option -g status-style "bg=#002b36,fg=#839496"
+    tmux set-option -g status-left-style "fg=#268bd2,bold"
+    tmux set-option -g status-right-style "fg=#859900"
+
+    # Update tmux window status for dark mode
+    tmux set-window-option -g window-status-current-format '#[fg=#cb4b16,bg=#073642,bold] #I:#W #[default]'
+    tmux set-window-option -g window-status-format '#[fg=#586e75] #I:#W '
+
+    # Update Kitty theme to dark
+    ln -sf ~/.config/kitty/solarized-dark.conf ~/.config/kitty/current-theme.conf
+    killall -SIGUSR1 kitty 2>/dev/null
+fi
+
+# Set tmux variable for Neovim to read
+tmux set-option -g '@theme' "$NEW_THEME"
+
+# Force tmux to redraw (silently)
+tmux refresh-client

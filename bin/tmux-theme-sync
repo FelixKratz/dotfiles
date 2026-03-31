@@ -1,0 +1,43 @@
+#!/bin/bash
+# Sync tmux theme to match current Kitty theme on startup
+
+KITTY_THEME_LINK=$(readlink ~/.config/kitty/current-theme.conf 2>/dev/null)
+
+if [[ "$KITTY_THEME_LINK" == *"latte"* ]] || [[ "$KITTY_THEME_LINK" == *"light"* ]]; then
+    THEME="light"
+    # Catppuccin Latte
+    BG="#eff1f5"
+    FG="#4c4f69"
+    SURFACE="#ccd0da"
+    OVERLAY="#9ca0b0"
+    BLUE="#1e66f5"
+    PEACH="#fe640b"
+    TEXT="#4c4f69"
+    SUBTEXT="#6c6f85"
+    MANTLE="#e6e9ef"
+else
+    THEME="dark"
+    # Catppuccin Mocha
+    BG="#1e1e2e"
+    FG="#cdd6f4"
+    SURFACE="#313244"
+    OVERLAY="#6c7086"
+    BLUE="#89b4fa"
+    PEACH="#fab387"
+    TEXT="#cdd6f4"
+    SUBTEXT="#a6adc8"
+    MANTLE="#181825"
+fi
+
+tmux set-option -g status-style "bg=$MANTLE,fg=$FG"
+tmux set-option -g status-left "#[fg=$MANTLE,bg=$BLUE,bold]  #S #[fg=$BLUE,bg=$MANTLE,nobold] "
+tmux set-option -g status-right "#[fg=$OVERLAY,bg=$MANTLE]#[fg=$BG,bg=$OVERLAY] %H:%M #[fg=$SUBTEXT,bg=$OVERLAY]#[fg=$BG,bg=$SUBTEXT] %d %b "
+tmux set-window-option -g window-status-current-format "#[fg=$MANTLE,bg=$PEACH]#[fg=$MANTLE,bg=$PEACH,bold] #I  #W #[fg=$PEACH,bg=$MANTLE,nobold]"
+tmux set-window-option -g window-status-format "  #[fg=$OVERLAY]#I #[fg=$SUBTEXT]#W  "
+tmux set-window-option -g window-status-separator ""
+tmux set-option -g pane-active-border-style "fg=$BLUE"
+tmux set-option -g pane-border-style "fg=$SURFACE"
+tmux set-option -g message-style "bg=$BLUE,fg=$MANTLE"
+tmux set-option -g status-left-length 30
+tmux set-option -g status-right-length 50
+tmux set-option -g '@theme' "$THEME"
