@@ -67,8 +67,13 @@ _tmux_title_precmd() {
   else
     name=${(%):-%1~}  # current dir
   fi
-  if [[ "$TERM" == screen* ]]; then
-    print -Pn "\Ek${name}\E\\"
+  if [[ -n "$TMUX" ]]; then
+    # Only rename if this pane is the active one, to avoid races between panes
+    local active_pane
+    active_pane=$(tmux display-message -p '#{pane_id}' 2>/dev/null)
+    if [[ "$TMUX_PANE" == "$active_pane" ]]; then
+      tmux rename-window "$name" 2>/dev/null
+    fi
   else
     print -Pn "\E]0;${name}\a"
   fi
@@ -158,22 +163,6 @@ alias kssh="kitty +kitten ssh"  # For ad-hoc servers
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/homebrew/lib
 
-
-# Set tmux window name to git repo name when inside a repo
-_tmux_set_window_name() {
-  if [[ -n "$TMUX" ]]; then
-    local repo
-    repo=$(git rev-parse --show-toplevel 2>/dev/null)
-    if [[ -n "$repo" ]]; then
-      tmux set-option -w automatic-rename off >/dev/null
-      tmux rename-window "$(basename "$repo")"
-    else
-      tmux set-option -w automatic-rename on >/dev/null
-    fi
-  fi
-}
-chpwd_functions+=(_tmux_set_window_name)
-_tmux_set_window_name  # Run once at shell start
 
 eval "$(zoxide init zsh)"
 source <(fzf --zsh)
