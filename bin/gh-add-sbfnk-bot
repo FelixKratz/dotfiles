@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Add sbfnk-bot as a push-permission collaborator on an sbfnk-owned repo
+# and accept the invitation from the bot side.
+#
+# Does NOT use `gh auth switch` — that mutates the keyring and leaks across
+# processes (including other terminals). Each call overrides GITHUB_TOKEN
+# for that one command only, so both the terminal's and Claude Code's
+# default identities are preserved.
+#
+# Usage:
+#   gh-add-sbfnk-bot <repo>          # shorthand for sbfnk/<repo>
+#   gh-add-sbfnk-bot <owner>/<repo>
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: $(basename "$0") <repo|owner/repo>" >&2
+  exit 64
+fi
+
+repo=$1
+[[ $repo == */* ]] || repo="sbfnk/$repo"
+
+sbfnk_token=$(gh auth token -u sbfnk)
+bot_token=$(gh auth token -u sbfnk-bot)
+
+echo "→ Inviting sbfnk-bot as collaborator on $repo (as sbfnk)"
+GITHUB_TOKEN=$sbfnk_token gh api -X PUT \
+  "repos/$repo/collaborators/sbfnk-bot" -f permission=push >/dev/null
+echo "   ✓ invitation created (or already a collaborator)"
+
+echo "→ Accepting invitation (as sbfnk-bot)"
+ids=$(GITHUB_TOKEN=$bot_token gh api user/repository_invitations \
+      --jq ".[] | select(.repository.full_name == \"$repo\") | .id" 2>/dev/null || true)
+
+if [[ -z "$ids" ]]; then
+  echo "   ✓ no pending invite (already a collaborator)"
+else
+  while IFS= read -r id; do
+    [[ -z "$id" ]] && continue
+    GITHUB_TOKEN=$bot_token gh api -X PATCH \
+      "user/repository_invitations/$id" >/dev/null
+    echo "   ✓ accepted invite $id"
+  done <<< "$ids"
+fi
+
+echo "Done."
