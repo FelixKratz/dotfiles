@@ -86,11 +86,5 @@ for file in $CODE_DIR/dotfiles/bin/*; do
   echo "Linked $file → ~/.local/bin/$(basename $file)"
 done
 
-# Email config generator (accounts.yaml is in dotfiles_private/config/email)
-if [[ "$PROFILE" != "minimal" ]] && [ -d $CODE_DIR/email-config ]; then
-  ln $LN_FLAG $CODE_DIR/email-config/generate.py $HOME/.config/email/
-  echo "Linked generate.py → ~/.config/email/"
-fi
-
 echo "\nDone."
 [[ "$PROFILE" != "minimal" ]] && echo "Run 'doom sync' if Emacs config changed."
