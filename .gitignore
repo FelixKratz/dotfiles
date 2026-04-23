@@ -13,3 +13,6 @@ __pycache__/
 *.alfredworkflow
 
 config/kitty/current-theme.conf
+
+# Notmuch HTML export tempfiles
+notmuch-*.html
