@@ -1,0 +1,47 @@
+#!/bin/bash
+# Create a new scoped project directory with git and CLAUDE.md
+# Usage: new-project <dirname> <title>
+# Example: new-project outbreak-detection "UKHSA outbreak detection"
+
+set -e
+
+if [ $# -lt 2 ]; then
+    echo "Usage: new-project <dirname> <title>"
+    echo "Example: new-project outbreak-detection \"UKHSA outbreak detection\""
+    exit 1
+fi
+
+DIR="$HOME/code/$1"
+TITLE="$2"
+
+if [ -d "$DIR" ]; then
+    echo "Error: $DIR already exists"
+    exit 1
+fi
+
+mkdir -p "$DIR"
+cd "$DIR"
+git init -q
+
+cat > CLAUDE.md << EOF
+# ${TITLE}
+
+## Org-roam context
+
+Create the org-roam node: SPC n r f → "${TITLE}"
+Then update the path below.
+
+- Project node: \`~/org-roam/TODO-update-path.org\`
+
+Related nodes:
+-
+
+## Working with org-roam files
+
+See \`~/code/dotfiles_private/docs/org-roam-llm-instructions.md\` for rules on reading/writing
+org-roam files. Key points: never modify untagged content, tag AI content with
+\`:ai:\`, be terse, preserve existing structure. British English throughout.
+EOF
+
+echo "Created $DIR with git and CLAUDE.md"
+echo "Next: open Emacs, SPC n r f → \"${TITLE}\", then update CLAUDE.md with the org-roam path"
