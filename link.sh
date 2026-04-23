@@ -42,11 +42,14 @@ for dir in $CODE_DIR/dotfiles*; do
 
       case "$name" in
         claude)
-          # Claude Code config: symlink individual files into ~/.claude
+          # Claude Code config: only link shareable config, not runtime state
+          # Runtime state (history.jsonl, cache/, projects/, etc.) stays local
           mkdir -p $HOME/.claude
-          for cf in $file/*; do
+          for entry in agents commands CLAUDE.md settings.json; do
+            cf="$file/$entry"
+            [ -e "$cf" ] || continue
             ln $LN_FLAG $cf $HOME/.claude/
-            echo "Linked $cf → ~/.claude/$(basename $cf)"
+            echo "Linked $cf → ~/.claude/$entry"
           done
           ;;
         *)
