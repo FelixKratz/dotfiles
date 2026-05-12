@@ -1,0 +1,35 @@
+#!/bin/zsh
+# Daily snapshot of ~/.claude/projects/ to pCloud.
+# Additive backups (no --delete) with 14-day rotation, so an accidental
+# rm -rf cannot propagate to the latest snapshot for at least a day.
+
+set -euo pipefail
+
+SRC="$HOME/.claude/projects"
+DEST="$HOME/pCloud Drive/Backups/claude-projects"
+KEEP_DAYS=14
+DATE=$(date +%Y-%m-%d)
+OUT="$DEST/claude-projects-$DATE.tar.gz"
+
+if [ ! -d "$SRC" ]; then
+  echo "Source missing: $SRC" >&2
+  exit 1
+fi
+
+PCLOUD="$HOME/pCloud Drive"
+if [ ! -d "$PCLOUD" ]; then
+  echo "pCloud not mounted (no $PCLOUD), skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$DEST"
+
+if [ -f "$OUT" ]; then
+  echo "Today's snapshot already exists: $OUT"
+else
+  tar -czf "$OUT.tmp" -C "$(dirname "$SRC")" "$(basename "$SRC")"
+  mv "$OUT.tmp" "$OUT"
+  echo "Snapshot written: $OUT ($(du -h "$OUT" | awk '{print $1}'))"
+fi
+
+find "$DEST" -name 'claude-projects-*.tar.gz' -type f -mtime +"$KEEP_DAYS" -print -delete

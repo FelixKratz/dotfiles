@@ -176,6 +176,19 @@ ssht() {
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
+# Nudge if ~/.claude/projects backup to pCloud is overdue (>7 days)
+() {
+  local dir="$HOME/pCloud Drive/Backups/claude-projects"
+  [ -d "$dir" ] || return
+  local latest=$(ls -t "$dir"/claude-projects-*.tar.gz 2>/dev/null | head -1)
+  if [ -z "$latest" ]; then
+    print -P "%F{yellow}⚠ no claude-projects backup yet — run: backup-claude-projects%f"
+    return
+  fi
+  local age_days=$(( ( $(date +%s) - $(stat -f %m "$latest") ) / 86400 ))
+  (( age_days > 7 )) && print -P "%F{yellow}⚠ claude-projects backup is ${age_days}d old — run: backup-claude-projects%f"
+}
+
 # Created by `pipx` on 2026-01-28 15:13:53
 export PATH="$PATH:$HOME/.local/bin"
 
