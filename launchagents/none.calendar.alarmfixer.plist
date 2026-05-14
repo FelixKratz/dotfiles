@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>none.calendar.alarmfixer</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__HOME__/.local/bin/calendar-alarm-fixer</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>CALENDAR_ALARM_LOOKAHEAD_DAYS</key>
+		<string>7</string>
+		<key>CALENDAR_ALARM_TRIGGER_MINUTES</key>
+		<string>0</string>
+		<key>CALENDAR_ALARM_INCLUDE_ALLDAY</key>
+		<string>0</string>
+		<key>CALENDAR_ALARM_CALENDARS</key>
+		<string>Calendar</string>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>__HOME__/.log/calendar-alarmfixer.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/.log/calendar-alarmfixer.err</string>
+	<key>StartInterval</key>
+	<integer>300</integer>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+</dict>
+</plist>

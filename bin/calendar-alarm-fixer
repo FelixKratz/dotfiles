@@ -1,0 +1,141 @@
+#!/bin/zsh
+# Add a "0-minute" display alarm to any upcoming Calendar event that doesn't
+# already have one. Replicates BusyCal's "always alert at event start"
+# behaviour, which Calendar.app's default-alerts setting only applies to
+# *newly created* events (not events synced from Google/iCloud/Exchange).
+#
+# Uses EventKit, the same store Calendar.app reads/writes — so added alarms
+# sync back to the originating account.
+#
+# Env vars:
+#   CALENDAR_ALARM_LOOKAHEAD_DAYS    how far ahead to scan       (default 7)
+#   CALENDAR_ALARM_TRIGGER_MINUTES   minutes relative to start   (default 0)
+#                                    0 = at start, -5 = 5 min before
+#   CALENDAR_ALARM_INCLUDE_ALLDAY    "1" to alarm all-day events (default 0)
+#   CALENDAR_ALARM_CALENDARS         comma-separated allow-list  (default: all)
+#                                    e.g. "Work,Personal"
+#
+# TCC: the first run compiles the embedded Swift source to a dedicated binary
+# at ~/.local/libexec/calendar-alarm-fixer-bin. macOS attributes Calendar
+# access to that path, so grant the permission there:
+#
+#   open "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+#   then drag ~/.local/libexec/calendar-alarm-fixer-bin into the list
+#
+# Subsequent runs (including from launchd) reuse the same binary, so the
+# permission sticks.
+
+set -euo pipefail
+
+SRC="${0:A}"
+BIN="$HOME/.local/libexec/calendar-alarm-fixer-bin"
+
+mkdir -p "$(dirname "$BIN")"
+
+if [[ ! -x "$BIN" ]] || [[ "$SRC" -nt "$BIN" ]]; then
+    tmp="$(mktemp -t calendar-alarm-fixer).swift"
+    awk '/^# === SWIFT SOURCE BELOW ===/{flag=1; next} flag' "$SRC" > "$tmp"
+    swiftc -O -o "$BIN" "$tmp"
+    rm -f "$tmp"
+fi
+
+exec "$BIN"
+
+# === SWIFT SOURCE BELOW ===
+import Foundation
+import EventKit
+
+let env = ProcessInfo.processInfo.environment
+let lookahead = Int(env["CALENDAR_ALARM_LOOKAHEAD_DAYS"] ?? "") ?? 7
+let triggerMin = Int(env["CALENDAR_ALARM_TRIGGER_MINUTES"] ?? "") ?? 0
+let includeAllday = (env["CALENDAR_ALARM_INCLUDE_ALLDAY"] ?? "0") == "1"
+let calFilter = (env["CALENDAR_ALARM_CALENDARS"] ?? "")
+    .split(separator: ",")
+    .map { $0.trimmingCharacters(in: .whitespaces) }
+    .filter { !$0.isEmpty }
+
+let store = EKEventStore()
+
+let sema = DispatchSemaphore(value: 0)
+var granted = false
+var requestError: Error?
+
+if #available(macOS 14.0, *) {
+    store.requestFullAccessToEvents { ok, err in
+        granted = ok; requestError = err; sema.signal()
+    }
+} else {
+    store.requestAccess(to: .event) { ok, err in
+        granted = ok; requestError = err; sema.signal()
+    }
+}
+sema.wait()
+
+guard granted else {
+    let msg = requestError?.localizedDescription ?? "Calendar access denied"
+    FileHandle.standardError.write(Data("EventKit access denied: \(msg) — grant via System Settings → Privacy & Security → Calendars\n".utf8))
+    exit(1)
+}
+
+let now = Date()
+guard let end = Calendar.current.date(byAdding: .day, value: lookahead, to: now) else {
+    FileHandle.standardError.write(Data("could not compute end date\n".utf8))
+    exit(1)
+}
+
+var calendars = store.calendars(for: .event)
+if !calFilter.isEmpty {
+    let allow = Set(calFilter)
+    calendars = calendars.filter { allow.contains($0.title) }
+}
+
+let predicate = store.predicateForEvents(withStart: now, end: end, calendars: calendars)
+let events = store.events(matching: predicate)
+
+let stamp = DateFormatter()
+stamp.dateFormat = "yyyy-MM-dd HH:mm:ss"
+print("[\(stamp.string(from: now))] scanned \(events.count) event(s) across \(calendars.count) calendar(s)")
+
+var fixedCount = 0
+var fixedLines: [String] = []
+var processedSeries = Set<String>()
+
+for event in events {
+    if !includeAllday && event.isAllDay { continue }
+    if !event.calendar.allowsContentModifications { continue }
+
+    // Recurring events share an identifier across occurrences. Process each
+    // series once: modify the master with .futureEvents so the alarm
+    // propagates to all upcoming occurrences in one save.
+    let seriesID = event.eventIdentifier ?? ""
+    if processedSeries.contains(seriesID) { continue }
+
+    if !(event.alarms ?? []).isEmpty {
+        processedSeries.insert(seriesID)
+        continue
+    }
+
+    event.addAlarm(EKAlarm(relativeOffset: TimeInterval(triggerMin * 60)))
+    let span: EKSpan = event.hasRecurrenceRules ? .futureEvents : .thisEvent
+
+    do {
+        try store.save(event, span: span, commit: false)
+        fixedCount += 1
+        fixedLines.append("\(event.calendar.title): \(event.title ?? "(no title)")")
+        processedSeries.insert(seriesID)
+    } catch {
+        FileHandle.standardError.write(Data("save failed for '\(event.title ?? "?")': \(error)\n".utf8))
+    }
+}
+
+if fixedCount > 0 {
+    do {
+        try store.commit()
+    } catch {
+        FileHandle.standardError.write(Data("commit failed: \(error)\n".utf8))
+        exit(2)
+    }
+}
+
+print("added \(fixedCount) alarm(s)")
+for line in fixedLines { print("  \(line)") }
