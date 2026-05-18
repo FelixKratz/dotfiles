@@ -163,8 +163,9 @@ Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so multi-selecti
 
 * Email
 Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
+The =t= flag makes this a no-op when doom-private is absent (e.g., on a fork).
 #+begin_src emacs-lisp
-(load! "email" "~/.config/doom-private")
+(load! "email" "~/.config/doom-private" t)
 #+end_src
 
 * Bluesky
