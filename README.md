@@ -9,10 +9,15 @@ root/          → symlinked to ~/.<filename> (zshrc, tmux.conf, etc.)
 config/        → symlinked to ~/.config/<dirname> (doom, kitty, alfred, etc.)
 bin/           → symlinked to ~/.local/bin/
 launchagents/  → symlinked to ~/Library/LaunchAgents/ (macOS only)
+.githooks/     → gitleaks pre-commit hook (activated by install.sh)
 ```
 
 Private configurations (calendar aliases, email accounts, etc.) live in a
 separate `dotfiles_private` repo with the same structure.
+
+`install.sh` activates a gitleaks pre-commit hook (`core.hooksPath
+.githooks`) that scans staged changes for credentials. Bypass with
+`--no-verify` only if a finding is a confirmed false positive.
 
 ## Setup
 

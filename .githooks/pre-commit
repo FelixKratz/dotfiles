@@ -1,0 +1,20 @@
+#!/bin/sh
+# Scan staged changes for secrets before allowing a commit.
+# Wired in via `git config core.hooksPath .githooks` (set by install.sh).
+# Bypass with `git commit --no-verify` only if you are certain a finding is a
+# false positive — otherwise unstage the offending file or add a
+# `gitleaks:allow` trailing comment on the line.
+
+set -e
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    printf '\033[33mwarning:\033[0m gitleaks not installed; skipping secret scan.\n' >&2
+    printf '         Install with: brew install gitleaks\n' >&2
+    exit 0
+fi
+
+if ! gitleaks git --staged --redact --no-banner; then
+    printf '\n\033[31merror:\033[0m gitleaks flagged possible secrets in staged changes (values redacted above).\n' >&2
+    printf '       Unstage the file, or add a `gitleaks:allow` comment if it is a known false positive.\n' >&2
+    exit 1
+fi

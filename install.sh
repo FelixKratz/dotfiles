@@ -31,7 +31,7 @@ if [[ "$OS" == "Darwin" ]]; then
   brew analytics off
 
   echo "Installing essential packages..."
-  brew install git wget tmux ripgrep gh jq node neovim btop python zoxide fzf
+  brew install git wget tmux ripgrep gh jq node neovim btop python zoxide fzf gitleaks
   brew tap homebrew/autoupdate
   brew autoupdate start --upgrade
 
@@ -141,6 +141,9 @@ echo "Cloning dotfiles..."
 [ ! -d "$CODE_DIR/dotfiles" ] && git clone git@github.com:sbfnk/dotfiles.git $CODE_DIR/dotfiles
 [ ! -d "$CODE_DIR/dotfiles_private" ] && git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private
 [[ "$PROFILE" != "minimal" ]] && [ ! -d "$CODE_DIR/email-config" ] && git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config
+
+# Enable the gitleaks pre-commit hook (idempotent — safe to re-run).
+git -C "$CODE_DIR/dotfiles" config core.hooksPath .githooks
 
 $CODE_DIR/dotfiles/link.sh --$PROFILE
 
