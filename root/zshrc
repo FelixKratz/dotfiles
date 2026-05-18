@@ -170,7 +170,7 @@ source <(fzf --zsh)
 
 # SSH and attach to tmux
 ssht() {
-    ssh -t "$@" "tmux attach || tmux new"
+    ssh -t "$@" 'zsh -lc "tmux attach || tmux new"'
 }
 
 # bun completions
@@ -180,12 +180,16 @@ ssht() {
 () {
   local dir="$HOME/pCloud Drive/Backups/claude-projects"
   [ -d "$dir" ] || return
-  local latest=$(ls -t "$dir"/claude-projects-*.tar.gz 2>/dev/null | head -1)
-  if [ -z "$latest" ]; then
+  local -a files
+  files=( "$dir"/claude-projects-*.tar.gz(N.om) )
+  if (( ${#files} == 0 )); then
     print -P "%F{yellow}⚠ no claude-projects backup yet — run: backup-claude-projects%f"
     return
   fi
-  local age_days=$(( ( $(date +%s) - $(stat -f %m "$latest") ) / 86400 ))
+  local mtime
+  mtime=$(stat -f %m "${files[1]}" 2>/dev/null) || return
+  [[ -n "$mtime" ]] || return
+  local age_days=$(( ( $(date +%s) - mtime ) / 86400 ))
   (( age_days > 7 )) && print -P "%F{yellow}⚠ claude-projects backup is ${age_days}d old — run: backup-claude-projects%f"
 }
 
