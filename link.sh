@@ -65,15 +65,17 @@ for dir in $CODE_DIR/dotfiles*; do
             done
           done
           ;;
-        email)
-          # Email config is split: scripts/docs in public, accounts.yaml in private.
-          # Link file-by-file so both repos contribute to ~/.config/email/.
-          [ -L "$HOME/.config/email" ] && rm "$HOME/.config/email"
-          mkdir -p "$HOME/.config/email"
+        email|doom-private)
+          # These configs are split across dotfiles and dotfiles_private:
+          #   email/        — scripts/docs in public, accounts.yaml in private
+          #   doom-private/ — generic elisp in public, generated/personal in private
+          # Link file-by-file so both repos contribute to ~/.config/<name>/.
+          [ -L "$HOME/.config/$name" ] && rm "$HOME/.config/$name"
+          mkdir -p "$HOME/.config/$name"
           for f in $file/*; do
             [ -e "$f" ] || continue
-            ln $LN_FLAG "$f" "$HOME/.config/email/"
-            echo "Linked $f → ~/.config/email/$(basename $f)"
+            ln $LN_FLAG "$f" "$HOME/.config/$name/"
+            echo "Linked $f → ~/.config/$name/$(basename $f)"
           done
           ;;
         *)
