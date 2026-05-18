@@ -139,8 +139,14 @@ fi
 
 echo "Cloning dotfiles..."
 [ ! -d "$CODE_DIR/dotfiles" ] && git clone git@github.com:sbfnk/dotfiles.git $CODE_DIR/dotfiles
-[ ! -d "$CODE_DIR/dotfiles_private" ] && git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private
-[[ "$PROFILE" != "minimal" ]] && [ ! -d "$CODE_DIR/email-config" ] && git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config
+
+# Private repos are only accessible to the owner — best-effort, skip on failure.
+[ ! -d "$CODE_DIR/dotfiles_private" ] && \
+  git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private \
+    2>/dev/null || true
+[[ "$PROFILE" != "minimal" ]] && [ ! -d "$CODE_DIR/email-config" ] && \
+  git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config \
+    2>/dev/null || true
 
 # Enable the gitleaks pre-commit hook (idempotent — safe to re-run).
 git -C "$CODE_DIR/dotfiles" config core.hooksPath .githooks
