@@ -43,6 +43,7 @@ install packages from MELPA, ELPA, or directly from git repos.
 (package! mastodon)                ; Mastodon client
 (package! mu4e-column-faces)       ; coloured columns in mu4e headers
 (package! org-msg)                 ; org-mode email composition
+(package! consult-notmuch)         ; consult interface for notmuch search
 (package! bluesky
   :recipe (:host github :repo "ahyatt/emacs-bluesky"))
 #+end_src
