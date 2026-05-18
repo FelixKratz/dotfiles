@@ -9,6 +9,7 @@ root/          → symlinked to ~/.<filename> (zshrc, tmux.conf, etc.)
 config/        → symlinked to ~/.config/<dirname> (doom, kitty, alfred, etc.)
 bin/           → symlinked to ~/.local/bin/
 launchagents/  → symlinked to ~/Library/LaunchAgents/ (macOS only)
+docs/          → reference material (org-roam workflow, slide style, etc.)
 .githooks/     → gitleaks pre-commit hook (activated by install.sh)
 ```
 
