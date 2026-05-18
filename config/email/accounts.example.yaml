@@ -1,0 +1,38 @@
+# Example email account configuration for generate.py.
+# Copy to ~/.config/email/accounts.yaml (or symlink from your private dotfiles
+# repo) and fill in your accounts. `generate.py --write` reads it and emits:
+#   ~/.mbsyncrc
+#   ~/.msmtprc
+#   ~/.config/doom-private/email-accounts.el  (doom integration)
+
+defaults:
+  name: Your Name
+  tls_type: IMAPS
+  auth: plain
+  certificate_file: /opt/homebrew/share/ca-certificates/cacert.pem
+  msmtp_port: 587
+  msmtp_tls_starttls: true
+
+accounts:
+  - name: personal
+    email: you@example.com
+    imap_host: imap.example.com
+    smtp_host: smtp.example.com
+    folders:
+      - INBOX
+      - Sent
+    sent_folder: Sent
+    drafts_folder: Drafts
+    trash_folder: Trash
+    search_key: p
+    default: true
+
+  # XOAUTH2 account example (Office365, Gmail):
+  # - name: work
+  #   email: you@example.org
+  #   imap_user: you@example.org
+  #   imap_host: outlook.office365.com
+  #   smtp_host: smtp.office365.com
+  #   auth: xoauth2
+  #   password_cmd: ~/.local/bin/refresh-token
+  #   msmtp_password_cmd: refresh-token --profile mail

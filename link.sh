@@ -65,6 +65,17 @@ for dir in $CODE_DIR/dotfiles*; do
             done
           done
           ;;
+        email)
+          # Email config is split: scripts/docs in public, accounts.yaml in private.
+          # Link file-by-file so both repos contribute to ~/.config/email/.
+          [ -L "$HOME/.config/email" ] && rm "$HOME/.config/email"
+          mkdir -p "$HOME/.config/email"
+          for f in $file/*; do
+            [ -e "$f" ] || continue
+            ln $LN_FLAG "$f" "$HOME/.config/email/"
+            echo "Linked $f → ~/.config/email/$(basename $f)"
+          done
+          ;;
         *)
           ln $LN_FLAG $file $HOME/.config
           echo "Linked $file → ~/.config/$name"
