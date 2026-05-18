@@ -102,9 +102,15 @@ for dir in $CODE_DIR/dotfiles*; do
 done
 
 if [[ "$OS" == "Darwin" ]]; then
+  mkdir -p $HOME/Library/LaunchAgents
   for file in $CODE_DIR/dotfiles/launchagents/*; do
-    ln $LN_FLAG $file $HOME/Library/LaunchAgents
-    echo "Linked $file → ~/Library/LaunchAgents/$(basename $file)"
+    dest=$HOME/Library/LaunchAgents/$(basename $file)
+    # Plists can't expand $HOME at runtime, so we substitute it at install
+    # time. Remove any legacy symlink first to avoid writing through it
+    # back into the repo.
+    [ -L "$dest" ] && rm "$dest"
+    sed "s|__HOME__|$HOME|g" "$file" > "$dest"
+    echo "Generated $dest"
   done
 fi
 
