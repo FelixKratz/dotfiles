@@ -45,11 +45,24 @@ for dir in $CODE_DIR/dotfiles*; do
           # Claude Code config: only link shareable config, not runtime state
           # Runtime state (history.jsonl, cache/, projects/, etc.) stays local
           mkdir -p $HOME/.claude
-          for entry in agents commands CLAUDE.md settings.json; do
+          for entry in CLAUDE.md settings.json; do
             cf="$file/$entry"
             [ -e "$cf" ] || continue
             ln $LN_FLAG $cf $HOME/.claude/
             echo "Linked $cf → ~/.claude/$entry"
+          done
+          # Link agents/commands file-by-file so both dotfiles and dotfiles_private
+          # can contribute entries. Replace any legacy whole-dir symlink.
+          for subdir in agents commands; do
+            sd="$file/$subdir"
+            [ -d "$sd" ] || continue
+            [ -L "$HOME/.claude/$subdir" ] && rm "$HOME/.claude/$subdir"
+            mkdir -p "$HOME/.claude/$subdir"
+            for f in $sd/*; do
+              [ -e "$f" ] || continue
+              ln $LN_FLAG "$f" "$HOME/.claude/$subdir/"
+              echo "Linked $f → ~/.claude/$subdir/$(basename $f)"
+            done
           done
           ;;
         *)
