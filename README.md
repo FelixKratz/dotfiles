@@ -60,7 +60,9 @@ overlay first:
 
 - `config/email/accounts.yaml` — copy `config/email/accounts.example.yaml`,
   fill in your accounts. Run `~/.config/email/generate.py --write` to emit
-  `~/.mbsyncrc`, `~/.msmtprc`, and `~/.config/doom-private/email-accounts.el`.
+  `~/.mbsyncrc`, `~/.msmtprc`, `~/.config/doom-private/email-accounts.el`,
+  and one `~/Library/LaunchAgents/none.mail.<account>.plist` per account
+  (polls inbox every 5 min via `getmail.sh`).
 - `config/doom-private/signatures.el` — `(setq sf/email-signatures '(("name"
   . "body") ...))`. Loaded with no-error by `email.el`.
 - launchagents: keep the `__HOME__` placeholder in the plist source. `link.sh`
