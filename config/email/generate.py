@@ -190,6 +190,60 @@ def _fcc_path(name, sent_folder):
     return path
 
 
+def _bookmark_maildir(name, folder):
+    """Return `maildir:PATH` for inside an elisp string, escaping inner quotes
+    if PATH contains spaces or brackets."""
+    path = f"/{name}/{folder}"
+    if " " in path or "[" in path:
+        return f'maildir:\\"{path}\\"'
+    return f'maildir:{path}'
+
+
+def _elisp_escape(s):
+    """Escape backslashes and double quotes for embedding in an elisp string."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _mu4e_context_form(acc, default_full_name):
+    """Emit a `make-mu4e-context` form for one account.
+
+    Wrapped in a function in email-accounts.el so the form is only evaluated
+    once mu4e is loaded (where `make-mu4e-context` is defined).
+    """
+    name = acc["name"]
+    email = acc["email"]
+    full_name = _elisp_escape(acc.get("full_name", default_full_name))
+    sent = acc["sent_folder"]
+    drafts = acc["drafts_folder"]
+    trash = acc["trash_folder"]
+    return f"""   (make-mu4e-context
+    :name "{name}"
+    :match-func (lambda (msg)
+                  (when msg (string-prefix-p "/{name}" (mu4e-message-field msg :maildir))))
+    :vars '((user-mail-address  . "{email}")
+            (user-full-name     . "{full_name}")
+            (mu4e-sent-folder   . "/{name}/{sent}")
+            (mu4e-drafts-folder . "/{name}/{drafts}")
+            (mu4e-trash-folder  . "/{name}/{trash}")))"""
+
+
+def _mu4e_bookmark_lines(acc):
+    """Two bookmarks per account: today's mail (lowercase key) and all (uppercase)."""
+    name = acc["name"]
+    label = name[0].upper() + name[1:]
+    key = acc.get("search_key", name[0])
+    inbox = _inbox_folder(name)
+    sent = acc["sent_folder"]
+    inbox_q = _bookmark_maildir(name, inbox)
+    sent_q = _bookmark_maildir(name, sent)
+    today_q = f"({inbox_q} OR {sent_q}) AND (date:today..now OR flag:unread)"
+    all_q = f"{inbox_q} OR {sent_q}"
+    return [
+        f'    (:name "{label} email (today)" :query "{today_q}" :key ?{key})',
+        f'    (:name "{label} email" :query "{all_q}" :key ?{key.upper()})',
+    ]
+
+
 def generate_email_accounts(config):
     """Emit a small email-accounts.el with only the account-derived bits."""
     default_acc = _default_account(config)
@@ -207,6 +261,18 @@ def generate_email_accounts(config):
         for a in accounts
     )
     fallback_fcc = _fcc_path(default_acc["name"], default_acc["sent_folder"])
+
+    contexts_block = "\n".join(
+        _mu4e_context_form(a, default_full_name) for a in accounts
+    )
+    bookmark_lines = []
+    for acc in accounts:
+        bookmark_lines.extend(_mu4e_bookmark_lines(acc))
+    bookmarks_block = "\n".join(bookmark_lines)
+    trash_block = "\n    ".join(
+        f'("{a["name"]}" . "{_elisp_escape(a["trash_folder"])}")'
+        for a in accounts
+    )
 
     search_lines = []
     for acc in accounts:
@@ -242,6 +308,24 @@ def generate_email_accounts(config):
 (setq notmuch-fcc-dirs
       '({fcc_block}
         (".*" . "{fallback_fcc}")))
+
+;; Trash folder per account — used by sf/notmuch-move-to-trash in email.el
+(defvar sf/notmuch-trash-folders
+  '({trash_block})
+  "Trash folder name per account, generated from accounts.yaml.")
+
+;; mu4e contexts — wrapped in a defun so `make-mu4e-context` is only called
+;; after mu4e has been loaded.
+(defun sf/mu4e-account-contexts ()
+  "Return mu4e contexts for the accounts in accounts.yaml."
+  (list
+{contexts_block}))
+
+;; mu4e bookmarks — two per account (today + all)
+(defvar sf/mu4e-account-bookmarks
+  '(
+{bookmarks_block})
+  "Per-account mu4e bookmarks, generated from accounts.yaml.")
 
 ;; Per-account inbox saved searches — merged into notmuch-saved-searches in email.el
 (defvar sf/notmuch-account-saved-searches
