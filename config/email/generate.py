@@ -15,6 +15,7 @@ CONFIG = Path.home() / ".config" / "email" / "accounts.yaml"
 MBSYNCRC = Path.home() / ".mbsyncrc"
 MSMTPRC = Path.home() / ".msmtprc"
 EMACS_ACCOUNTS = Path.home() / ".config" / "doom-private" / "email-accounts.el"
+LAUNCHAGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
 
 GENERATED_HEADER = "# Auto-generated from accounts.yaml — do not edit directly\n"
 
@@ -244,6 +245,45 @@ def _mu4e_bookmark_lines(acc):
     ]
 
 
+def generate_mail_launchagents(config):
+    """Return {filename: plist content} for each non-smtp-only account.
+
+    These launchagents poll the account's inbox every 5 minutes via
+    `getmail.sh <account>`. The account name is the canonical key.
+    """
+    home = str(Path.home())
+    out = {}
+    for acc in _mail_accounts(config):
+        name = acc["name"]
+        label = f"none.mail.{name}"
+        out[f"{label}.plist"] = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/timelimit</string>
+        <string>-t</string>
+        <string>120</string>
+        <string>{home}/.local/bin/getmail.sh</string>
+        <string>{name}</string>
+    </array>
+    <key>StandardOutPath</key>
+    <string>{home}/.log/getmail.log</string>
+    <key>StandardErrorPath</key>
+    <string>{home}/.log/getmail.err</string>
+    <key>StartInterval</key>
+    <integer>300</integer>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+</dict>
+</plist>
+"""
+    return out
+
+
 def generate_email_accounts(config):
     """Emit a small email-accounts.el with only the account-derived bits."""
     default_acc = _default_account(config)
@@ -343,6 +383,8 @@ def main():
     parser.add_argument("--mbsync", action="store_true", help="Print mbsyncrc to stdout")
     parser.add_argument("--msmtp", action="store_true", help="Print msmtprc to stdout")
     parser.add_argument("--emacs", action="store_true", help="Print email-accounts.el to stdout")
+    parser.add_argument("--launchagents", action="store_true",
+                        help="Print per-account launchagent plists to stdout")
     parser.add_argument("--write", action="store_true",
                         help="Write outputs in place (default writes to .generated files for review)")
     args = parser.parse_args()
@@ -355,12 +397,19 @@ def main():
         print(generate_msmtprc(config)); return
     if args.emacs:
         print(generate_email_accounts(config)); return
+    if args.launchagents:
+        for name, content in generate_mail_launchagents(config).items():
+            print(f"--- {name} ---")
+            print(content)
+        return
 
     outputs = {
         MBSYNCRC: generate_mbsyncrc(config),
         MSMTPRC: generate_msmtprc(config),
         EMACS_ACCOUNTS: generate_email_accounts(config),
     }
+    for filename, content in generate_mail_launchagents(config).items():
+        outputs[LAUNCHAGENTS_DIR / filename] = content
 
     for path, content in outputs.items():
         target = path if args.write else path.with_suffix(path.suffix + ".generated")
