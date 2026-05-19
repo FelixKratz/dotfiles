@@ -155,10 +155,15 @@ $CODE_DIR/dotfiles/link.sh --$PROFILE
 
 # macOS-only post-installation (full mode)
 if [[ "$OS" == "Darwin" ]] && [[ "$PROFILE" != "minimal" ]]; then
-  for file in $CODE_DIR/dotfiles/launchagents/*; do
+  # Load everything in ~/Library/LaunchAgents starting with our `none.` prefix.
+  # This covers both static plists installed by link.sh and per-account mail
+  # plists written by generate.py (so the loop doesn't need to know which is
+  # which).
+  for file in $HOME/Library/LaunchAgents/none.*.plist; do
+    [ -e "$file" ] || continue
     filename=$(basename $file .plist)
-    launchctl load $HOME/Library/LaunchAgents/$filename.plist
-    launchctl start $filename
+    launchctl load "$file" 2>/dev/null
+    launchctl start "$filename"
   done
 
   git clone git@github.com:shaunsingh/SFMono-Nerd-Font-Ligaturized.git /tmp/SFMono_Nerd_Font
