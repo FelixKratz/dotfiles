@@ -16,3 +16,9 @@ config/kitty/current-theme.conf
 
 # Notmuch HTML export tempfiles
 notmuch-*.html
+
+# Local backup files (never commit)
+*.bak
+
+# Local-only Claude Code settings (machine-specific paths)
+.claude/settings.local.json
