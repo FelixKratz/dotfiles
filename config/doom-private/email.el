@@ -144,6 +144,15 @@
           (lambda ()
             (add-hook 'auto-save-hook #'sf/auto-save-draft nil t)))
 
+;; Doom's `company-global-modes' exclusion list has message-mode but not
+;; org-msg-edit-mode (which derives from org-mode). Without this, company-box
+;; pops dictionary words and snippet candidates over what we type in compose
+;; buffers.
+(after! company
+  (setq company-global-modes
+        (append company-global-modes
+                '(org-msg-edit-mode notmuch-message-mode))))
+
 ;;; Notmuch
 (require 'notmuch)
 
@@ -253,13 +262,6 @@
   (setq notmuch-address-command 'internal
         notmuch-address-use-company nil)
 
-  ;; Prevent text-mode from adding ispell-completion-at-point as a CAPF.
-  ;; Emacs 30+ defaults this to 'completion-at-point, which surfaces
-  ;; dictionary words ("Readable", "Readability"...) in the To: header
-  ;; popup alongside real recipients. Disable everywhere; compose buffers
-  ;; need to be clean and there's no use for it in other text-modes here.
-  (setq-default text-mode-ispell-word-completion nil)
-
   (defun sf/notmuch-on-address-header-p ()
     "Non-nil when point is on a recipient header line or its continuation."
     (save-excursion
@@ -272,15 +274,15 @@
                               (point-max)))))
         (when (< (point) header-end)
           (beginning-of-line)
-          ;; Walk back across continuation lines (those starting with whitespace)
-          ;; to find the logical header start.
           (while (and (> (point) (point-min))
                       (looking-at "[ \t]"))
             (forward-line -1))
           (looking-at notmuch-address-completion-headers-regexp)))))
 
   (defun sf/notmuch-address-capf ()
-    "Completion-at-point function for notmuch addresses in headers."
+    "Completion-at-point function for notmuch addresses in headers.
+Exclusive by default, so when it returns non-nil on a header line
+(even with empty matches) corfu won't fall through to other CAPFs."
     (when (sf/notmuch-on-address-header-p)
       (let ((start (save-excursion
                      (if (re-search-backward "[:,][ \t\n]*"
@@ -303,38 +305,20 @@
                    (notmuch-address-matching
                     (buffer-substring-no-properties start end)))))))))
 
-  (defun sf/notmuch-setup-address-capf ()
-    "Restrict compose-buffer completion to address sources.
-Drops ispell/yasnippet/cape-* so dictionary words and snippets don't
-appear as completions for email recipients. Also turns off company-mode
-in this buffer so its popup doesn't mask the corfu CAPF popup."
-    (when (bound-and-true-p company-mode) (company-mode -1))
-    ;; Discard whatever parent-mode hooks accumulated, then install our
-    ;; minimal list. kill-local-variable first so we start from a known
-    ;; baseline rather than mutating whatever was inherited.
-    (kill-local-variable 'completion-at-point-functions)
-    (setq-local completion-at-point-functions
-                (list #'sf/notmuch-address-capf
-                      #'message-completion-function)))
+  (defun sf/notmuch-compose-setup ()
+    "Wire up compose-buffer completion: address CAPF first (exclusive,
+so on header lines corfu shows only addresses), and `corfu-auto-prefix'
+toggled to a value that never fires in the body."
+    (add-hook 'completion-at-point-functions #'sf/notmuch-address-capf -90 t)
+    (add-hook 'post-command-hook
+              (lambda ()
+                (setq-local corfu-auto-prefix
+                            (if (sf/notmuch-on-address-header-p) 2 999)))
+              nil t))
 
-  (defun sf/notmuch-compose-buffer-p ()
-    "Non-nil when current buffer is a mail-compose buffer."
-    (derived-mode-p 'message-mode 'org-msg-edit-mode 'notmuch-message-mode))
-
-  (defun sf/notmuch-suppress-yas-capf ()
-    "Remove yasnippet-capf from CAPF in compose buffers.
-yas-global-mode enables yas-minor-mode via after-change-major-mode-hook,
-which runs AFTER our mode hooks, so Doom's +corfu-add-yasnippet-capf-h
-re-pollutes our cleaned list. Run later in yas-minor-mode-hook to undo it."
-    (when (sf/notmuch-compose-buffer-p)
-      (remove-hook 'completion-at-point-functions #'yasnippet-capf t)))
-
-  ;; Depth 100 so we run AFTER any other hook that might re-add CAPFs.
-  (add-hook 'org-msg-edit-mode-hook #'sf/notmuch-setup-address-capf 100)
-  (add-hook 'notmuch-message-mode-hook #'sf/notmuch-setup-address-capf 100)
-  (add-hook 'message-mode-hook #'sf/notmuch-setup-address-capf 100)
-  ;; Depth 90 runs after Doom's +corfu-add-yasnippet-capf-h (default depth).
-  (add-hook 'yas-minor-mode-hook #'sf/notmuch-suppress-yas-capf 90)
+  (add-hook 'org-msg-edit-mode-hook #'sf/notmuch-compose-setup)
+  (add-hook 'notmuch-message-mode-hook #'sf/notmuch-compose-setup)
+  (add-hook 'message-mode-hook #'sf/notmuch-compose-setup)
 
   ;; View in browser
   (defun sf/notmuch-find-message-plist (tree)
