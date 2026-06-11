@@ -87,6 +87,7 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in
-  `signatures.el` in the private overlay.
+  `signatures.el` in the private overlay. Office365 XOAUTH2 setup and
+  troubleshooting: `docs/email-xoauth2.md`.
 - **kitty** - `config/kitty/`
 - **Alfred workflows** - `config/alfred/workflows/`

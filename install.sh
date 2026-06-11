@@ -54,6 +54,11 @@ if [[ "$OS" == "Darwin" ]]; then
     brew install dropbox mailmate slack
     brew install emacs-plus
     brew install --HEAD sbfnk/formulae/isync
+    brew install sbfnk/formulae/cyrus-sasl-xoauth2
+    # libsasl2 only loads plugins from its own keg; this copy is lost
+    # whenever cyrus-sasl is rebuilt (see docs/email-xoauth2.md)
+    cp "$(brew --prefix cyrus-sasl-xoauth2)"/lib/sasl2/libxoauth2.* \
+       "$(brew --prefix cyrus-sasl)"/lib/sasl2/
     brew install mu msmtp timelimit
     pipx install m365auth
 
