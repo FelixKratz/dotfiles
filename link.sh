@@ -51,9 +51,10 @@ for dir in $CODE_DIR/dotfiles*; do
             ln $LN_FLAG $cf $HOME/.claude/
             echo "Linked $cf → ~/.claude/$entry"
           done
-          # Link agents/commands file-by-file so both dotfiles and dotfiles_private
-          # can contribute entries. Replace any legacy whole-dir symlink.
-          for subdir in agents commands; do
+          # Link agents/commands/skills entry-by-entry so both dotfiles and
+          # dotfiles_private can contribute, and locally-installed skills (e.g.
+          # humanizer) survive. Replace any legacy whole-dir symlink.
+          for subdir in agents commands skills; do
             sd="$file/$subdir"
             [ -d "$sd" ] || continue
             [ -L "$HOME/.claude/$subdir" ] && rm "$HOME/.claude/$subdir"
