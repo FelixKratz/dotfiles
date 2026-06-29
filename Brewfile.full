@@ -24,16 +24,10 @@ brew "sketchybar"
 brew "ical-buddy"
 brew "nnn"
 brew "sudo-touchid", restart_service: true
-brew "mactex"
 brew "svim"
 brew "mu"
 brew "msmtp"
 brew "timelimit"
-
-# Apps via Homebrew
-brew "dropbox"
-brew "mailmate"
-brew "slack"
 brew "emacs-plus"
 
 # Email xoauth2 stack — see docs/email-xoauth2.md
@@ -42,8 +36,12 @@ brew "emacs-plus"
 brew "sbfnk/formulae/isync", args: ["HEAD"]
 brew "sbfnk/formulae/cyrus-sasl-xoauth2"
 
-# Casks
+# Casks (apps that `brew install` silently resolved to casks)
 cask "git-credential-manager"
+cask "mactex"
+cask "dropbox"
+cask "mailmate"
+cask "slack"
 cask "kitty"
 cask "1password"
 cask "arc"
