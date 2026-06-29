@@ -6,6 +6,26 @@
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
+DOTFILES=${0:A:h}        # directory this script lives in
+STATE_DIR=$HOME/.cache/dotfiles
+
+# Re-run a step only when a watched file's contents change — a lightweight
+# take on chezmoi's run_onchange_ scripts. The file's hash is recorded under
+# $STATE_DIR; while it's unchanged the step is skipped.
+#   run_onchange <key> <watched-file> <command> [args...]
+run_onchange() {
+  local key=$1 watch=$2
+  shift 2
+  mkdir -p $STATE_DIR
+  local stamp=$STATE_DIR/$key.sha256
+  local current
+  current=$(shasum -a 256 "$watch" | cut -d' ' -f1)
+  if [[ -f $stamp && "$current" == "$(cat $stamp)" ]]; then
+    echo "Skipped $key (unchanged)"
+    return 0
+  fi
+  "$@" && print -r -- "$current" > $stamp
+}
 
 case "${1:-}" in
   --full)    PROFILE=full ;;
@@ -31,76 +51,22 @@ if [[ "$OS" == "Darwin" ]]; then
   brew analytics off
 
   echo "Installing essential packages..."
-  brew install git wget tmux ripgrep gh jq node neovim btop python zoxide fzf gitleaks
+  run_onchange brewfile "$DOTFILES/Brewfile" brew bundle --file="$DOTFILES/Brewfile"
   brew tap homebrew/autoupdate
   brew autoupdate start --upgrade
 
   if [[ "$PROFILE" != "minimal" ]]; then
-    echo "Tapping Brew..."
-    brew tap homebrew/cask-fonts
-    brew tap FelixKratz/formulae
-    brew tap nikitabobko/tap
-    brew tap d12frosted/emacs-plus
-    brew tap artginzburg/tap
-    brew tap sbfnk/formulae
+    echo "Installing full desktop packages..."
+    run_onchange brewfile-full "$DOTFILES/Brewfile.full" brew bundle --file="$DOTFILES/Brewfile.full"
 
-    echo "Installing Brew Formulae..."
-    brew install gsl llvm boost libomp
-    brew install mas ifstat switchaudio-osx sketchybar ical-buddy nnn
-    brew install --cask git-credential-manager
-    brew install sudo-touchid
-    brew services start sudo-touchid
-    brew install mactex svim
-    brew install dropbox mailmate slack
-    brew install emacs-plus
-    brew install --HEAD sbfnk/formulae/isync
-    brew install sbfnk/formulae/cyrus-sasl-xoauth2
     # libsasl2 only loads plugins from its own keg; this copy is lost
     # whenever cyrus-sasl is rebuilt (see docs/email-xoauth2.md)
     cp "$(brew --prefix cyrus-sasl-xoauth2)"/lib/sasl2/libxoauth2.* \
        "$(brew --prefix cyrus-sasl)"/lib/sasl2/
-    brew install mu msmtp timelimit
     pipx install m365auth
 
-    echo "Installing Brew Casks..."
-    brew install --cask kitty 1password arc r inkscape zoom skim
-    brew install --cask nikitabobko/tap/aerospace
-    brew install --cask alfred spotify telegram whatsapp
-    brew install --cask sf-symbols font-hack-nerd-font font-jetbrains-mono font-fira-code
-
-    echo "Installing Mac App Store Apps..."
-    mas install 360593530 # Notability
-
     echo "Changing macOS defaults..."
-    defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-    defaults write com.apple.dock autohide -bool true
-    defaults write com.apple.dock "mru-spaces" -bool "false"
-    defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
-    defaults write com.apple.LaunchServices LSQuarantine -bool false
-    defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false
-    defaults write NSGlobalDomain KeyRepeat -int 1
-    defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
-    defaults write NSGlobalDomain AppleShowAllExtensions -bool true
-    defaults write NSGlobalDomain _HIHideMenuBar -bool true
-    defaults write NSGlobalDomain AppleHighlightColor -string "0.65098 0.85490 0.58431"
-    defaults write NSGlobalDomain AppleAccentColor -int 1
-    defaults write com.apple.screencapture location -string "$HOME/Desktop"
-    defaults write com.apple.screencapture disable-shadow -bool true
-    defaults write com.apple.screencapture type -string "png"
-    defaults write com.apple.finder DisableAllAnimations -bool true
-    defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool false
-    defaults write com.apple.finder ShowHardDrivesOnDesktop -bool false
-    defaults write com.apple.finder ShowMountedServersOnDesktop -bool false
-    defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool false
-    defaults write com.apple.Finder AppleShowAllFiles -bool true
-    defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
-    defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
-    defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
-    defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-    defaults write com.apple.finder ShowStatusBar -bool false
-    defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool YES
-    defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
-    defaults write com.freron.MailMate MmMessagesOutlineMoveStrategy -string "unreadOrPrevious"
+    run_onchange macos-defaults "$DOTFILES/macos/defaults.sh" zsh "$DOTFILES/macos/defaults.sh"
   fi
 
   mkdir -p $HOME/Library/LaunchAgents $HOME/.log

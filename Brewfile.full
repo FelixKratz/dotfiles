@@ -1,0 +1,65 @@
+# Full desktop additions — installed only in --full profile, on top of Brewfile.
+# Apply with: brew bundle --file=Brewfile.full
+# (homebrew/cask-fonts was deprecated in 2024; font casks now live in the
+#  default cask repo and no longer need a tap.)
+
+# Taps
+tap "FelixKratz/formulae"
+tap "nikitabobko/tap"
+tap "d12frosted/emacs-plus"
+tap "artginzburg/tap"
+tap "sbfnk/formulae"
+
+# Build / scientific
+brew "gsl"
+brew "llvm"
+brew "boost"
+brew "libomp"
+
+# CLI tools
+brew "mas"
+brew "ifstat"
+brew "switchaudio-osx"
+brew "sketchybar"
+brew "ical-buddy"
+brew "nnn"
+brew "sudo-touchid", restart_service: true
+brew "mactex"
+brew "svim"
+brew "mu"
+brew "msmtp"
+brew "timelimit"
+
+# Apps via Homebrew
+brew "dropbox"
+brew "mailmate"
+brew "slack"
+brew "emacs-plus"
+
+# Email xoauth2 stack — see docs/email-xoauth2.md
+# (the libxoauth2 plugin must be copied into cyrus-sasl's keg after install;
+#  install.sh does that imperatively, as brew bundle can't express it.)
+brew "sbfnk/formulae/isync", args: ["HEAD"]
+brew "sbfnk/formulae/cyrus-sasl-xoauth2"
+
+# Casks
+cask "git-credential-manager"
+cask "kitty"
+cask "1password"
+cask "arc"
+cask "r"
+cask "inkscape"
+cask "zoom"
+cask "skim"
+cask "nikitabobko/tap/aerospace"
+cask "alfred"
+cask "spotify"
+cask "telegram"
+cask "whatsapp"
+cask "sf-symbols"
+cask "font-hack-nerd-font"
+cask "font-jetbrains-mono"
+cask "font-fira-code"
+
+# Mac App Store
+mas "Notability", id: 360593530
