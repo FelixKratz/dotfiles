@@ -21,6 +21,7 @@ return require("lazy").setup(
   "junegunn/vim-easy-align",
   {
     "nvim-treesitter/nvim-treesitter",
+    branch = "main",
     build = ":TSUpdate",
     config = function()
       require "plugins.treesitter"
@@ -40,6 +41,7 @@ return require("lazy").setup(
   },
   {
     "williamboman/mason-lspconfig.nvim",
+    dependencies = { "williamboman/mason.nvim", "neovim/nvim-lspconfig" },
     config = function()
       require "plugins.mason_lspconfig"
     end,
@@ -60,7 +62,7 @@ return require("lazy").setup(
   {
     "L3MON4D3/LuaSnip",
     dependencies = "onsails/lspkind.nvim",
-    run = "make install_jsregexp",
+    build = "make install_jsregexp",
     config = function()
       require "plugins.luasnip"
     end,
@@ -120,8 +122,8 @@ return require("lazy").setup(
   },
   {
     "akinsho/bufferline.nvim",
-    version = "v2.*",
-    dependencies = "kyazdani42/nvim-web-devicons",
+    version = "*",
+    dependencies = "nvim-tree/nvim-web-devicons",
     config = function()
       require "plugins.bufferline"
     end

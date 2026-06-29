@@ -12,6 +12,9 @@ config/kitty/solarized-light.conf
 __pycache__/
 *.alfredworkflow
 
+# Neovim plugin lockfile - not pinning versions
+config/nvim/lazy-lock.json
+
 config/kitty/current-theme.conf
 
 # Notmuch HTML export tempfiles

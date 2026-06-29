@@ -1,16 +1,17 @@
-local options = {
-  ensure_installed = {
-    "lua",
-    "vim",
-    "c",
-    "cpp",
-    "python",
-    "rust"
-  },
-  highlight = {
-    enable = true,
-    use_languagetree = true,
-  },
+local languages = {
+  "lua",
+  "vim",
+  "c",
+  "cpp",
+  "python",
+  "rust",
 }
 
-require("nvim-treesitter.configs").setup(options)
+require("nvim-treesitter").install(languages)
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = languages,
+  callback = function()
+    vim.treesitter.start()
+  end,
+})

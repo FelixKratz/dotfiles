@@ -3,8 +3,7 @@ vim.g.maplocalleader = " "
 
 local opts = { silent = true, noremap = true }
 
--- Globally remap h->j j->k k->l l->ö for commands
-vim.opt.langmap = "jklöJKLÖ;hjklHJKL"
+-- langmap intentionally unset: it interfered with hjkl navigation
 
 -- General movements
 vim.keymap.set("", "ß", "$", opts)
