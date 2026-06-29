@@ -65,6 +65,14 @@ if [[ "$OS" == "Darwin" ]]; then
        "$(brew --prefix cyrus-sasl)"/lib/sasl2/
     pipx install m365auth
 
+    # Touch ID for sudo, the native way (macOS Sonoma+): a single PAM line in
+    # sudo_local, which survives OS updates and needs no third-party tap or
+    # root daemon. Replaces the old sudo-touchid formula.
+    if ! grep -q 'pam_tid.so' /etc/pam.d/sudo_local 2>/dev/null; then
+      echo "Enabling Touch ID for sudo (needs sudo)..."
+      echo 'auth       sufficient     pam_tid.so' | sudo tee /etc/pam.d/sudo_local >/dev/null
+    fi
+
     echo "Changing macOS defaults..."
     run_onchange macos-defaults "$DOTFILES/macos/defaults.sh" zsh "$DOTFILES/macos/defaults.sh"
   fi
