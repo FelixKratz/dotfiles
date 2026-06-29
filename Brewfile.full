@@ -7,7 +7,6 @@
 tap "FelixKratz/formulae"
 tap "nikitabobko/tap"
 tap "d12frosted/emacs-plus"
-tap "artginzburg/tap"
 tap "sbfnk/formulae"
 
 # Build / scientific
@@ -23,7 +22,6 @@ brew "switchaudio-osx"
 brew "sketchybar"
 brew "ical-buddy"
 brew "nnn"
-brew "sudo-touchid", restart_service: true
 brew "svim"
 brew "mu"
 brew "msmtp"
