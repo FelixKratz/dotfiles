@@ -18,7 +18,7 @@ default-root-container-orientation = 'auto'
 # Mouse follows focus when switching monitors
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
-automatically-unhide-macos-hidden-apps = false
+automatically-unhide-macos-hidden-apps = true
 
 # Notify sketchybar on workspace change
 exec-on-workspace-change = ['/bin/bash', '-c',
