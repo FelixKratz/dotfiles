@@ -1,9 +1,11 @@
 ---
-argument-hint: [PR-number]
-description: Poll a PR for reviews, address all comments with inline replies and one commit per fix. Waits for both CodeRabbit and a human reviewer before stopping. With no argument, uses the PR for the current branch.
+argument-hint: [PR-number ...]
+description: Poll one or more PRs for reviews, address all comments with inline replies and one commit per fix. Waits for both CodeRabbit and a human reviewer before stopping. With no argument, uses the PR for the current branch.
 ---
 
-You are watching a PR in the current repository. The PR number is `$1` if provided; otherwise use the PR for the current branch (`gh pr view --json number -q .number`). Resolve the PR number once at the start of this turn and use it throughout.
+You are watching one or more PRs in the current repository. Read the watch list from `$ARGUMENTS`: it may contain several space-separated PR numbers (e.g. `665 666`). If `$ARGUMENTS` is empty, use the single PR for the current branch (`gh pr view --json number -q .number`). Resolve the watch list once at the start of this turn.
+
+Process **each PR in the watch list independently** through the steps below: fetch its state, address its trusted comments, attempt its failing-check fixes, keep its branch fresh, and evaluate its stopping condition. Throughout the steps, `<PR>` means the PR currently being processed. A PR is *done* once it meets the Step 5 stopping condition (and is then auto-merged where eligible, or dropped from the list). Keep watching until **every** PR in the list is done.
 
 Your job is to address every *trusted* review comment as it arrives, until at least one human maintainer has reviewed and no unaddressed trusted comments remain.
 
@@ -43,9 +45,9 @@ Denylist (case-insensitive):
 
 The denylist is enforced by you, not by git. If a fix legitimately requires one of these files, stop and flag it — the human decides whether to make that change manually.
 
-## Step 1 — fetch current state
+## Step 1 — fetch current state (per PR)
 
-Run these in parallel (substitute the resolved PR number for `<PR>`):
+Repeat Steps 1–5 for each PR in the watch list. For the PR being processed, run these in parallel (substitute its number for `<PR>`):
 
 - `gh pr view <PR> --json number,headRefName,state,isDraft,mergeable,mergeStateStatus,reviews,reviewDecision,author,url,statusCheckRollup`
 - `gh api repos/{owner}/{repo}/pulls/<PR>/comments --paginate` (inline review comments on the diff)
@@ -61,9 +63,10 @@ From the results determine:
 
 ## Step 2 — if nothing to do, sleep
 
-If there are no unaddressed trusted comments, no failing checks to attempt, AND something is still pending (required review missing, or checks still in progress):
+After processing every PR in the watch list: if no PR has unaddressed trusted comments or fixable failing checks, but at least one PR is still pending (required review missing, or checks still in progress):
 
-- Call `ScheduleWakeup` with `delaySeconds=180`, `reason="waiting on PR #<PR> reviews/checks"`, and `prompt="/wait-for-review <PR>"` (the resolved PR number) so this command runs again in 3 minutes.
+- Drop from the list any PR that is now fully done (merged, or auto-merge queued).
+- Call `ScheduleWakeup` with `delaySeconds=180`, `reason="waiting on PRs #<remaining list> reviews/checks"`, and `prompt="/wait-for-review <space-separated remaining PR numbers>"` so this command runs again in 3 minutes for the PRs still being watched.
 - Then stop this turn. Do not poll in a tight loop.
 
 ## Step 3 — if there are unaddressed trusted comments, address them one at a time
@@ -110,7 +113,7 @@ Never rebase. Never force-push. Conflict resolution is out of scope for this com
 
 ## Step 5 — stopping condition and auto-merge
 
-Stop (do not call `ScheduleWakeup`) when all of these are true:
+Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review.
 - If the repo uses CodeRabbit, CodeRabbit has posted a review.
@@ -134,6 +137,8 @@ If `sbfnk` reviewed but didn't approve, or the PR is not mergeable, or there's a
 
 - Do NOT mark ready. Do NOT merge.
 - Post a summary comment noting what was addressed and what still needs human attention (changes requested, conflict, failed checks, untrusted comments skipped).
+
+**Across the watch list:** only end the turn without scheduling a wakeup when *every* watched PR is done. If any PR is still pending, reschedule per Step 2 with the PRs that remain.
 
 ## Rules
 
