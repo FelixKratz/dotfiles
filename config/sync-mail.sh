@@ -11,7 +11,7 @@ trap "rmdir '$LOCKDIR'" EXIT
 channels=$(/opt/homebrew/bin/yq -r '.accounts[].name' ~/.config/email/accounts.yaml | grep -vE '^(work|princeton)$')
 
 for channel in $channels; do
-    /opt/homebrew/bin/timeout 120 /opt/homebrew/bin/mbsync "$channel" &
+    /opt/homebrew/bin/timelimit -t 120 /opt/homebrew/bin/mbsync "$channel" &
 done
 wait
 
