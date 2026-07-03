@@ -167,6 +167,14 @@ run = 'move-node-to-workspace 4'
 if.app-name-regex-substring = '^Google Chrome$'
 run = 'move-node-to-workspace 4'
 
+# Zen dialogs (Save/Open panels) have empty accessibility titles; moving them
+# to workspace 4 strands them away from their parent window, which then looks
+# frozen. Float them where they appear instead.
+[[on-window-detected]]
+if.app-name-regex-substring = '^Zen$'
+if.window-title-regex-substring = '^$'
+run = 'layout floating'
+
 [[on-window-detected]]
 if.app-name-regex-substring = '^Zen$'
 run = 'move-node-to-workspace 4'
