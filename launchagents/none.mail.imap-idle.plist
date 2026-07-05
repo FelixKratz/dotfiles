@@ -6,7 +6,7 @@
 	<string>none.mail.imap-idle</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>__HOME__/go/bin/goimapnotify</string>
+		<string>__HOME__/.local/bin/goimapnotify</string>
 	</array>
 	<key>StandardOutPath</key>
 	<string>__HOME__/.log/goimapnotify.log</string>
