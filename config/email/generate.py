@@ -248,8 +248,9 @@ def _mu4e_bookmark_lines(acc):
 def generate_mail_launchagents(config):
     """Return {filename: plist content} for each non-smtp-only account.
 
-    These launchagents poll the account's inbox every 5 minutes via
-    `getmail.sh <account>`. The account name is the canonical key.
+    These launchagents poll the account every 15 minutes via
+    `getmail.sh <account>`, as a backstop for the goimapnotify IMAP IDLE
+    agent, which only watches INBOX. The account name is the canonical key.
     """
     home = str(Path.home())
     out = {}
@@ -266,7 +267,7 @@ def generate_mail_launchagents(config):
     <array>
         <string>/opt/homebrew/bin/timelimit</string>
         <string>-t</string>
-        <string>120</string>
+        <string>600</string>
         <string>{home}/.local/bin/getmail.sh</string>
         <string>{name}</string>
     </array>
@@ -275,7 +276,7 @@ def generate_mail_launchagents(config):
     <key>StandardErrorPath</key>
     <string>{home}/.log/getmail.err</string>
     <key>StartInterval</key>
-    <integer>300</integer>
+    <integer>900</integer>
     <key>LimitLoadToSessionType</key>
     <string>Aqua</string>
 </dict>
