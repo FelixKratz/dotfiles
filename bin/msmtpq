@@ -4,4 +4,18 @@ export MSMTP=/opt/homebrew/bin/msmtp
 export MSMTPQ_Q=~/.msmtpq
 export MSMTPQ_LOG=~/.log/msmtpq.log
 export EMAIL_QUEUE_QUIET=t
-exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq "$@"
+
+# make_id in msmtp >= 1.8.33 breaks under macOS bash 3.2: `local -i INC`
+# counts as set, so ${INC+-} appends a stray dash to the queue filename.
+# The mail is then written to <id>-.mail while the touched <id>.mail stays
+# empty, and after each successful send the leftover empty pair makes the
+# queue flush (and thus msmtpq) exit 64. Patch to ${INC:+-}, which expands
+# empty for an empty INC, in a cached copy and run that.
+SRC=/opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq
+CACHE=~/.cache/msmtpq/msmtpq-patched
+if [ ! -f "$CACHE" ] || [ "$SRC" -nt "$CACHE" ]; then
+  mkdir -p "$(dirname "$CACHE")"
+  sed 's/{INC+-}/{INC:+-}/g' "$SRC" > "$CACHE" || exit 1
+  chmod +x "$CACHE"
+fi
+exec bash "$CACHE" "$@"

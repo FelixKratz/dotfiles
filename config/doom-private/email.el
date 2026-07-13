@@ -157,6 +157,12 @@
 (require 'notmuch)
 
 (after! notmuch
+  ;; Doom's notmuch module sets `message-send-mail-function' to the
+  ;; synchronous `message-send-mail-with-sendmail' when notmuch loads,
+  ;; clobbering the async sender configured in `after! message' above.
+  ;; Reassert it here, which runs after the module's config.
+  (setq message-send-mail-function #'sf/send-mail-async)
+
   (setq browse-url-browser-function #'browse-url-default-macosx-browser)
 
   (defun sf/notmuch-folder-list ()
