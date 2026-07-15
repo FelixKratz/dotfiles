@@ -65,9 +65,9 @@ From the results determine:
 
 Before waiting on external reviewers, post your own review of the PR:
 
-1. Check whether the pass has already run: look in the PR conversation comments for a marker comment containing `claude-review-pass` posted by the authenticated `gh` user (`gh api user -q .login`). If present, skip this step.
-2. Otherwise: check out the PR branch (`gh pr checkout <PR>`), then invoke the `code-review` skill with args `--comment` so findings are posted as inline comments on the PR.
-3. Afterwards post a marker comment on the PR: `claude-review-pass: reviewed <head-sha>, <N> findings posted` (or "no findings").
+1. Check whether the pass has already run — skip this step if ANY of these hold: the PR carries the `claude-reviewed` label (`gh pr view <PR> --json labels`); `sbfnk-bot` has already posted inline review comments on this PR (`gh api repos/{owner}/{repo}/pulls/<PR>/comments`); or you have already run the pass earlier in this session. Do NOT post a top-level marker comment.
+2. Otherwise: check out the PR branch (`gh pr checkout <PR>`), then invoke the `code-review` skill with args `--comment` so findings are posted as inline comments on the diff.
+3. After the pass completes, tag the PR so a later stateless wake-up can tell it ran even when there were no findings: `gh label create claude-reviewed --color BFD4F2 --description "Reviewed by the wait-for-review loop" 2>/dev/null; gh pr edit <PR> --add-label claude-reviewed`. This label is bookkeeping, not a trust signal — anyone with triage access can remove it, but the only consequence is a benign re-review (never a code change, approval, or merge), so its removability is harmless. If adding the label is blocked or fails, do not hard-fail — continue; the pass simply re-runs harmlessly next wake-up.
 4. Findings posted this way come from `sbfnk-bot` (the account this loop authenticates as), which is on the trusted list — on subsequent passes through Step 3, address each one like any other trusted comment (fix with a commit, or reply explaining why no change is needed).
 
 Run this pass once per PR, not once per push, so you don't end up reviewing your own review fixes indefinitely.
@@ -128,7 +128,7 @@ Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review (comments from `sbfnk-bot` — this loop's own output — do not count towards this).
 - If the repo uses CodeRabbit: CodeRabbit has posted a review, OR more than 60 minutes have passed since the PR's head commit was pushed without one (its free tier queues reviews when rate-limited, so a review that hasn't arrived within the hourly window isn't coming). Judge this from the head commit's committer timestamp. When proceeding without CodeRabbit, note it in the summary.
-- The Step 1b Claude review pass has run (marker comment present).
+- The Step 1b Claude review pass has run (the `claude-reviewed` label is present, or sbfnk-bot has posted inline review comments on the diff).
 - All unaddressed trusted comments have been addressed.
 - No unresolved merge conflict (Step 4).
 - No unaddressable failing checks and no checks still in progress (Step 3b). If checks are still running, keep polling.
@@ -143,12 +143,12 @@ If both are true:
 - If the PR is a draft (`isDraft: true`), mark it ready: `gh pr ready <PR>`.
 - Queue the auto-merge: `gh pr merge <PR> --auto --delete-branch` (no merge-strategy flag — use the repo default).
 - `--auto` waits for required checks to pass before merging, so you don't need to verify CI yourself.
-- Post the summary comment noting "auto-merge queued".
+- Report "auto-merge queued" in your end-of-turn message to the user (do NOT post a PR comment).
 
 If `sbfnk` reviewed but didn't approve, or the PR is not mergeable, or there's a conflict from Step 4:
 
 - Do NOT mark ready. Do NOT merge.
-- Post a summary comment noting what was addressed and what still needs human attention (changes requested, conflict, failed checks, untrusted comments skipped).
+- Surface what was addressed and what still needs human attention (changes requested, conflict, failed checks, untrusted comments skipped) in your end-of-turn message to the user — do NOT post it as a PR comment.
 
 **Across the watch list:** only end the turn without scheduling a wakeup when *every* watched PR is done. If any PR is still pending, reschedule per Step 2 with the PRs that remain.
 
@@ -162,4 +162,5 @@ If `sbfnk` reviewed but didn't approve, or the PR is not mergeable, or there's a
 - One commit per addressed comment. Do not squash or batch fixes across comments.
 - If a comment is ambiguous or you're uncertain whether it needs a code change, reply asking for clarification rather than guessing.
 - Do not respond to conversation comments that aren't tied to specific review lines unless they are clearly addressed to you. Focus on inline review comments.
+- Never post top-level PR or issue conversation comments (no `gh pr comment`, no `gh api .../issues/<PR>/comments` POST, no marker or summary comments). Only ever post inline review comments on the diff (Step 1b) and inline replies to existing trusted threads (Step 3, via `-F in_reply_to`). Report all status, summaries, and merge outcomes to the user in your end-of-turn message instead.
 - British English in all replies and commit messages.
