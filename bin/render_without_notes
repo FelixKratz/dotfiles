@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Build both variants of a Quarto reveal.js deck:
+#
+#   <base>_full.html  — full render, WITH speaker notes
+#                       (present from this locally; stash as an unlinked remote
+#                        backup in case the laptop dies; delete after the talk)
+#   <base>.html       — notes stripped (the public / QR'd copy)
+#
+#   Usage:  render_without_notes <deck.qmd>
+#
+# Strips every  ::: {.notes} ... :::  block; leaves other fenced divs intact.
+set -euo pipefail
+
+src="${1:?usage: render_without_notes <deck.qmd>}"
+base="${src%.qmd}"
+
+# 1. full render (with notes) -> <base>.html, kept as <base>_full.html
+quarto render "$src" --to revealjs
+cp "${base}.html" "${base}_full.html"
+
+# 2. notes-stripped render -> overwrite <base>.html
+tmp="${base}.nonotes.qmd"
+awk '
+  /^:::.*\.notes/            { skip=1; next }   # opening ::: {.notes}
+  skip && /^:::[[:space:]]*$/ { skip=0; next }  # its closing :::
+  skip                      { next }           # drop everything in between
+  { print }
+' "$src" > "$tmp"
+quarto render "$tmp" --to revealjs >/dev/null
+mv "${base}.nonotes.html" "${base}.html"
+rm -f "$tmp"
+
+echo "Wrote:"
+echo "  ${base}_full.html  — full, with notes (present locally / remote backup, delete after)"
+echo "  ${base}.html       — notes stripped (publish this; QR points here)"
