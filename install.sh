@@ -55,6 +55,13 @@ if [[ "$OS" == "Darwin" ]]; then
   brew tap homebrew/autoupdate
   brew autoupdate start --upgrade
 
+  # tmux-urlview looks for a `urlview`/`extract_url` binary by name; point it at
+  # urlscan (the maintained replacement) via a symlink in Homebrew's bin (always
+  # on PATH on macOS).
+  if command -v urlscan &>/dev/null; then
+    ln -sf "$(command -v urlscan)" "$(brew --prefix)/bin/urlview"
+  fi
+
   if [[ "$PROFILE" != "minimal" ]]; then
     echo "Installing full desktop packages..."
     run_onchange brewfile-full "$DOTFILES/Brewfile.full" brew bundle --file="$DOTFILES/Brewfile.full"
