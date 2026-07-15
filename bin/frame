@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Frame an image in the style of Keynote's bottom-right picture style:
+# white matte border with a soft "lifted paper" shadow along the bottom.
+#
+# Usage:
+#   frame input.png [output.png]   # file in, file out (default: input-framed.png)
+#   frame                          # clipboard in, clipboard out
+#   frame -o output.png            # clipboard in, file out
+set -euo pipefail
+
+usage() {
+  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-0}"
+}
+
+output=""
+while getopts "o:h" opt; do
+  case $opt in
+    o) output=$OPTARG ;;
+    h) usage ;;
+    *) usage 1 ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+from_clipboard=false
+if [[ $# -ge 1 ]]; then
+  input=$1
+  [[ -z $output && $# -ge 2 ]] && output=$2
+  [[ -z $output ]] && output="${input%.*}-framed.png"
+else
+  from_clipboard=true
+  input=$tmpdir/clipboard.png
+  pngpaste "$input" || { echo "frame: no image on clipboard" >&2; exit 1; }
+fi
+
+# All sizes scale with image width so the frame looks the same at any resolution.
+read -r matte curl_h curl_blur curl_lift margin amb_blur amb_off <<< "$(magick "$input" -format \
+  '%[fx:round(max(w*0.047,10))] %[fx:round(max(w*0.028,6))] %[fx:max(w*0.01,2)] %[fx:round(max(w*0.012,3))] %[fx:round(max(w*0.06,14))] %[fx:max(w*0.006,1)] %[fx:max(w*0.002,0.5)]' info:)"
+
+magick "$input" -bordercolor white -border "$matte" +repage "$tmpdir/card.png"
+card_w=$(magick identify -format %w "$tmpdir/card.png")
+card_h=$(magick identify -format %h "$tmpdir/card.png")
+
+# Shadow bowed with an arc so it hangs lower at the corners, as if the
+# page is lifted in the middle.
+magick -size "$((card_w - margin / 3))x${curl_h}" xc:black \
+  -virtual-pixel transparent -distort Arc 12 -blur "0x${curl_blur}" +repage \
+  -channel A -evaluate multiply 0.55 +channel "$tmpdir/curl.png"
+
+magick -size "$((card_w + 2 * margin))x$((card_h + 2 * margin))" xc:white \
+  "$tmpdir/curl.png" -gravity south -geometry "+0+$((margin - curl_lift))" -composite \
+  \( "$tmpdir/card.png" \
+     \( +clone -background black -shadow "25x${amb_blur}+0+${amb_off}" \) \
+     +swap -background none -layers merge +repage \) \
+  -gravity center -composite "$tmpdir/framed.png"
+
+if [[ -n $output ]]; then
+  cp "$tmpdir/framed.png" "$output"
+  echo "$output"
+elif $from_clipboard; then
+  osascript -e "set the clipboard to (read (POSIX file \"$tmpdir/framed.png\") as «class PNGf»)"
+  echo "framed image copied to clipboard"
+fi
