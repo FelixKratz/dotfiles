@@ -83,13 +83,13 @@ elif [[ "$OS" == "Linux" ]]; then
   # Linux Installation
   if command -v apt-get &>/dev/null; then
     sudo apt-get update
-    sudo apt-get install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx
+    sudo apt-get install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan
     [[ "$PROFILE" != "minimal" ]] && sudo apt-get install -y emacs isync mu4e msmtp openconnect
   elif command -v dnf &>/dev/null; then
-    sudo dnf install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx
+    sudo dnf install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan
     [[ "$PROFILE" != "minimal" ]] && sudo dnf install -y emacs isync maildir-utils msmtp openconnect
   elif command -v pacman &>/dev/null; then
-    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx
+    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx urlscan
     [[ "$PROFILE" != "minimal" ]] && sudo pacman -S --noconfirm emacs isync mu msmtp openconnect
   else
     echo "Warning: Unknown package manager. Please install packages manually."
@@ -99,6 +99,13 @@ elif [[ "$OS" == "Linux" ]]; then
   if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     echo "Installing tmux plugin manager..."
     git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+  fi
+
+  # tmux-urlview looks for a `urlview`/`extract_url` binary by name; point it at
+  # urlscan (the maintained replacement) via a symlink on PATH.
+  if command -v urlscan &>/dev/null; then
+    mkdir -p $HOME/.local/bin
+    ln -sf "$(command -v urlscan)" $HOME/.local/bin/urlview
   fi
 
   mkdir -p $HOME/.log
