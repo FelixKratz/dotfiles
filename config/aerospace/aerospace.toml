@@ -88,6 +88,17 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     ctrl-shift-8 = 'move-node-to-workspace 8'
     ctrl-shift-9 = 'move-node-to-workspace 9'
 
+    # Move window to workspace AND follow it there
+    ctrl-alt-1 = 'move-node-to-workspace --focus-follows-window 1'
+    ctrl-alt-2 = 'move-node-to-workspace --focus-follows-window 2'
+    ctrl-alt-3 = 'move-node-to-workspace --focus-follows-window 3'
+    ctrl-alt-4 = 'move-node-to-workspace --focus-follows-window 4'
+    ctrl-alt-5 = 'move-node-to-workspace --focus-follows-window 5'
+    ctrl-alt-6 = 'move-node-to-workspace --focus-follows-window 6'
+    ctrl-alt-7 = 'move-node-to-workspace --focus-follows-window 7'
+    ctrl-alt-8 = 'move-node-to-workspace --focus-follows-window 8'
+    ctrl-alt-9 = 'move-node-to-workspace --focus-follows-window 9'
+
     # Toggle back to previous workspace
     alt-tab = 'workspace-back-and-forth'
 
