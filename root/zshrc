@@ -68,11 +68,12 @@ _tmux_title_precmd() {
     name=${(%):-%1~}  # current dir
   fi
   if [[ -n "$TMUX" ]]; then
-    # Only rename if this pane is the active one, to avoid races between panes
-    local active_pane
-    active_pane=$(tmux display-message -p '#{pane_id}' 2>/dev/null)
-    if [[ "$TMUX_PANE" == "$active_pane" ]]; then
-      tmux rename-window "$name" 2>/dev/null
+    # Only rename if this pane is the active one *of its own window* (avoids
+    # panes racing over the name) and target that window explicitly, so a shell
+    # in a background window still renames its own tab rather than the one on
+    # screen.
+    if [[ $(tmux display-message -p -t "$TMUX_PANE" '#{pane_active}' 2>/dev/null) == 1 ]]; then
+      tmux rename-window -t "$TMUX_PANE" "$name" 2>/dev/null
     fi
   else
     print -Pn "\E]0;${name}\a"
