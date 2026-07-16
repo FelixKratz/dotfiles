@@ -7,6 +7,7 @@
 brew "git"
 brew "wget"
 brew "tmux"
+brew "urlscan"
 brew "ripgrep"
 brew "gh"
 brew "jq"
