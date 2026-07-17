@@ -30,6 +30,7 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
 defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 defaults write com.apple.finder ShowStatusBar -bool false
+defaults write com.apple.finder FXRemoveOldTrashItems -bool true
 defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool YES
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
 defaults write com.freron.MailMate MmMessagesOutlineMoveStrategy -string "unreadOrPrevious"

@@ -212,3 +212,41 @@ path=("$HOME/.juliaup/bin" $path)
 export PATH
 
 # <<< juliaup initialize <<<
+
+# yazi wrapper: on quit, cd to the directory you navigated to (q keeps it, Q discards)
+y() {
+  local cwd_file cwd
+  cwd_file="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$cwd_file"
+  if cwd="$(command cat -- "$cwd_file")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    builtin cd -- "$cwd"
+  fi
+  command rm -f -- "$cwd_file"
+}
+
+# rm → Trash on interactive shells, when a trash backend exists: macOS's
+# /usr/bin/trash, trash-cli's trash-put, or `gio trash` (Linux/glib). Where
+# none exists (e.g. HPC), rm stays /bin/rm. rm-style flags (-r/-f/-i/…) are
+# dropped — trashing is recursive and prompt-free anyway. Use `command rm`
+# for a real, permanent remove.
+if [[ "$OSTYPE" == darwin* && -x /usr/bin/trash ]]; then
+  _rm_trash() { /usr/bin/trash "$@" }
+elif command -v trash-put >/dev/null 2>&1; then
+  _rm_trash() { trash-put -- "$@" }
+elif command -v gio >/dev/null 2>&1; then
+  _rm_trash() { gio trash -- "$@" }
+fi
+if (( $+functions[_rm_trash] )); then
+  rm() {
+    local -a paths
+    local arg
+    for arg in "$@"; do
+      [[ "$arg" == -* ]] || paths+=("$arg")
+    done
+    if (( ${#paths} == 0 )); then
+      print -u2 "rm→trash: no paths given (flags are ignored; use \`command rm\` for the real rm)"
+      return 1
+    fi
+    _rm_trash "${paths[@]}"
+  }
+fi

@@ -1,0 +1,12 @@
+# yazi configuration — defaults are sensible; only overrides live here
+# full reference: https://yazi-rs.github.io/docs/configuration/yazi
+
+[mgr]
+sort_by = "natural"
+sort_dir_first = true
+linemode = "size"
+show_symlink = true
+
+[preview]
+max_width = 1200
+max_height = 1800

@@ -90,16 +90,41 @@ elif [[ "$OS" == "Linux" ]]; then
   # Linux Installation
   if command -v apt-get &>/dev/null; then
     sudo apt-get update
-    sudo apt-get install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan
+    sudo apt-get install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan trash-cli unzip
     [[ "$PROFILE" != "minimal" ]] && sudo apt-get install -y emacs isync mu4e msmtp openconnect
   elif command -v dnf &>/dev/null; then
-    sudo dnf install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan
+    sudo dnf install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan trash-cli unzip
     [[ "$PROFILE" != "minimal" ]] && sudo dnf install -y emacs isync maildir-utils msmtp openconnect
   elif command -v pacman &>/dev/null; then
-    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx urlscan
+    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx urlscan trash-cli unzip yazi
     [[ "$PROFILE" != "minimal" ]] && sudo pacman -S --noconfirm emacs isync mu msmtp openconnect
   else
     echo "Warning: Unknown package manager. Please install packages manually."
+  fi
+
+  # yazi isn't in the Debian/Ubuntu/Fedora repos — install the static musl
+  # binary from the latest GitHub release into ~/.local/bin (skipped where a
+  # package provided it, e.g. pacman).
+  if ! command -v yazi &>/dev/null; then
+    echo "Installing yazi from GitHub releases..."
+    YAZI_TMP=$(mktemp -d)
+    if curl -fsSL -o "$YAZI_TMP/yazi.zip" \
+        "https://github.com/sxyazi/yazi/releases/latest/download/yazi-$(uname -m)-unknown-linux-musl.zip" \
+        && unzip -q "$YAZI_TMP/yazi.zip" -d "$YAZI_TMP"; then
+      mkdir -p $HOME/.local/bin
+      install "$YAZI_TMP"/yazi-*/yazi "$YAZI_TMP"/yazi-*/ya $HOME/.local/bin/
+    else
+      echo "Warning: yazi install failed — see https://github.com/sxyazi/yazi/releases"
+    fi
+    rm -rf "$YAZI_TMP"
+  fi
+
+  # Auto-empty trash items older than 30 days (mirrors macOS Finder's
+  # FXRemoveOldTrashItems setting); trash-empty comes with trash-cli.
+  if command -v trash-empty &>/dev/null && command -v crontab &>/dev/null; then
+    if ! crontab -l 2>/dev/null | grep -q trash-empty; then
+      (crontab -l 2>/dev/null; echo "@daily $(command -v trash-empty) -f 30") | crontab -
+    fi
   fi
 
   # Install tpm (tmux plugin manager)
