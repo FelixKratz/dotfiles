@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# org-roam-sync — commit local changes, rebase onto the remote, push.
+# Cross-platform (Linux/macOS). Scheduled via cron (Linux) or launchd (macOS).
+# Override the repo with ORG_ROAM_DIR / branch with ORG_ROAM_BRANCH.
+set -uo pipefail
+
+# Schedulers start with a minimal PATH; make sure git and friends are found.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+REPO="${ORG_ROAM_DIR:-$HOME/org-roam}"
+BRANCH="${ORG_ROAM_BRANCH:-main}"
+
+log() { echo "$(date '+%F %T') $*"; }
+
+cd "$REPO" 2>/dev/null || { log "repo not found: $REPO"; exit 1; }
+
+# Single-instance lock: flock on Linux, mkdir fallback on macOS (no flock).
+LOCK="${TMPDIR:-/tmp}/org-roam-sync.lock"
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK"
+  flock -n 9 || { log "another sync is running, skipping"; exit 0; }
+else
+  mkdir "$LOCK" 2>/dev/null || { log "another sync is running, skipping"; exit 0; }
+  trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+fi
+
+# 1. Commit local changes (tracked and new files) if there are any.
+if [ -n "$(git status --porcelain)" ]; then
+  git add -A
+  git commit -q -m "Auto-sync $(hostname -s) $(date '+%F %T')" && log "committed local changes"
+fi
+
+# 2. Rebase onto the remote; abort cleanly on conflict so the tree stays sane.
+git fetch -q origin "$BRANCH" || { log "fetch failed"; exit 1; }
+if ! git rebase -q "origin/$BRANCH"; then
+  git rebase --abort
+  log "CONFLICT rebasing onto origin/$BRANCH — aborted, resolve manually"
+  exit 1
+fi
+
+# 3. Push if we have unpushed commits.
+if [ -n "$(git log "origin/$BRANCH..$BRANCH" --oneline 2>/dev/null)" ]; then
+  git push -q origin "$BRANCH" && log "pushed"
+fi
