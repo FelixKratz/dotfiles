@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Mint a short-lived installation token for the sbfnk-review-bot GitHub App,
+# so PR review findings post as sbfnk-review-bot[bot] instead of sbfnk-bot.
+#
+# The app ID is public (visible in the app's URL); the only secret is the
+# private key, which lives outside the repo in ~/.config/sbfnk-review-bot/.
+# Tokens are scoped to pull-request read/write on the given repo and expire
+# after an hour.
+#
+# Usage:
+#   GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api ...
+#
+# Exits 2 if the app is not installed on the repo — callers should fall back
+# to posting as sbfnk-bot.
+set -euo pipefail
+
+app_id=4359973
+key=$HOME/.config/sbfnk-review-bot/key.pem
+
+if [[ $# -ne 1 || $1 != */* ]]; then
+  echo "usage: $(basename "$0") <owner>/<repo>" >&2
+  exit 64
+fi
+repo=$1
+
+if [[ ! -r $key ]]; then
+  echo "private key not found at $key" >&2
+  exit 1
+fi
+
+b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+
+now=$(date +%s)
+header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+payload=$(printf '{"iat":%d,"exp":%d,"iss":%d}' \
+  "$((now - 60))" "$((now + 540))" "$app_id" | b64url)
+signature=$(printf '%s.%s' "$header" "$payload" |
+  openssl dgst -sha256 -sign "$key" -binary | b64url)
+jwt="$header.$payload.$signature"
+
+installation_id=$(curl -sf \
+  -H "Authorization: Bearer $jwt" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/$repo/installation" | jq -r .id) || {
+  echo "sbfnk-review-bot is not installed on $repo" >&2
+  exit 2
+}
+
+curl -sf -X POST \
+  -H "Authorization: Bearer $jwt" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/app/installations/$installation_id/access_tokens" |
+  jq -r .token
