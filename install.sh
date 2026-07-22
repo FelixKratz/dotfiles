@@ -119,6 +119,12 @@ elif [[ "$OS" == "Linux" ]]; then
     rm -rf "$YAZI_TMP"
   fi
 
+  # Let user systemd timers (e.g. org-roam sync) keep running without an active
+  # login session — needed on always-on/headless boxes.
+  if command -v loginctl &>/dev/null; then
+    sudo loginctl enable-linger "$USER" 2>/dev/null || true
+  fi
+
   # Auto-empty trash items older than 30 days (mirrors macOS Finder's
   # FXRemoveOldTrashItems setting); trash-empty comes with trash-cli.
   if command -v trash-empty &>/dev/null && command -v crontab &>/dev/null; then

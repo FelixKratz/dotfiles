@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic org-roam git sync (every 15 min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

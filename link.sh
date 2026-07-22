@@ -115,6 +115,23 @@ if [[ "$OS" == "Darwin" ]]; then
   done
 fi
 
+# systemd user timers (the Linux analogue of the launchd agents above). Units
+# reference %h, so they can be symlinked straight from the repo — no $HOME
+# substitution needed.
+if [[ "$OS" == "Linux" ]] && [[ "$PROFILE" != "minimal" ]] && command -v systemctl >/dev/null 2>&1; then
+  mkdir -p $HOME/.config/systemd/user
+  for file in $CODE_DIR/dotfiles/systemd/*; do
+    ln $LN_FLAG $file $HOME/.config/systemd/user/
+    echo "Linked $file → ~/.config/systemd/user/$(basename $file)"
+  done
+  systemctl --user daemon-reload 2>/dev/null
+  # Enable the org-roam sync timer only where the repo is actually present.
+  if [ -d "$HOME/org-roam/.git" ]; then
+    systemctl --user enable --now org-roam-sync.timer 2>/dev/null && \
+      echo "Enabled org-roam-sync.timer"
+  fi
+fi
+
 # Link scripts to ~/.local/bin
 mkdir -p ~/.local/bin ~/.msmtpq
 for file in $CODE_DIR/dotfiles/bin/*; do

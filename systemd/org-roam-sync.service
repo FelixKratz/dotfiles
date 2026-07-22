@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync org-roam notes with the git remote
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/org-roam-sync
