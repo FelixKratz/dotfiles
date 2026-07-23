@@ -250,3 +250,5 @@ if (( $+functions[_rm_trash] )); then
     _rm_trash "${paths[@]}"
   }
 fi
+
+export PATH="$HOME/.local/bin:$PATH"

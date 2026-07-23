@@ -65,6 +65,58 @@ for dir in $CODE_DIR/dotfiles*; do
               echo "Linked $f → ~/.claude/$subdir/$(basename $f)"
             done
           done
+
+          # Antigravity (AGY) config sync: link rules, skills, agents, commands
+          mkdir -p $HOME/.gemini/antigravity-cli/rules $HOME/.gemini/antigravity-cli/skills
+          if [ -e "$file/CLAUDE.md" ]; then
+            ln $LN_FLAG "$file/CLAUDE.md" $HOME/.gemini/antigravity-cli/rules/global_rules.md
+            echo "Linked $file/CLAUDE.md → ~/.gemini/antigravity-cli/rules/global_rules.md"
+          fi
+          if [ -d "$file/skills" ]; then
+            for sk in "$file/skills"/*; do
+              [ -e "$sk" ] || continue
+              ln $LN_FLAG "$sk" $HOME/.gemini/antigravity-cli/skills/
+              echo "Linked $sk → ~/.gemini/antigravity-cli/skills/$(basename $sk)"
+            done
+          fi
+          if [ -d "$file/agents" ]; then
+            for ag in "$file/agents"/*; do
+              [ -e "$ag" ] || continue
+              ag_name="$(basename "$ag" .md)"
+              mkdir -p "$HOME/.gemini/antigravity-cli/skills/$ag_name"
+              ln $LN_FLAG "$ag" "$HOME/.gemini/antigravity-cli/skills/$ag_name/SKILL.md"
+              echo "Linked $ag → ~/.gemini/antigravity-cli/skills/$ag_name/SKILL.md"
+            done
+          fi
+          if [ -d "$file/commands" ]; then
+            for cmd in "$file/commands"/*; do
+              [ -e "$cmd" ] || continue
+              cmd_name="$(basename "$cmd" .md)"
+              mkdir -p "$HOME/.gemini/antigravity-cli/skills/$cmd_name"
+              ln $LN_FLAG "$cmd" "$HOME/.gemini/antigravity-cli/skills/$cmd_name/SKILL.md"
+              echo "Linked $cmd → ~/.gemini/antigravity-cli/skills/$cmd_name/SKILL.md"
+            done
+          fi
+          ;;
+        antigravity)
+          # Antigravity CLI config: link settings, rules, skills, subagents
+          mkdir -p $HOME/.gemini/antigravity-cli
+          for entry in settings.json; do
+            cf="$file/$entry"
+            [ -e "$cf" ] || continue
+            ln $LN_FLAG $cf $HOME/.gemini/antigravity-cli/
+            echo "Linked $cf → ~/.gemini/antigravity-cli/$entry"
+          done
+          for subdir in rules subagents skills; do
+            sd="$file/$subdir"
+            [ -d "$sd" ] || continue
+            mkdir -p "$HOME/.gemini/antigravity-cli/$subdir"
+            for f in $sd/*; do
+              [ -e "$f" ] || continue
+              ln $LN_FLAG "$f" "$HOME/.gemini/antigravity-cli/$subdir/"
+              echo "Linked $f → ~/.gemini/antigravity-cli/$subdir/$(basename $f)"
+            done
+          done
           ;;
         email|doom-private)
           # These configs are split across dotfiles and dotfiles_private:
