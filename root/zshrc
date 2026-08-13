@@ -82,6 +82,21 @@ _tmux_title_precmd() {
 autoload -Uz add-zsh-hook
 add-zsh-hook precmd _tmux_title_precmd
 
+# Ensure agy displays current git repo / directory name in tmux tab (like claude)
+agy() {
+  if [[ -n "$TMUX" ]]; then
+    local name
+    if name=$(git rev-parse --show-toplevel 2>/dev/null); then
+      name=${name:t}
+    else
+      name=${(%):-%1~}
+    fi
+    (sleep 0.2; tmux rename-window -t "$TMUX_PANE" "$name" 2>/dev/null) &!
+  fi
+  command agy "$@"
+}
+
+
 #
 # zsh-autosuggestions
 #

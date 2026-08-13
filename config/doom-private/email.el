@@ -165,6 +165,33 @@
 
   (setq browse-url-browser-function #'browse-url-default-macosx-browser)
 
+  (defun sf/notmuch-print-to-pdf (message)
+    "Save the current notmuch message as a PDF."
+    (let* ((subject (notmuch-prettify-subject
+                     (plist-get (notmuch-show-get-prop :headers message)
+                                :Subject)))
+           (pdf-file (expand-file-name
+                      (read-file-name "Save PDF as: " nil nil nil "message.pdf")))
+           (ps-file (make-temp-file "notmuch-" nil ".ps")))
+      (unwind-protect
+          (let ((ps-print-header nil)
+                (ps-top-margin 72)
+                (ps-left-margin 72)
+                (ps-right-margin 72))
+            (rename-buffer subject t)
+            (ps-print-buffer ps-file)
+            (unless (zerop (call-process "ps2pdf" nil nil nil ps-file pdf-file))
+              (user-error "Failed to convert the message to PDF"))
+            (message "Saved PDF to %s" pdf-file))
+        (delete-file ps-file))))
+
+  (setq notmuch-print-mechanism #'sf/notmuch-print-to-pdf)
+
+  (defun sf/notmuch-print-message-to-pdf ()
+    "Save the current notmuch message as a PDF."
+    (interactive)
+    (notmuch-show-print-message))
+
   (defun sf/notmuch-folder-list ()
     "List maildir folders relative to the notmuch database root."
     (let* ((root (expand-file-name (notmuch-database-path)))
@@ -523,6 +550,7 @@ toggled to a value that never fires in the body."
 
   ;; Evil keybindings — show mode
   (evil-define-key 'normal notmuch-show-mode-map
+    "#" #'sf/notmuch-print-message-to-pdf
     "n" #'notmuch-show-next-open-message
     "p" #'notmuch-show-previous-open-message
     "N" #'notmuch-show-next-thread-show
@@ -961,4 +989,3 @@ toggled to a value that never fires in the body."
               :around #'sf/notmuch-forward-without-org-msg))
 
 ;;; email.el ends here
-
