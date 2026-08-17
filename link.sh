@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./link.sh --full     # full desktop setup
-#   ./link.sh --minimal  # shell, tmux, nvim, starship, claude only
+#   ./link.sh --minimal  # shell, tmux, nvim, emacs, starship, claude only
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
@@ -14,8 +14,8 @@ case "${1:-}" in
   --minimal) PROFILE=minimal ;;
   *)
     echo "Usage: ./link.sh --full|--minimal"
-    echo "  --full     Full desktop setup (emacs, email, window manager, etc.)"
-    echo "  --minimal  Shell, tmux, nvim, starship, claude only"
+    echo "  --full     Full desktop setup (org-mode, email, window manager, etc.)"
+    echo "  --minimal  Shell, tmux, nvim, emacs, starship, claude only"
     exit 1
     ;;
 esac
@@ -23,8 +23,15 @@ esac
 # macOS ln uses -h, GNU ln uses -n to avoid following existing symlinks
 [[ "$OS" == "Darwin" ]] && LN_FLAG="-sfh" || LN_FLAG="-sfn"
 
-# Desktop-only configs (skipped in minimal mode)
-DESKTOP_ONLY=(aerospace alfred doom kitty sketchybar svim email doom-private goimapnotify oauth2ms github-copilot)
+# Record the profile where other tools can read it. Doom checks this to decide
+# whether to load org-mode, notes and mail (see config/doom/profile.el).
+mkdir -p $HOME/.cache/dotfiles
+print -r -- "$PROFILE" > $HOME/.cache/dotfiles/profile
+
+# Desktop-only configs (skipped in minimal mode). `doom` is linked in both
+# profiles — Emacs is there for magit and file editing on servers too — and
+# gates its own desktop modules on the profile marker above.
+DESKTOP_ONLY=(aerospace alfred kitty sketchybar svim email doom-private goimapnotify oauth2ms github-copilot)
 
 mkdir -p $HOME/.config
 [[ "$OS" == "Darwin" ]] && mkdir -p $HOME/Library/LaunchAgents
@@ -192,4 +199,4 @@ for file in $CODE_DIR/dotfiles/bin/*; do
 done
 
 echo "\nDone."
-[[ "$PROFILE" != "minimal" ]] && echo "Run 'doom sync' if Emacs config changed."
+echo "Run 'doom sync' if Emacs config changed."
