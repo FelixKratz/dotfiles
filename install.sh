@@ -2,7 +2,7 @@
 
 # Usage:
 #   ./install.sh --full     # full desktop setup
-#   ./install.sh --minimal  # shell, tmux, nvim, starship, claude only
+#   ./install.sh --minimal  # shell, tmux, nvim, emacs, starship, Claude, Codex
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
@@ -32,8 +32,8 @@ case "${1:-}" in
   --minimal) PROFILE=minimal ;;
   *)
     echo "Usage: ./install.sh --full|--minimal"
-    echo "  --full     Full desktop setup (emacs, email, window manager, etc.)"
-    echo "  --minimal  Shell, tmux, nvim, starship, claude only"
+    echo "  --full     Full desktop setup (org-mode, email, window manager, etc.)"
+    echo "  --minimal  Shell, tmux, nvim, emacs, starship, Claude, Codex"
     exit 1
     ;;
 esac
@@ -62,6 +62,15 @@ if [[ "$OS" == "Darwin" ]]; then
     ln -sf "$(command -v urlscan)" "$(brew --prefix)/bin/urlview"
   fi
 
+  # Emacs is in both profiles. Full desktops get emacs-plus from Brewfile.full;
+  # elsewhere take the plain formula. Both provide bin/emacs, so only install
+  # it where neither is present.
+  if [[ "$PROFILE" == "minimal" ]] \
+     && ! brew list --formula emacs-plus &>/dev/null \
+     && ! brew list --formula emacs &>/dev/null; then
+    brew install emacs
+  fi
+
   if [[ "$PROFILE" != "minimal" ]]; then
     echo "Installing full desktop packages..."
     run_onchange brewfile-full "$DOTFILES/Brewfile.full" brew bundle --file="$DOTFILES/Brewfile.full"
@@ -88,16 +97,22 @@ if [[ "$OS" == "Darwin" ]]; then
 
 elif [[ "$OS" == "Linux" ]]; then
   # Linux Installation
+  # Emacs is in both profiles — servers get it for magit and file editing. Take
+  # the text-only build and drop weak dependencies: the metapackage otherwise
+  # pulls in the GTK build, plus postfix, mailutils and the MySQL/Postgres
+  # client libraries by way of Recommends.
   if command -v apt-get &>/dev/null; then
     sudo apt-get update
     sudo apt-get install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan trash-cli unzip
-    [[ "$PROFILE" != "minimal" ]] && sudo apt-get install -y emacs isync mu4e msmtp openconnect
+    sudo apt-get install -y --no-install-recommends emacs-nox
+    [[ "$PROFILE" != "minimal" ]] && sudo apt-get install -y isync mu4e msmtp openconnect build-essential cmake libtool-bin
   elif command -v dnf &>/dev/null; then
     sudo dnf install -y git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd-find bat gh nodejs npm python3 python3-pip pipx urlscan trash-cli unzip
-    [[ "$PROFILE" != "minimal" ]] && sudo dnf install -y emacs isync maildir-utils msmtp openconnect
+    sudo dnf install -y --setopt=install_weak_deps=False emacs-nox
+    [[ "$PROFILE" != "minimal" ]] && sudo dnf install -y isync maildir-utils msmtp openconnect gcc make cmake libtool
   elif command -v pacman &>/dev/null; then
-    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx urlscan trash-cli unzip yazi
-    [[ "$PROFILE" != "minimal" ]] && sudo pacman -S --noconfirm emacs isync mu msmtp openconnect
+    sudo pacman -Syu --noconfirm git zsh tmux neovim ripgrep jq wget curl htop btop fzf zoxide fd bat github-cli nodejs npm python python-pip python-pipx urlscan trash-cli unzip yazi emacs-nox
+    [[ "$PROFILE" != "minimal" ]] && sudo pacman -S --noconfirm isync mu msmtp openconnect base-devel cmake libtool
   else
     echo "Warning: Unknown package manager. Please install packages manually."
   fi
@@ -146,6 +161,19 @@ elif [[ "$OS" == "Linux" ]]; then
     ln -sf "$(command -v urlscan)" $HOME/.local/bin/urlview
   fi
 
+  # Debian and Ubuntu ship these under different names to avoid clashes with
+  # older packages. Everything that looks for them — doom, fzf integrations,
+  # shell aliases — expects the upstream names, so bridge them on PATH.
+  mkdir -p $HOME/.local/bin
+  for pair in fd:fdfind bat:batcat; do
+    want=${pair%%:*}
+    have=${pair##*:}
+    if ! command -v $want &>/dev/null && command -v $have &>/dev/null; then
+      ln -sf "$(command -v $have)" $HOME/.local/bin/$want
+      echo "Linked $have → ~/.local/bin/$want"
+    fi
+  done
+
   mkdir -p $HOME/.log
 
 else
@@ -154,12 +182,6 @@ else
 fi
 
 # Common installation (macOS and Linux)
-
-if [[ "$PROFILE" != "minimal" ]] && [ ! -d "$HOME/.config/emacs" ]; then
-  echo "Installing Doom Emacs..."
-  git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
-  ~/.config/emacs/bin/doom install
-fi
 
 echo "Cloning dotfiles..."
 [ ! -d "$CODE_DIR/dotfiles" ] && git clone git@github.com:sbfnk/dotfiles.git $CODE_DIR/dotfiles
@@ -176,6 +198,29 @@ echo "Cloning dotfiles..."
 git -C "$CODE_DIR/dotfiles" config core.hooksPath .githooks
 
 $CODE_DIR/dotfiles/link.sh --$PROFILE
+
+# Doom Emacs, in both profiles — the config gates its desktop-only modules on
+# the profile marker link.sh just wrote. Installed after link.sh so ~/.config/
+# doom is already the symlink into this repo and `doom install` picks up the
+# real config instead of writing a template over it.
+if [ -d "$HOME/.emacs.d" ]; then
+  # Emacs prefers ~/.emacs.d over ~/.config/emacs, so a leftover install there
+  # shadows the one we manage.
+  echo "Warning: ~/.emacs.d exists and takes precedence over ~/.config/emacs."
+  echo "         Move it aside to use this Doom config."
+elif [ ! -d "$HOME/.config/emacs" ]; then
+  echo "Installing Doom Emacs..."
+  git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
+  # --force answers the confirmation prompts, which otherwise sit and wait
+  # forever in an unattended run; --no-config keeps `doom install` from writing
+  # a template DOOMDIR over the one link.sh just symlinked.
+  ~/.config/emacs/bin/doom --force install --no-config
+else
+  # Pick up module-list and config.org changes on re-runs (a couple of seconds
+  # when nothing has changed).
+  echo "Syncing Doom Emacs..."
+  ~/.config/emacs/bin/doom --force sync
+fi
 
 # macOS-only post-installation (full mode)
 if [[ "$OS" == "Darwin" ]] && [[ "$PROFILE" != "minimal" ]]; then

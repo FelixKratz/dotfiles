@@ -49,13 +49,36 @@ cd ~/code/dotfiles
 git clone <repo> ~/code/dotfiles
 git clone <private-repo> ~/code/dotfiles_private  # optional
 cd ~/code/dotfiles
-./install.sh --minimal  # just shell essentials (zsh, tmux, nvim, ripgrep, etc.)
+./install.sh --minimal  # shell essentials (zsh, tmux, nvim, ripgrep, ...) + Emacs
 ```
+
+### Profiles
+
+| | `--minimal` | `--full` |
+|---|---|---|
+| shell, tmux, nvim, ripgrep, fzf, yazi, gh | ✅ | ✅ |
+| Emacs + Doom (magit, file editing) | ✅ | ✅ |
+| org-mode, org-roam notes, bibliography, PDF, Jupyter | | ✅ |
+| vterm (needs a C toolchain to build its module) | | ✅ |
+| mail (isync, notmuch, msmtp), openconnect | | ✅ |
+| window manager, terminal, launcher and other GUI configs | | ✅ |
+| systemd timers / launch agents (org-roam sync, mail polling) | | ✅ |
+
+`link.sh` records the profile in `~/.cache/dotfiles/profile`, and
+`config/doom/profile.el` reads it into `sf/doom-full`. `init.el` gates the
+desktop-only Doom modules on that variable and `config.org` gates the matching
+packages, so a `--minimal` machine builds Emacs for magit and editing without
+pulling in org-roam, mail or the writing tools. Machines with no marker file
+are treated as full, so existing setups are unaffected.
+
+On Linux, Emacs installs as the text-only build with weak dependencies
+disabled: the `emacs` metapackage otherwise brings in the GTK build along with
+postfix, mailutils and the MySQL/Postgres client libraries.
 
 ### Forking
 
 `./install.sh --minimal` works without `dotfiles_private` access — you get
-shell, tmux, nvim, ripgrep, etc. For `--full`, populate your own private
+shell, tmux, nvim, ripgrep and Emacs. For `--full`, populate your own private
 overlay first:
 
 - `config/email/accounts.yaml` — copy `config/email/accounts.example.yaml`,
@@ -83,7 +106,9 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
 
 - **zsh** (zim framework) - `root/zshrc`, `root/zimrc`
 - **tmux** - `root/tmux.conf` (C-a prefix, vim-tmux-navigator, tpm plugins)
-- **Doom Emacs** - `config/doom/` (vulpea for org-roam notes)
+- **Doom Emacs** - `config/doom/` (vulpea for org-roam notes). `config.org` is
+  the source: `doom sync` tangles it into `config.el` and `packages.el`, so
+  edit the org file. `profile.el` decides which modules a machine gets.
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in

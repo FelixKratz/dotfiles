@@ -10,6 +10,7 @@ tap "d12frosted/emacs-plus"
 tap "sbfnk/formulae"
 
 # Build / scientific
+brew "cmake"        # builds vterm's native module
 brew "gsl"
 brew "llvm"
 brew "boost"
