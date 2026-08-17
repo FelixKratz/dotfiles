@@ -15,11 +15,18 @@ After editing this file, run =doom sync= to regenerate config.el and packages.el
 These package declarations are tangled to =packages.el=. Doom uses these to
 install packages from MELPA, ELPA, or directly from git repos.
 
-** Theme
+** Profile
+Desktop-only packages are gated on the install profile, so a =--minimal=
+machine does not build org-roam, mail or social clients. See =profile.el=.
 #+begin_src emacs-lisp
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
+(load! "profile" doom-user-dir)
+#+end_src
+
+** Theme
+#+begin_src emacs-lisp
 (package! catppuccin-theme)        ; catppuccin colour theme
 #+end_src
 
@@ -31,21 +38,23 @@ install packages from MELPA, ELPA, or directly from git repos.
 
 ** Org Extensions
 #+begin_src emacs-lisp
-(package! org-ref)                 ; citations and cross-references
-(package! vulpea)                  ; org-roam workflow helpers
-(package! consult-vulpea
-  :recipe (:host github :repo "d12frosted/consult-vulpea"))
+(when sf/doom-full
+  (package! org-ref)               ; citations and cross-references
+  (package! vulpea)                ; org-roam workflow helpers
+  (package! consult-vulpea
+    :recipe (:host github :repo "d12frosted/consult-vulpea")))
 #+end_src
 
 ** Communication
 #+begin_src emacs-lisp
-(package! telega)                  ; Telegram client
-(package! mastodon)                ; Mastodon client
-(package! mu4e-column-faces)       ; coloured columns in mu4e headers
-(package! org-msg)                 ; org-mode email composition
-(package! consult-notmuch)         ; consult interface for notmuch search
-(package! bluesky
-  :recipe (:host github :repo "ahyatt/emacs-bluesky"))
+(when sf/doom-full
+  (package! telega)                ; Telegram client
+  (package! mastodon)              ; Mastodon client
+  (package! mu4e-column-faces)     ; coloured columns in mu4e headers
+  (package! org-msg)               ; org-mode email composition
+  (package! consult-notmuch)       ; consult interface for notmuch search
+  (package! bluesky
+    :recipe (:host github :repo "ahyatt/emacs-bluesky")))
 #+end_src
 
 ** AI Tools
@@ -68,7 +77,16 @@ install packages from MELPA, ELPA, or directly from git repos.
 ** Editing
 #+begin_src emacs-lisp
 (package! evil-embrace)            ; mode-specific surrounds
-(package! atomic-chrome)           ; edit browser text in Emacs
+(when sf/doom-full
+  (package! atomic-chrome))        ; edit browser text in Emacs
+#+end_src
+
+* Profile
+=profile.el= records whether this machine was installed with =--minimal=;
+=init.el= reads it to pick the module list, and the sections below use it to
+skip desktop-only setup. Loading it again here is a no-op.
+#+begin_src emacs-lisp
+(load! "profile" doom-user-dir)
 #+end_src
 
 * Private Configuration
@@ -96,12 +114,16 @@ cause =buffer-file-name= to be nil when Doom's hook fires during =find-file=.
 - =Source Sans 3= - clean sans-serif for prose/variable-pitch
 
 Adjust =:size= if text is too small/large on your display.
+
+Text-only builds (=emacs-nox= on servers) have no fontset support, so the emoji
+fallback is guarded — calling it there aborts the rest of the config.
 #+begin_src emacs-lisp
 (setq doom-font (font-spec :family "Fira Code" :size 12 :weight 'semi-light)
       doom-variable-pitch-font (font-spec :family "Source Sans 3" :size 13))
 
 ;; Emoji font fallback
-(set-fontset-font t 'emoji "Apple Color Emoji" nil 'prepend)
+(when (fboundp 'set-fontset-font)
+  (set-fontset-font t 'emoji "Apple Color Emoji" nil 'prepend))
 #+end_src
 
 ** Theme and UI
@@ -127,6 +149,14 @@ so it works across different themes.
 (custom-set-faces!
   '(mode-line :inherit highlight :box nil)
   '(mode-line-inactive :inherit shadow :box nil))
+#+end_src
+
+** Vterm Module
+vterm builds a native module on first use and asks before doing so, which stalls
+an unattended first start. The build needs =cmake= and a C toolchain, installed
+with the full profile.
+#+begin_src emacs-lisp
+(setq vterm-always-compile-module t)
 #+end_src
 
 ** Vterm Popup
@@ -164,8 +194,11 @@ Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so multi-selecti
 * Email
 Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
 The =t= flag makes this a no-op when doom-private is absent (e.g., on a fork).
+Minimal machines skip it outright: the file requires notmuch, and =t= only
+covers a missing =email.el=, not a failure inside it.
 #+begin_src emacs-lisp
-(load! "email" "~/.config/doom-private" t)
+(when sf/doom-full
+  (load! "email" "~/.config/doom-private" t))
 #+end_src
 
 * Bluesky
@@ -173,12 +206,13 @@ Credentials stored in =~/.authinfo.gpg= as:
 : machine bsky.social login sbfnk.bsky.social password APP-PASSWORD
 Use an [[https://bsky.app/settings/app-passwords][app password]], not your main password.
 #+begin_src emacs-lisp
-(after! bluesky
-  (setq bluesky-handle "sbfnk.bsky.social"
-        bluesky-password (lambda ()
-                           (auth-source-pick-first-password
-                            :host "bsky.social"
-                            :user "sbfnk.bsky.social"))))
+(when sf/doom-full
+  (after! bluesky
+    (setq bluesky-handle "sbfnk.bsky.social"
+          bluesky-password (lambda ()
+                             (auth-source-pick-first-password
+                              :host "bsky.social"
+                              :user "sbfnk.bsky.social")))))
 #+end_src
 
 * ESS (Emacs Speaks Statistics)
@@ -492,7 +526,19 @@ The buffer is still accessible via =SPC b B= (global buffer list).
       :desc "Remove buffer from workspace" "b W" #'persp-remove-buffer)
 #+end_src
 
+* Org and Notes
+Org-mode, the vulpea note-taking workflow and the bibliography setup tangle to
+=notes.el=, which minimal machines skip — they have no =~/org-roam= and no
+=:lang org= module, and these blocks evaluate vulpea variables at load time.
+#+begin_src emacs-lisp
+(when sf/doom-full
+  (load! "notes" doom-user-dir))
+#+end_src
+
 * Org Mode
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle notes.el
+:END:
 ** Directories
 #+begin_src emacs-lisp
 (setq org-directory "~/org")
@@ -632,6 +678,9 @@ Auto-confirm R code execution (don't prompt every time).
 #+end_src
 
 * Bibliography
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle notes.el
+:END:
 ** BibTeX Auto-key Generation
 When inserting references, automatically generate citation keys in format: =AuthorYY_FirstThreeWords=
 #+begin_src emacs-lisp
@@ -802,9 +851,10 @@ then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
 ** Atomic Chrome
 Edit browser text areas with Emacs. Install the "Atomic Chrome" browser extension.
 #+begin_src emacs-lisp
-(use-package! atomic-chrome
-  :commands (atomic-chrome-start-server)
-  :config
-  (setq-default atomic-chrome-extension-type-list '(atomic-chrome))
-  (atomic-chrome-start-server))
+(when sf/doom-full
+  (use-package! atomic-chrome
+    :commands (atomic-chrome-start-server)
+    :config
+    (setq-default atomic-chrome-extension-type-list '(atomic-chrome))
+    (atomic-chrome-start-server)))
 #+end_src
