@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./link.sh --full     # full desktop setup
-#   ./link.sh --minimal  # shell, tmux, nvim, emacs, starship, claude only
+#   ./link.sh --minimal  # shell, tmux, nvim, emacs, starship, Claude, Codex
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
@@ -15,7 +15,7 @@ case "${1:-}" in
   *)
     echo "Usage: ./link.sh --full|--minimal"
     echo "  --full     Full desktop setup (org-mode, email, window manager, etc.)"
-    echo "  --minimal  Shell, tmux, nvim, emacs, starship, claude only"
+    echo "  --minimal  Shell, tmux, nvim, emacs, starship, Claude, Codex"
     exit 1
     ;;
 esac
@@ -35,6 +35,7 @@ DESKTOP_ONLY=(aerospace alfred kitty sketchybar svim email doom-private goimapno
 
 mkdir -p $HOME/.config
 [[ "$OS" == "Darwin" ]] && mkdir -p $HOME/Library/LaunchAgents
+typeset -a CODEX_GUIDANCE
 
 for dir in $CODE_DIR/dotfiles*; do
   if [ -d $dir/config ]; then
@@ -105,6 +106,32 @@ for dir in $CODE_DIR/dotfiles*; do
             done
           fi
           ;;
+        codex)
+          # Codex: combine public and private guidance in source order, then link
+          # user-created skills. Runtime state (auth, history, caches, databases,
+          # and bundled skills) stays local.
+          mkdir -p "$HOME/.codex/skills"
+          [ -f "$file/AGENTS.md" ] && CODEX_GUIDANCE+=("$file/AGENTS.md")
+          if [ -d "$file/skills" ]; then
+            for skill in "$file/skills"/*; do
+              [ -e "$skill" ] || continue
+              ln $LN_FLAG "$skill" "$HOME/.codex/skills/"
+              echo "Linked $skill → ~/.codex/skills/$(basename "$skill")"
+            done
+          fi
+          if [ -f "$file/hooks.json" ]; then
+            ln $LN_FLAG "$file/hooks.json" "$HOME/.codex/hooks.json"
+            echo "Linked $file/hooks.json → ~/.codex/hooks.json"
+          fi
+          if [ -d "$file/hooks" ]; then
+            mkdir -p "$HOME/.codex/hooks"
+            for hook in "$file/hooks"/*; do
+              [ -e "$hook" ] || continue
+              ln $LN_FLAG "$hook" "$HOME/.codex/hooks/"
+              echo "Linked $hook → ~/.codex/hooks/$(basename "$hook")"
+            done
+          fi
+          ;;
         antigravity)
           # Antigravity CLI config: link settings, rules, skills, subagents
           mkdir -p $HOME/.gemini/antigravity-cli
@@ -160,6 +187,42 @@ for dir in $CODE_DIR/dotfiles*; do
     done
   fi
 done
+
+if (( ${#CODEX_GUIDANCE[@]} )); then
+  # Do not write through a legacy symlink from an earlier configuration.
+  [ -L "$HOME/.codex/AGENTS.md" ] && rm "$HOME/.codex/AGENTS.md"
+  {
+    print "# Managed by dotfiles/link.sh; edit its source files, then re-run link.sh."
+    for guidance in "${CODEX_GUIDANCE[@]}"; do
+      print "\n<!-- Source: $guidance -->"
+      cat "$guidance"
+    done
+  } > "$HOME/.codex/AGENTS.md"
+  echo "Generated ~/.codex/AGENTS.md from ${#CODEX_GUIDANCE[@]} source file(s)"
+fi
+
+if [ -e "$HOME/.codex/hooks.json" ]; then
+  codex_config="$HOME/.codex/config.toml"
+  if [ -f "$codex_config" ]; then
+    codex_config_tmp="$(mktemp "$HOME/.codex/config.toml.XXXXXX")" || exit 1
+    if grep -q '^\[features\]$' "$codex_config"; then
+      awk '
+        /^\[features\]$/ { in_features = 1 }
+        /^\[/ && $0 != "[features]" { in_features = 0 }
+        in_features && /^hooks = / { next }
+        { print }
+        /^\[features\]$/ { print "hooks = true" }
+      ' "$codex_config" > "$codex_config_tmp" && mv "$codex_config_tmp" "$codex_config"
+    else
+      cp "$codex_config" "$codex_config_tmp"
+      print '\n[features]\nhooks = true' >> "$codex_config_tmp"
+      mv "$codex_config_tmp" "$codex_config"
+    fi
+  else
+    print '[features]\nhooks = true' > "$codex_config"
+  fi
+  echo "Enabled Codex lifecycle hooks"
+fi
 
 if [[ "$OS" == "Darwin" ]]; then
   mkdir -p $HOME/Library/LaunchAgents

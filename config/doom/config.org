@@ -185,20 +185,106 @@ Allow Emacs to prompt for GPG passphrase in minibuffer.
 #+end_src
 
 ** Completion
-Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so multi-selection works in vertico.
+Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so
+multi-selection works in Vertico. Move to the next candidate after selecting,
+which makes repeated selection quicker.
 #+begin_src emacs-lisp
+(defun sf/embark-select-and-next ()
+  "Toggle the current Embark candidate and advance to the next one."
+  (interactive)
+  (embark-select)
+  (vertico-next))
+
 (after! embark
-  (define-key vertico-map (kbd "C-;") #'embark-select))
+  (define-key vertico-map (kbd "C-;") #'sf/embark-select-and-next))
 #+end_src
 
 * Email
-Email configuration is in a separate file (in doom-private, generated from accounts.yaml).
-The =t= flag makes this a no-op when doom-private is absent (e.g., on a fork).
-Minimal machines skip it outright: the file requires notmuch, and =t= only
-covers a missing =email.el=, not a failure inside it.
-#+begin_src emacs-lisp
+:PROPERTIES:
+:header-args:emacs-lisp: :tangle mail-config.el
+:END:
+This chapter tangles to =mail-config.el=, which only full machines load, so
+anything added here stays off servers without needing its own guard.
+#+begin_src emacs-lisp :tangle config.el
 (when sf/doom-full
-  (load! "email" "~/.config/doom-private" t))
+  (load! "mail-config" doom-user-dir))
+#+end_src
+
+** Account configuration
+Account data lives in a separate file (in doom-private, generated from
+accounts.yaml). The =t= flag makes this a no-op when doom-private is absent
+(e.g., on a fork).
+#+begin_src emacs-lisp
+(load! "email" "~/.config/doom-private" t)
+#+end_src
+
+** Multiple attachments
+The standard Doom attachment command uses =read-file-name=, whose =RET= action
+returns only the current candidate. In the attachment prompt, make =RET= consume
+all candidates selected with =C-;=. Selecting a directory opens Dired, where
+marked files can be attached with =C-c C-c=.
+#+begin_src emacs-lisp
+(defvar sf/mu4e-selected-attachments nil
+  "Files selected in the active mu4e attachment prompt.")
+
+(defun sf/mu4e-attachment-exit ()
+  "Exit a file prompt with all Embark-selected attachment candidates."
+  (interactive)
+  (if-let* ((selection (embark-selected-candidates))
+            (candidates (cdr selection)))
+      (progn
+        (setq sf/mu4e-selected-attachments
+              (mapcar
+               (lambda (candidate)
+                 (expand-file-name
+                  (substring-no-properties
+                   (if (consp candidate) (car candidate) candidate))
+                  default-directory))
+               candidates))
+        (exit-minibuffer))
+    (vertico-exit)))
+
+(defun sf/mu4e-attach-files ()
+  "Attach one file or every file selected with `embark-select'."
+  (interactive)
+  (let ((target-buffer (current-buffer))
+        (sf/mu4e-selected-attachments nil)
+        selected-file)
+    (setq selected-file
+          (minibuffer-with-setup-hook
+              (lambda ()
+                (use-local-map (copy-keymap (current-local-map)))
+                (keymap-local-set "RET" #'sf/mu4e-attachment-exit)
+                (keymap-local-set "C-m" #'sf/mu4e-attachment-exit))
+            (read-file-name "Attach: " nil nil t)))
+    (if (file-directory-p selected-file)
+        (let ((dired-buffer (dired-noselect selected-file)))
+          (with-current-buffer dired-buffer
+            (setq-local dired-mail-buffer target-buffer)
+            (dired-mu4e-attach-ctrl-c-ctrl-c 1))
+          (pop-to-buffer dired-buffer))
+      (dolist (file (or sf/mu4e-selected-attachments (list selected-file)))
+        (unless (file-directory-p file)
+          (with-current-buffer target-buffer
+            (pcase major-mode
+              ('org-msg-edit-mode (org-msg-attach-attach file))
+              ('mu4e-compose-mode (mail-add-attachment file)))))))))
+
+(after! org-msg
+  (map! :map (mu4e-compose-mode-map org-msg-edit-mode-map)
+        "C-c C-a" #'sf/mu4e-attach-files
+        :localleader
+        :desc "attach" "a" #'sf/mu4e-attach-files))
+#+end_src
+
+** Search within viewed messages
+mu4e normally uses =n= and =N= for message navigation. In Evil normal state,
+retain the usual Vim behaviour so they repeat searches started with =/= or =?=.
+#+begin_src emacs-lisp
+(after! mu4e
+  (evil-define-key 'normal mu4e-view-mode-map
+    "n" #'evil-search-next
+    "N" #'evil-search-previous))
 #+end_src
 
 * Bluesky

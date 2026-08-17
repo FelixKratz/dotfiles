@@ -3,6 +3,7 @@ config/doom/config.el
 config/doom/email.el
 config/doom/packages.el
 config/doom/notes.el
+config/doom/mail-config.el
 config/doom/custom.el
 
 # Kitty - theme files modified by ctrl+shift+l/d toggle

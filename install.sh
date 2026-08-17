@@ -2,7 +2,7 @@
 
 # Usage:
 #   ./install.sh --full     # full desktop setup
-#   ./install.sh --minimal  # shell, tmux, nvim, emacs, starship, claude only
+#   ./install.sh --minimal  # shell, tmux, nvim, emacs, starship, Claude, Codex
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
@@ -33,7 +33,7 @@ case "${1:-}" in
   *)
     echo "Usage: ./install.sh --full|--minimal"
     echo "  --full     Full desktop setup (org-mode, email, window manager, etc.)"
-    echo "  --minimal  Shell, tmux, nvim, emacs, starship, claude only"
+    echo "  --minimal  Shell, tmux, nvim, emacs, starship, Claude, Codex"
     exit 1
     ;;
 esac
