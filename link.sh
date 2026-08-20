@@ -119,6 +119,15 @@ for dir in $CODE_DIR/dotfiles*; do
               echo "Linked $skill → ~/.codex/skills/$(basename "$skill")"
             done
           fi
+          if [ -d "$file/prompts" ]; then
+            # Codex exposes ~/.codex/prompts/<name>.md as the slash command /<name>.
+            mkdir -p "$HOME/.codex/prompts"
+            for prompt in "$file/prompts"/*.md; do
+              [ -e "$prompt" ] || continue
+              ln $LN_FLAG "$prompt" "$HOME/.codex/prompts/"
+              echo "Linked $prompt → ~/.codex/prompts/$(basename "$prompt")"
+            done
+          fi
           if [ -f "$file/hooks.json" ]; then
             ln $LN_FLAG "$file/hooks.json" "$HOME/.codex/hooks.json"
             echo "Linked $file/hooks.json → ~/.codex/hooks.json"

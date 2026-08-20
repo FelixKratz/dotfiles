@@ -75,6 +75,22 @@ Repeat until a round comes back clean or you hit the cap:
      end-of-turn summary. A finding you neither fix nor surface is a finding you
      have silently dropped.
 
+   Post those comments as **`sbfnk-review-bot[bot]`**, not as the account you are
+   authenticated as. Mint a token first:
+
+       GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api \
+         repos/{owner}/{repo}/pulls/<PR>/comments \
+         -f body="..." -f commit_id="<head sha>" -f path="..." -F line=N -f side=RIGHT
+
+   The PR is authored by `sbfnk-bot`, so posting review findings from that same
+   account puts the author and the reviewer under one identity — which makes it
+   impossible to tell at a glance whether a comment came from the change or from
+   the critique of it. The separate app identity is the whole reason it exists.
+
+   `gh-review-bot-token` exits 2 when the app is not installed on the repo. If it
+   does, fall back to posting as the authenticated account, and say so in the
+   summary — a silent fallback would look identical to the app having worked.
+
 4. **Push** the round's commits, unless `--dry-run`.
 
 5. **Next round**, with `--since` set to the head SHA from the start of this one.
