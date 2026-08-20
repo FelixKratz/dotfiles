@@ -32,32 +32,38 @@ only inputs.
 
 ## Where the criteria live
 
-The specification comes in two halves, and a review follows both:
+The specification comes in two halves:
 
-- **The repo half** — what to look for in this codebase (its domain, footguns,
-  conventions). Find it in this order:
-  1. `.github/REVIEW.md`
-  2. `AGENTS.md` or `CLAUDE.md`, which may name one
-  3. `.claude/commands/review.md`, if the repo happens to ship one
-- **The org half** — the shared reviewing method (how to scope, the finding bar,
-  reporting and suggestion mechanics, trust). Infer the owner
+- **The org half** (the requirement) — the shared reviewing method: how to scope,
+  the finding bar, reporting and suggestion mechanics, trust. Infer the owner
   (`gh repo view --json owner -q .owner.login`) and fetch that org's `.github`
   repository `REVIEW.md`:
   `gh api repos/<owner>/.github/contents/REVIEW.md -H "Accept: application/vnd.github.raw"`.
-  A 404 means the org publishes no shared spec — use the repo half alone.
+- **The repo half** (optional) — what to look for in *this* codebase: the subtle,
+  repo-specific footguns a cold reviewer would not derive from the code itself.
+  Find it in this order:
+  1. `.github/REVIEW.md`
+  2. `AGENTS.md` or `CLAUDE.md`, which may name one
+  3. `.claude/commands/review.md`, if the repo happens to ship one
 
-Hand the agent **both** files and tell it to follow both: the org half for
-method, the repo half for what to look for here. Do not paste your own review
-criteria over them, and do not fall back to a generic checklist when a spec
-exists — the point is that contributors and maintainers review against the same
-bar. (An existing repo may still carry a full spec, method and all, in its own
+  Many repos have no repo half, and that is fine — generic-language and
+  convention concerns belong to a competent reviewer and the repo's own
+  `CLAUDE.md`, not to a per-repo checklist. A repo half exists only where there
+  is something non-obvious and specific to say.
+
+Hand the agent whichever halves exist and tell it to follow them: the org half
+for method, the repo half (if any) for what to look for here, and the repo's
+`CLAUDE.md` (if any) for its conventions. Do not paste your own review criteria
+over them, and do not fall back to a generic checklist when a spec exists — the
+point is that contributors and maintainers review against the same bar. (An
+older repo may still carry a full spec, method and all, in its own
 `.github/REVIEW.md`; that is fine — the org half just repeats what is already
-there until the repo file is slimmed to its domain half.)
+there.)
 
-**If the repo has no spec of its own** (none of the three above), say so and
-stop. Offer to write one (the socialmixr `.github/REVIEW.md` is a reasonable
-model, and the org `REVIEW.md` supplies the method). A review with no agreed bar
-produces exactly the nit-generation this design exists to avoid.
+**Only if neither half exists** — the `<owner>/.github` `REVIEW.md` 404s *and*
+none of the three repo locations has one — say so and stop. Offer to write the
+org spec (the socialmixr history is a reasonable model). A review with no agreed
+bar at all produces exactly the nit-generation this design exists to avoid.
 
 ## The loop
 

@@ -45,11 +45,14 @@ Denylist (case-insensitive):
 
 The denylist is enforced by you, not by git. If a fix legitimately requires one of these files, stop and flag it — the human decides whether to make that change manually.
 
-## Step 0 — the repo must have a review spec
+## Step 0 — a review spec must exist
 
-Before processing any PR, confirm this repository has a review specification — the file `/review-loop` reviews against. Look, in order, for `.github/REVIEW.md`, then an `AGENTS.md` or `CLAUDE.md` that names one, then `.claude/commands/review.md`.
+Before processing any PR, confirm there is a review specification for `/review-loop` to review against. The spec has two halves and **either one** satisfies this gate:
 
-If none exists, **stop the whole command immediately**. Do not resolve the watch list, enter the per-PR loop, spawn a reviewer, or schedule a wake-up. Report that the repo has no review spec, so PRs cannot be driven to a verified review, and offer to write one (the socialmixr `.github/REVIEW.md` is the model). This check exists because without a spec `/review-loop` stops without publishing a `claude-review` check (Step 1b), so the Step 5 stopping condition can never be met and the loop would otherwise reschedule for ever without saying why.
+- the **org half** — the owner's `.github` repository `REVIEW.md` (`gh api repos/<owner>/.github/contents/REVIEW.md -H "Accept: application/vnd.github.raw"`; infer `<owner>` with `gh repo view --json owner -q .owner.login`), or
+- a **repo half** — `.github/REVIEW.md`, an `AGENTS.md`/`CLAUDE.md` that names one, or `.claude/commands/review.md`.
+
+The repo half is optional; most repos rely on the org half alone, and that is enough. **Only if neither exists**, stop the whole command immediately: do not resolve the watch list, enter the per-PR loop, spawn a reviewer, or schedule a wake-up. Report that there is no review spec, so PRs cannot be driven to a verified review, and offer to write the org spec (the socialmixr history is a model). This check exists because with no spec `/review-loop` stops without publishing a `claude-review` check (Step 1b), so the Step 5 stopping condition can never be met and the loop would otherwise reschedule for ever without saying why.
 
 ## Step 1 — fetch current state (per PR)
 
