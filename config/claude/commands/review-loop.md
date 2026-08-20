@@ -89,21 +89,28 @@ Repeat until a round comes back clean or you hit the cap:
    - **Fix it** — minimal change, targeted at that finding alone. Stage only the
      affected files. Commit with a message describing the fix, not the review
      (`Guard against zero-length input`, not `address review comment 3`). Then
-     reply to the thread with what you changed and the commit SHA, and resolve
-     it — both under the app token, so the whole exchange reads as the reviewer
-     rather than half of it appearing as the PR author:
+     reply to the thread saying what you changed, with the commit SHA — as
+     **`sbfnk-bot`**, the plain authenticated account, because that reply is the
+     author answering the review:
+
+         gh api --method POST repos/{owner}/{repo}/pulls/<PR>/comments \
+           -f body="..." -F in_reply_to=<comment id>
+
+     Then resolve the thread as **`sbfnk-review-bot[bot]`**, because closing a
+     finding is the reviewer's call, not the author's:
 
          GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api graphql \
            -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
            -f id="<thread id>"
 
-     Thread ids come from the `reviewThreads` GraphQL query; the REST comments
-     endpoint does not expose them. Resolving needs only the `pull_requests`
-     write the app already has.
+     So each thread reads as a real exchange: raised by the reviewer, answered
+     and fixed by the author, closed by the reviewer. Thread ids come from the
+     `reviewThreads` GraphQL query; the REST comments endpoint does not expose
+     them. Resolving needs only the `pull_requests` write the app already has.
    - **Push back** — if you disagree, or it needs a decision only the human can
-     make, do not fix it. Reply to the thread with your reasoning and leave it
-     **unresolved**, so it is waiting when the human arrives. Carry it in the
-     end-of-turn summary too.
+     make, do not fix it. Reply to the thread with your reasoning as
+     `sbfnk-bot`, and leave it **unresolved**, so it is waiting when the human
+     arrives. Carry it in the end-of-turn summary too.
 
    Every thread ends either resolved with a commit SHA or open with a reason. A
    finding you neither fix nor answer is one you have silently dropped.
