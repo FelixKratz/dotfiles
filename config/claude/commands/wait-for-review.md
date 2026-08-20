@@ -45,6 +45,12 @@ Denylist (case-insensitive):
 
 The denylist is enforced by you, not by git. If a fix legitimately requires one of these files, stop and flag it — the human decides whether to make that change manually.
 
+## Step 0 — the repo must have a review spec
+
+Before processing any PR, confirm this repository has a review specification — the file `/review-loop` reviews against. Look, in order, for `.github/REVIEW.md`, then an `AGENTS.md` or `CLAUDE.md` that names one, then `.claude/commands/review.md`.
+
+If none exists, **stop the whole command immediately**. Do not resolve the watch list, enter the per-PR loop, spawn a reviewer, or schedule a wake-up. Report that the repo has no review spec, so PRs cannot be driven to a verified review, and offer to write one (the socialmixr `.github/REVIEW.md` is the model). This check exists because without a spec `/review-loop` stops without publishing a `claude-review` check (Step 1b), so the Step 5 stopping condition can never be met and the loop would otherwise reschedule for ever without saying why.
+
 ## Step 1 — fetch current state (per PR)
 
 Repeat Steps 1–5 for each PR in the watch list. For the PR being processed, run these in parallel (substitute its number for `<PR>`):
