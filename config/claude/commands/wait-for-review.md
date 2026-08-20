@@ -103,7 +103,10 @@ has had no automated review and leave it to the human.
 After processing every PR in the watch list: if no PR has unaddressed trusted comments or fixable failing checks, but at least one PR is still pending (required review missing, automated review round still in flight, or checks still in progress):
 
 - Drop from the list any PR that is now fully done (merged, or auto-merge queued).
-- Call `ScheduleWakeup` with `delaySeconds=180`, `reason="waiting on PRs #<remaining list> reviews/checks"`, and `prompt="/wait-for-review <space-separated remaining PR numbers>"` so this command runs again in 3 minutes for the PRs still being watched.
+- Call `ScheduleWakeup` with **all four** of `delaySeconds`, `noop`, `reason` and `prompt`. `noop` is required and easy to forget — omit it and the call fails with `noop is required when stop is not true`, no wake-up is scheduled, and the PR is left unwatched while your summary claims otherwise. Pass `noop=true` when the wake-up found nothing to do, `noop=false` when it acted (pushed a fix, addressed a comment).
+- Set `prompt="/wait-for-review <space-separated remaining PR numbers>"` and `reason="waiting on PRs #<remaining list> reviews/checks"`.
+- Pick `delaySeconds` from what you are actually waiting for: **180** while CI checks are still running, since those settle in minutes. **1800** when the only thing outstanding is `sbfnk`'s review — a human does not arrive on a three-minute cadence, and polling as if they might is pure spend. If you are waiting on both, use the shorter one until the checks finish.
+- Whatever you schedule, say so accurately in the end-of-turn summary. If the call failed, say the loop is **not** running rather than that you will check back.
 - Then stop this turn. Do not poll in a tight loop.
 
 ## Step 3 — if there are unaddressed trusted comments, address them one at a time
