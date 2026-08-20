@@ -137,26 +137,113 @@
 ;; Auto-save drafts to protect against accidental buffer kills
 (setq notmuch-draft-save-plaintext t)
 
-(defun sf/draft-auto-save-setup ()
-  "Arrange for the compose buffer to be saved as a notmuch draft.
+;; `message-set-auto-save-file-name' makes every compose buffer visit a file
+;; under `message-auto-save-directory', so C-x C-s writes there. Keep those
+;; out of the home directory; the notmuch draft is the copy we go looking for.
+(setq message-auto-save-directory "~/.local/state/message-drafts/")
+
+(defvar-local sf/draft-saved-tick nil
+  "Value of `buffer-chars-modified-tick' when the draft was last saved.")
+
+;; Marks the variable special for this file, so the `let' below binds it
+;; dynamically even if message.el has not been loaded at compile time.
+(defvar message-encoded-mail-cache)
+
+(defun sf/notmuch-draft-save ()
+  "Save the compose buffer as a notmuch draft.
 `org-msg-edit-mode' is a major mode, so switching into it runs
 `kill-all-local-variables' and drops message-mode's buffer-local
 `message-encoded-mail-cache'.  Sending then writes the encoded mail to the
 global value, and `notmuch-maildir-setup-message-for-saving' prefers that
-cache over the buffer contents, so every later draft save would store a
-copy of the last sent message.  Restoring the buffer-local binding keeps
-the cache where message-mode expects it."
+cache over the buffer contents, so the draft would be a copy of the last
+sent message."
+  (interactive)
+  (let ((message-encoded-mail-cache nil))
+    (notmuch-draft-save))
+  (setq sf/draft-saved-tick (buffer-chars-modified-tick)))
+
+(defun sf/auto-save-draft ()
+  "Save the draft unless it is unchanged since the last save.
+Each save marks the previous draft deleted, so saving an untouched buffer
+every auto-save tick would leave a trail of files behind."
+  (unless (eq (buffer-chars-modified-tick) sf/draft-saved-tick)
+    (sf/notmuch-draft-save)))
+
+(defun sf/notmuch-compose-save ()
+  "Save the compose buffer to the notmuch database and to its file."
+  (interactive)
+  (sf/notmuch-draft-save)
+  (when buffer-file-name
+    (save-buffer))
+  (message "Draft saved (%s)" (or notmuch-draft-id "no id")))
+
+(defun sf/draft-auto-save-setup ()
+  "Arrange for the compose buffer to be saved as a notmuch draft."
+  ;; Restore the buffer-local binding org-msg-edit-mode killed; see
+  ;; `sf/notmuch-draft-save'.
   (setq-local message-encoded-mail-cache nil)
   (add-hook 'auto-save-hook #'sf/auto-save-draft nil t))
 
-(defun sf/auto-save-draft ()
-  "Save draft silently if buffer has been modified."
-  (when (buffer-modified-p)
-    (let ((message-encoded-mail-cache nil))
-      (notmuch-draft-save))))
-
 (add-hook 'notmuch-message-mode-hook #'sf/draft-auto-save-setup)
 (add-hook 'org-msg-edit-mode-hook #'sf/draft-auto-save-setup)
+
+;;; Resuming messages saved to a file
+
+(defun sf/message-file-directories ()
+  "Directories holding message files saved from compose buffers.
+Older ones predate `message-auto-save-directory' pointing anywhere but home."
+  (seq-filter #'file-directory-p
+              (delete-dups (list (expand-file-name message-auto-save-directory)
+                                 (expand-file-name "~/")))))
+
+(defun sf/message-files ()
+  "Message files saved from compose buffers, newest first."
+  (sort (mapcan (lambda (dir) (directory-files dir t "\\`\\*message\\*-"))
+                (sf/message-file-directories))
+        #'file-newer-than-file-p))
+
+(defun sf/message-file-summary (file)
+  "Describe FILE by its date, subject and recipients."
+  (with-temp-buffer
+    (insert-file-contents file nil 0 4096)
+    (save-restriction
+      (message-narrow-to-headers-or-head)
+      (let ((subject (rfc2047-decode-string
+                      (or (message-fetch-field "subject") "(no subject)")))
+            (names (mapconcat
+                    (lambda (address)
+                      (or (car (mail-extract-address-components address)) address))
+                    (message-tokenize-header
+                     (rfc2047-decode-string (or (message-fetch-field "to") "")))
+                    ", ")))
+        (format "%s  %-40s  %s"
+                (format-time-string
+                 "%Y-%m-%d %H:%M"
+                 (file-attribute-modification-time (file-attributes file)))
+                (truncate-string-to-width subject 40)
+                (truncate-string-to-width names 50))))))
+
+(defun sf/notmuch-resume-message-file (file)
+  "Resume editing the message saved in FILE.
+Compose buffers saved with C-x C-s land in `message-auto-save-directory'
+rather than in the notmuch database, so `notmuch-draft-resume' cannot see
+them.  Saving the resumed buffer stores it as a notmuch draft as well."
+  (interactive
+   (let ((choices (mapcar (lambda (f) (cons (sf/message-file-summary f) f))
+                          (sf/message-files))))
+     (unless choices
+       (user-error "No saved message files"))
+     (list (cdr (assoc (completing-read "Resume message: " choices nil t)
+                       choices)))))
+  (find-file file)
+  (notmuch-message-mode)
+  (when (and (bound-and-true-p org-msg-mode)
+             (save-excursion
+               (message-goto-body)
+               (search-forward org-msg-options nil t)))
+    (org-msg-edit-mode))
+  (message-goto-body)
+  (set-buffer-modified-p nil))
 
 ;; Doom's `company-global-modes' exclusion list has message-mode but not
 ;; org-msg-edit-mode (which derives from org-mode). Without this, company-box
@@ -303,7 +390,8 @@ the cache where message-mode expects it."
 
   (map! :map notmuch-message-mode-map
         "C-c C-f f" #'sf/notmuch-cycle-identity
-        "C-c TAB"   #'notmuch-address-expand-name)
+        "C-c TAB"   #'notmuch-address-expand-name
+        [remap save-buffer] #'sf/notmuch-compose-save)
 
   ;; Address completion via CAPF (works with corfu)
   (setq notmuch-address-command 'internal
@@ -799,6 +887,7 @@ toggled to a value that never fires in the body."
          :desc "Find tree"      "F" #'consult-notmuch-tree
          :desc "Folder"         "d" #'sf/notmuch-search-folder
          :desc "Compose"        "c" #'notmuch-mua-new-mail
+         :desc "Resume file"    "r" #'sf/notmuch-resume-message-file
          :desc "Queue flush"    "q" #'sf/mail-queue-flush))
 
 ) ;; end (after! notmuch)
@@ -982,6 +1071,8 @@ toggled to a value that never fires in the body."
         "C-c C-s" #'sf/insert-signature)
   (map! :map org-msg-edit-mode-map
         "C-c TAB" #'notmuch-address-expand-name)
+  (map! :map org-msg-edit-mode-map
+        [remap save-buffer] #'sf/notmuch-compose-save)
   (map! :map message-mode-map
         "C-c C-s" #'sf/insert-signature)
   (setq message-hidden-headers '("Fcc"))
