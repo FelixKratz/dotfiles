@@ -1,17 +1,21 @@
 Review a change in this repository and report what is worth acting on.
 
-Find the review specification and follow it, in this order:
+Find the review specification, which comes in two halves:
 
-1. `.github/REVIEW.md`
-2. `AGENTS.md` or `CLAUDE.md`, which may name one
-3. `.claude/commands/review.md`, if the repo happens to ship one
+- **The org half** (the method — scoping, the finding bar, reporting, trust).
+  Infer the owner (`gh repo view --json owner -q .owner.login`) and fetch that
+  org's `.github` repository `REVIEW.md`:
+  `gh api repos/<owner>/.github/contents/REVIEW.md -H "Accept: application/vnd.github.raw"`.
+- **The repo half** (optional — the non-obvious traps specific to this codebase):
+  `.github/REVIEW.md`, or a file named by `AGENTS.md` / `CLAUDE.md`. Most repos
+  have none, which is fine: generic language knowledge and stated conventions
+  belong to a competent reviewer and to the repo's own `CLAUDE.md`.
 
-That file is the repository's own standard: what counts as a finding, what to
-look for in this codebase, and what to stay quiet about. Follow it rather than a
-general review checklist, so the review matches what a maintainer here would
-raise. Pass through whatever arguments were given — a PR number, `--since <sha>`
-for a re-review of just the recent commits, `--post` to leave inline comments.
+Follow whichever halves exist, plus the repo's `CLAUDE.md` for its conventions.
 
-**If the repository has no review specification**, say so and stop rather than
-improvising one. Offer to write it: an agreed bar for what counts as a finding
-is what keeps a review from turning into a list of things that are merely true.
+Pass through whatever arguments were given — a PR number, `--since <sha>` for a
+re-review of just the recent commits, `--post` to leave inline comments.
+
+**If neither half exists**, say so and stop rather than improvising a checklist.
+Offer to write the org half: an agreed bar for what counts as a finding is what
+keeps a review from turning into a list of things that are merely true.
