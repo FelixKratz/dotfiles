@@ -90,7 +90,16 @@ Repeat until a round comes back clean or you hit the cap:
      affected files. Commit with a message describing the fix, not the review
      (`Guard against zero-length input`, not `address review comment 3`). Then
      reply to the thread with what you changed and the commit SHA, and resolve
-     it (`gh api graphql` → `resolveReviewThread`).
+     it — both under the app token, so the whole exchange reads as the reviewer
+     rather than half of it appearing as the PR author:
+
+         GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api graphql \
+           -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
+           -f id="<thread id>"
+
+     Thread ids come from the `reviewThreads` GraphQL query; the REST comments
+     endpoint does not expose them. Resolving needs only the `pull_requests`
+     write the app already has.
    - **Push back** — if you disagree, or it needs a decision only the human can
      make, do not fix it. Reply to the thread with your reasoning and leave it
      **unresolved**, so it is waiting when the human arrives. Carry it in the
@@ -102,6 +111,16 @@ Repeat until a round comes back clean or you hit the cap:
 5. **Push** the round's commits, unless `--dry-run`.
 
 6. **Next round**, with `--since` set to the head SHA from the start of this one.
+
+### Tidy up on the way out
+
+When a full pass finally comes back clean, resolve any of your own threads that
+GitHub has since marked **outdated** — the code they pointed at is gone, and the
+pass that just ran read the whole diff and found nothing, so there is nothing
+left for them to be about. Left open they look like outstanding findings.
+
+Only on a clean pass. While findings still stand, an outdated thread may just be
+a fix that moved code around, and resolving it would bury a live point.
 
 ## Record the verdict
 
