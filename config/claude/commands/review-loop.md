@@ -32,20 +32,32 @@ only inputs.
 
 ## Where the criteria live
 
-The repository owns them. Look for a review specification, in this order:
+The specification comes in two halves, and a review follows both:
 
-1. `.github/REVIEW.md`
-2. `AGENTS.md` or `CLAUDE.md`, which may name one
-3. `.claude/commands/review.md`, if the repo happens to ship one
+- **The repo half** — what to look for in this codebase (its domain, footguns,
+  conventions). Find it in this order:
+  1. `.github/REVIEW.md`
+  2. `AGENTS.md` or `CLAUDE.md`, which may name one
+  3. `.claude/commands/review.md`, if the repo happens to ship one
+- **The org half** — the shared reviewing method (how to scope, the finding bar,
+  reporting and suggestion mechanics, trust). Infer the owner
+  (`gh repo view --json owner -q .owner.login`) and fetch that org's `.github`
+  repository `REVIEW.md`:
+  `gh api repos/<owner>/.github/contents/REVIEW.md -H "Accept: application/vnd.github.raw"`.
+  A 404 means the org publishes no shared spec — use the repo half alone.
 
-Tell the agent to follow that file. Do not paste your own review criteria over
-it, and do not fall back to a generic checklist when one exists — the point of
-the file being in the repo is that contributors and maintainers review against
-the same bar.
+Hand the agent **both** files and tell it to follow both: the org half for
+method, the repo half for what to look for here. Do not paste your own review
+criteria over them, and do not fall back to a generic checklist when a spec
+exists — the point is that contributors and maintainers review against the same
+bar. (An existing repo may still carry a full spec, method and all, in its own
+`.github/REVIEW.md`; that is fine — the org half just repeats what is already
+there until the repo file is slimmed to its domain half.)
 
-**If the repo has no review specification**, say so and stop. Offer to write one
-(the socialmixr `.github/REVIEW.md` is a reasonable model). A review with no
-agreed bar produces exactly the nit-generation this design exists to avoid.
+**If the repo has no spec of its own** (none of the three above), say so and
+stop. Offer to write one (the socialmixr `.github/REVIEW.md` is a reasonable
+model, and the org `REVIEW.md` supplies the method). A review with no agreed bar
+produces exactly the nit-generation this design exists to avoid.
 
 ## The loop
 
