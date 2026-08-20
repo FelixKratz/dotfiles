@@ -63,36 +63,74 @@ Repeat until a round comes back clean or you hit the cap:
    changes have compounded. Skip this on round one, which already read
    everything. If the full pass is also clean, stop — the PR is done.
 
-3. **Address each finding, one commit each.** For each, decide:
-   - **Fix it** — minimal change, targeted at that finding alone. Stage only the
-     affected files. Commit with a message describing the fix, not the review
-     (`Guard against zero-length input`, not `address review comment 3`). No PR
-     comment: the commit is the record.
-   - **Push back** — if you disagree, or it needs a decision only the human can
-     make, do not fix it and do not argue with the agent. Post it as an inline
-     comment on the PR for the human, with your reasoning, and carry it in the
-     end-of-turn summary. A finding you neither fix nor surface is a finding you
-     have silently dropped.
-
-   Post those comments as **`sbfnk-review-bot[bot]`**, not as the account you are
-   authenticated as. Mint a token first:
+3. **Post every finding** as an inline comment on the line it concerns, before
+   fixing anything. Post them as **`sbfnk-review-bot[bot]`**, not as the account
+   you are authenticated as:
 
        GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api \
          repos/{owner}/{repo}/pulls/<PR>/comments \
          -f body="..." -f commit_id="<head sha>" -f path="..." -F line=N -f side=RIGHT
 
-   The PR is authored by `sbfnk-bot`, so posting review findings from that same
-   account puts the author and the reviewer under one identity — which makes it
-   impossible to tell at a glance whether a comment came from the change or from
-   the critique of it. The separate app identity is the whole reason it exists.
+   The PR is authored by `sbfnk-bot`, so posting findings from that same account
+   puts author and reviewer under one identity, and you cannot tell at a glance
+   whether a comment came from the change or from the critique of it. Separating
+   them is the whole reason the app exists.
 
-   `gh-review-bot-token` exits 2 when the app is not installed on the repo. If it
-   does, fall back to posting as the authenticated account, and say so in the
-   summary — a silent fallback would look identical to the app having worked.
+   `gh-review-bot-token` exits 2 when the app is not installed on the repo. Then
+   fall back to the authenticated account and say so in the summary — a silent
+   fallback looks identical to the app having worked.
 
-4. **Push** the round's commits, unless `--dry-run`.
+   Post them even when you intend to fix them immediately. The comment is what
+   lets a human see what was caught, judge whether the fix was right, and
+   disagree with one applied on their behalf. A fix with no visible cause is a
+   commit nobody can review.
 
-5. **Next round**, with `--since` set to the head SHA from the start of this one.
+4. **Address each finding, one commit each.** For each thread:
+   - **Fix it** — minimal change, targeted at that finding alone. Stage only the
+     affected files. Commit with a message describing the fix, not the review
+     (`Guard against zero-length input`, not `address review comment 3`). Then
+     reply to the thread with what you changed and the commit SHA, and resolve
+     it (`gh api graphql` → `resolveReviewThread`).
+   - **Push back** — if you disagree, or it needs a decision only the human can
+     make, do not fix it. Reply to the thread with your reasoning and leave it
+     **unresolved**, so it is waiting when the human arrives. Carry it in the
+     end-of-turn summary too.
+
+   Every thread ends either resolved with a commit SHA or open with a reason. A
+   finding you neither fix nor answer is one you have silently dropped.
+
+5. **Push** the round's commits, unless `--dry-run`.
+
+6. **Next round**, with `--since` set to the head SHA from the start of this one.
+
+## Record the verdict
+
+When the loop ends — clean or capped — publish a `claude-review` check run
+against the **current head SHA**, using the app token:
+
+    GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api \
+      repos/{owner}/{repo}/check-runs -X POST \
+      -f name=claude-review -f head_sha="<head sha>" \
+      -f status=completed -f conclusion=success \
+      -f 'output[title]'="No findings" \
+      -f 'output[summary]'="Reviewed clean at <head sha>."
+
+Use `conclusion=success` with "No findings" when a full pass came back clean,
+and `conclusion=neutral` with a title naming the count when you stopped at the
+round cap with findings still open. Never `failure`: nothing is broken, and a red
+check reads as a build problem.
+
+This is what stops `/wait-for-review` re-reviewing the same head on every
+three-minute wake-up. Without it that loop has no way to know the work was done —
+a clean round leaves no commits and no comments, so there is nothing else to
+observe. Publish it even when the loop found nothing; that is exactly the case
+with no other trace.
+
+Check runs can only be created by GitHub Apps, so this needs `sbfnk-review-bot`
+to hold **Checks: read and write** on top of its pull-request permission. If the
+POST 403s, say so plainly rather than carrying on — silently skipping it leaves
+`/wait-for-review` in the re-review loop above, which costs money and looks like
+nothing is wrong.
 
 ### Stop after 5 rounds
 

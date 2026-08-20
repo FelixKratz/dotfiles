@@ -71,23 +71,28 @@ There is no CI review lane. Reviews happen locally, on demand, via
 `/review-loop` — which spawns a fresh-context reviewer, addresses what it finds
 one commit at a time, and repeats until a full pass is clean.
 
-Work out whether this PR has had one **against its current head**:
+Work out whether this PR has had one **against its current head**: look for a
+`claude-review` check run on the head SHA, published by `/review-loop` when it
+finishes. Read it from `statusCheckRollup`, already fetched in Step 1.
 
-1. Get the head SHA (`gh pr view <PR> --json headRefOid`).
-2. Look for a commit on this branch whose message or trailer records a
-   `/review-loop` round, or check whether you ran it earlier this session for
-   this PR at this head.
+The check is bound to the SHA it was published against, so there is nothing to
+reason about: a new commit simply has no check yet.
 
 Then:
 
-- **Already reviewed at this head** — nothing to do here; go on to Step 3.
-- **Not reviewed at this head** — run `/review-loop <PR>` now, before waiting on
+- **`SUCCESS`** — reviewed and clean at this head; go on to Step 3.
+- **`NEUTRAL`** — `/review-loop` stopped at its round cap with findings still
+  open. Do not re-run it; those findings are inline comments awaiting the human.
+  Go on to Step 3 and note it in the summary.
+- **No check on this head** — run `/review-loop <PR>` now, before waiting on
   anyone. It pushes its own commits, which moves the head; re-read the state
   afterwards rather than reasoning from what you fetched in Step 1.
 
 Run it once per head, not once per wake-up: a wake-up that finds the head
 unchanged and already reviewed must not review again. Otherwise the loop burns
-tokens re-reviewing an idle PR every three minutes.
+tokens re-reviewing an idle PR every three minutes — which is the failure this
+bookkeeping exists to prevent, and it is silent, so nothing will alert you to it
+but the bill.
 
 **On a PR you did not author**, do not run it. Review findings there would lead
 you to push commits to someone else's branch. Note in the summary that the PR
@@ -154,7 +159,7 @@ Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review (comments from `sbfnk-bot` — this loop's own output — do not count towards this, and neither does anything `/review-loop` produced).
 - If the repo uses CodeRabbit: CodeRabbit has posted a review, OR more than 60 minutes have passed since the PR's head commit was pushed without one (its free tier queues reviews when rate-limited, so a review that hasn't arrived within the hourly window isn't coming). Judge this from the head commit's committer timestamp. When proceeding without CodeRabbit, note it in the summary.
-- `/review-loop` has run against the current head and finished clean, or stopped at its round cap with the remainder surfaced (Step 1b). On a PR you did not author, treat this as not applicable and say so in the summary.
+- A `claude-review` check run on the current head SHA, published by `/review-loop` (Step 1b). `SUCCESS` means it finished clean; `NEUTRAL` means it hit its round cap and the remainder is surfaced as open inline comments — both count as done for this condition. No check on this SHA means not done. On a PR you did not author, treat this as not applicable and say so in the summary.
 - All unaddressed trusted comments have been addressed, including findings in trusted review bodies (Step 3).
 - No unresolved merge conflict (Step 4).
 - No unaddressable failing checks and no checks still in progress (Step 3b). If checks are still running, keep polling.
