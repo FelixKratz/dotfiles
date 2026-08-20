@@ -136,13 +136,27 @@
 
 ;; Auto-save drafts to protect against accidental buffer kills
 (setq notmuch-draft-save-plaintext t)
+
+(defun sf/draft-auto-save-setup ()
+  "Arrange for the compose buffer to be saved as a notmuch draft.
+`org-msg-edit-mode' is a major mode, so switching into it runs
+`kill-all-local-variables' and drops message-mode's buffer-local
+`message-encoded-mail-cache'.  Sending then writes the encoded mail to the
+global value, and `notmuch-maildir-setup-message-for-saving' prefers that
+cache over the buffer contents, so every later draft save would store a
+copy of the last sent message.  Restoring the buffer-local binding keeps
+the cache where message-mode expects it."
+  (setq-local message-encoded-mail-cache nil)
+  (add-hook 'auto-save-hook #'sf/auto-save-draft nil t))
+
 (defun sf/auto-save-draft ()
   "Save draft silently if buffer has been modified."
   (when (buffer-modified-p)
-    (notmuch-draft-save)))
-(add-hook 'notmuch-message-mode-hook
-          (lambda ()
-            (add-hook 'auto-save-hook #'sf/auto-save-draft nil t)))
+    (let ((message-encoded-mail-cache nil))
+      (notmuch-draft-save))))
+
+(add-hook 'notmuch-message-mode-hook #'sf/draft-auto-save-setup)
+(add-hook 'org-msg-edit-mode-hook #'sf/draft-auto-save-setup)
 
 ;; Doom's `company-global-modes' exclusion list has message-mode but not
 ;; org-msg-edit-mode (which derives from org-mode). Without this, company-box
@@ -974,6 +988,26 @@ toggled to a value that never fires in the body."
 
   ;; Suppress org export buffer when org-msg generates text/plain
   (setq org-export-show-temporary-export-buffer nil)
+
+  ;; `notmuch-draft-resume' hard-codes `notmuch-message-mode', so a draft
+  ;; saved from an org-msg buffer comes back as raw org source and would be
+  ;; sent verbatim. Switch back into org-msg when the body still carries the
+  ;; org-msg options keyword, keeping the draft id so the stale copy is
+  ;; deleted on the next save or on send.
+  (defun sf/notmuch-draft-resume-org-msg (&rest _args)
+    (when (and org-msg-mode
+               (not (eq major-mode 'org-msg-edit-mode))
+               (save-excursion
+                 (message-goto-body)
+                 (search-forward org-msg-options nil t)))
+      (let ((id notmuch-draft-id)
+            (address user-mail-address))
+        (org-msg-edit-mode)
+        (setq-local user-mail-address address)
+        (setq notmuch-draft-id id)
+        (org-msg-goto-body)
+        (set-buffer-modified-p nil))))
+  (advice-add 'notmuch-draft-resume :after #'sf/notmuch-draft-resume-org-msg)
 
   ;; Disable org-msg for forwards. The MML directive that embeds the
   ;; original message can't live inside an org body that gets exported to
