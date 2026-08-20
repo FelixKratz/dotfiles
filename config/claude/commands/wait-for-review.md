@@ -81,9 +81,11 @@ reason about: a new commit simply has no check yet.
 Then:
 
 - **`SUCCESS`** — reviewed and clean at this head; go on to Step 3.
-- **`NEUTRAL`** — `/review-loop` stopped at its round cap with findings still
-  open. Do not re-run it; those findings are inline comments awaiting the human.
+- **`FAILURE`, title naming open findings** — `/review-loop` stopped at its round
+  cap. Do not re-run it; those findings are inline comments awaiting the human.
   Go on to Step 3 and note it in the summary.
+- **`FAILURE`, title `Not reviewed yet`** — a push landed and nothing has
+  reviewed it. Run `/review-loop <PR>`, as below.
 - **No check on this head** — run `/review-loop <PR>` now, before waiting on
   anyone. It pushes its own commits, which moves the head; re-read the state
   afterwards rather than reasoning from what you fetched in Step 1.
@@ -132,6 +134,11 @@ After addressing all current unaddressed trusted comments, go back to Step 1 —
 
 ## Step 3b — attempt to fix failing checks
 
+**Skip `claude-review`.** It is red whenever the current head has not been
+reviewed clean, which is a verdict rather than a broken build. It clears by
+reviewing (Step 1b) or by addressing the findings (Step 3) — never by debugging.
+Do not open its run log, and never commit a `fix ci:` against it.
+
 For every other check with conclusion `FAILURE`, `TIMED_OUT`, or `CANCELLED`:
 
 1. Check whether you've already attempted a fix for this check on the current HEAD commit. Look at commits since the last push for messages starting with `fix ci:`. If there's already a fix attempt referencing this check name, do NOT retry — note it in the summary and move on.
@@ -162,7 +169,7 @@ Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review (comments from `sbfnk-bot` — this loop's own output — do not count towards this, and neither does anything `/review-loop` produced).
 - If the repo uses CodeRabbit: CodeRabbit has posted a review, OR more than 60 minutes have passed since the PR's head commit was pushed without one (its free tier queues reviews when rate-limited, so a review that hasn't arrived within the hourly window isn't coming). Judge this from the head commit's committer timestamp. When proceeding without CodeRabbit, note it in the summary.
-- A `claude-review` check run on the current head SHA, published by `/review-loop` (Step 1b). `SUCCESS` means it finished clean; `NEUTRAL` means it hit its round cap and the remainder is surfaced as open inline comments — both count as done for this condition. No check on this SHA means not done. On a PR you did not author, treat this as not applicable and say so in the summary.
+- The `claude-review` check on the current head SHA is `SUCCESS`, or is `FAILURE` with a title naming findings left open at the round cap (Step 1b). `FAILURE` with `Not reviewed yet`, or no check at all, means not done. Never treat this check as CI to fix in Step 3b — it is a review verdict, and it clears by reviewing, not by debugging. On a PR you did not author, treat the condition as not applicable and say so in the summary.
 - All unaddressed trusted comments have been addressed, including findings in trusted review bodies (Step 3).
 - No unresolved merge conflict (Step 4).
 - No unaddressable failing checks and no checks still in progress (Step 3b). If checks are still running, keep polling.

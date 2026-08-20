@@ -129,36 +129,55 @@ left for them to be about. Left open they look like outstanding findings.
 Only on a clean pass. While findings still stand, an outdated thread may just be
 a fix that moved code around, and resolving it would bury a live point.
 
-## Record the verdict
+## The verdict check
 
-When the loop ends — clean or capped — publish a `claude-review` check run
-against the **current head SHA**, using the app token:
+The PR carries a `claude-review` check run on its head SHA, published under the
+app token. It is **red until a review has cleared that exact commit**:
+
+- **Whenever you push** — a fix round, a merge of main, anything that moves the
+  head — immediately publish `conclusion=failure`, title `Not reviewed yet`,
+  against the new SHA.
+- **When a full pass comes back clean** — update it to `conclusion=success`,
+  title `No findings`.
+- **When you stop at the round cap** — leave it red, title naming the count of
+  findings still open.
+
+Red by default is the point. An absent check is invisible, and "nobody has
+reviewed this commit" is exactly the state worth noticing; a green tick among a
+dozen other green ticks is not. So the failing state carries the information and
+the passing state is just the absence of a problem.
+
+Publish:
 
     GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api \
       repos/{owner}/{repo}/check-runs -X POST \
       -f name=claude-review -f head_sha="<head sha>" \
-      -f status=completed -f conclusion=success \
-      -f 'output[title]'="No findings" \
-      -f 'output[summary]'="Reviewed clean at <head sha>."
+      -f status=completed -f conclusion=failure \
+      -f 'output[title]'="Not reviewed yet" \
+      -f 'output[summary]'="No review has cleared <head sha>."
 
-Use `conclusion=success` with "No findings" when a full pass came back clean,
-and `conclusion=neutral` with a title naming the count when you stopped at the
-round cap with findings still open. Never `failure`: nothing is broken, and a red
-check reads as a build problem.
+Update the same check rather than posting a second one — find its id with
+`gh api repos/{owner}/{repo}/commits/<sha>/check-runs` and `PATCH
+repos/{owner}/{repo}/check-runs/<id>`. Two check runs sharing a name on one SHA
+is ambiguous to anything reading `statusCheckRollup`, and only the app that
+created a check run may update it, so both ends must use the app token.
 
-This is what stops `/wait-for-review` re-reviewing the same head on every
-three-minute wake-up. Without it that loop has no way to know the work was done —
-a clean round leaves no commits and no comments, so there is nothing else to
-observe. Publish it even when the loop found nothing; that is exactly the case
-with no other trace.
+Publish the clean verdict even when the loop found nothing: that is the case
+with no other trace, since a clean round leaves no commits and no comments.
 
 Check runs can only be created by GitHub Apps, so this needs `sbfnk-review-bot`
-to hold **Checks: read and write** on top of its pull-request permission. If the
-POST 403s, say so plainly rather than carrying on — silently skipping it leaves
-`/wait-for-review` in the re-review loop above, which costs money and looks like
-nothing is wrong.
+to hold **Checks: read and write**. If the call 403s, say so plainly rather than
+carrying on — silently skipping it leaves `/wait-for-review` re-reviewing the
+same head on every wake-up, which costs money and looks like nothing is wrong.
 
-### Stop after 5 rounds
+### A push nobody made through this command
+
+If you push to a PR branch outside this loop — a manual fix, a merge — publish
+the red check for the new head there too. Nothing else will: there is no CI
+watching the branch, so a commit pushed by hand simply has no verdict, and an
+absent check is the invisible state this design is trying to remove.
+
+### Stop after 5 rounds### Stop after 5 rounds
 
 If five rounds have not converged, stop. Report what is still open and leave it
 for the human. A reviewer that keeps finding new things after five passes is
