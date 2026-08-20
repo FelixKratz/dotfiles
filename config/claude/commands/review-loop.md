@@ -134,9 +134,13 @@ a fix that moved code around, and resolving it would bury a live point.
 The PR carries a `claude-review` check run on its head SHA, published under the
 app token. It is **red until a review has cleared that exact commit**:
 
+- **Before round one**, as the very first thing the loop does — publish
+  `conclusion=failure`, title `Not reviewed yet`, against the current head. Do
+  this before spawning any reviewer, so the PR is visibly unreviewed for the
+  whole time the review is running, not only afterwards.
 - **Whenever you push** — a fix round, a merge of main, anything that moves the
-  head — immediately publish `conclusion=failure`, title `Not reviewed yet`,
-  against the new SHA.
+  head — publish the same red verdict against the new SHA. A push invalidates
+  whatever the previous head was cleared for.
 - **When a full pass comes back clean** — update it to `conclusion=success`,
   title `No findings`.
 - **When you stop at the round cap** — leave it red, title naming the count of
@@ -170,12 +174,16 @@ to hold **Checks: read and write**. If the call 403s, say so plainly rather than
 carrying on — silently skipping it leaves `/wait-for-review` re-reviewing the
 same head on every wake-up, which costs money and looks like nothing is wrong.
 
-### A push nobody made through this command
+### PRs this loop never runs on
 
-If you push to a PR branch outside this loop — a manual fix, a merge — publish
-the red check for the new head there too. Nothing else will: there is no CI
-watching the branch, so a commit pushed by hand simply has no verdict, and an
-absent check is the invisible state this design is trying to remove.
+A PR that is never handed to this command has no `claude-review` check at all —
+absent rather than red, which is the invisible state the red verdict exists to
+remove. Nothing else can publish it: there is no CI watching the branch.
+
+That is the intended shape as long as running the loop is what you do after
+opening a PR. If you find yourself with unreviewed PRs sitting there with no
+verdict, the fix is to publish the red check at PR-creation time rather than
+here.
 
 ### Stop after 5 rounds### Stop after 5 rounds
 
