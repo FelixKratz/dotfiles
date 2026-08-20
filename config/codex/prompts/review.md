@@ -3,9 +3,8 @@ Review a change in this repository and report what is worth acting on.
 Find the review specification and follow it, in this order:
 
 1. `.github/REVIEW.md`
-2. `.claude/commands/review.md` — if it only points somewhere else, follow the
-   pointer
-3. `AGENTS.md` or `CLAUDE.md`, which may name one
+2. `AGENTS.md` or `CLAUDE.md`, which may name one
+3. `.claude/commands/review.md`, if the repo happens to ship one
 
 That file is the repository's own standard: what counts as a finding, what to
 look for in this codebase, and what to stay quiet about. Follow it rather than a

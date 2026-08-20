@@ -35,9 +35,8 @@ only inputs.
 The repository owns them. Look for a review specification, in this order:
 
 1. `.github/REVIEW.md`
-2. `.claude/commands/review.md` — if it is a wrapper pointing elsewhere, follow
-   the pointer
-3. `AGENTS.md` or `CLAUDE.md`, which may name one
+2. `AGENTS.md` or `CLAUDE.md`, which may name one
+3. `.claude/commands/review.md`, if the repo happens to ship one
 
 Tell the agent to follow that file. Do not paste your own review criteria over
 it, and do not fall back to a generic checklist when one exists — the point of
