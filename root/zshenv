@@ -28,3 +28,7 @@ fi
 
 # Bun
 [ -d "$HOME/.bun" ] && export BUN_INSTALL="$HOME/.bun"
+
+# Default new files to owner-only. This is a shared machine, so scratch work
+# outside ~ (notably /tmp) would otherwise be readable by every other account.
+umask 077
