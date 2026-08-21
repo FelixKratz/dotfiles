@@ -15,6 +15,7 @@
 #
 # Usage:
 #   gh-publish-review-check <owner>/<repo> <sha> not-reviewed
+#   gh-publish-review-check <owner>/<repo> <sha> in-progress
 #   gh-publish-review-check <owner>/<repo> <sha> clean
 #   gh-publish-review-check <owner>/<repo> <sha> findings <count>
 #
@@ -23,7 +24,7 @@
 set -euo pipefail
 
 if [[ $# -lt 3 || $1 != */* ]]; then
-  echo "usage: $(basename "$0") <owner>/<repo> <sha> not-reviewed|clean|findings [count]" >&2
+  echo "usage: $(basename "$0") <owner>/<repo> <sha> not-reviewed|in-progress|clean|findings [count]" >&2
   exit 64
 fi
 repo=$1 sha=$2 verdict=$3
@@ -33,6 +34,11 @@ case $verdict in
     conclusion=failure
     title="Not reviewed yet"
     summary="No review has cleared $sha."
+    ;;
+  in-progress)
+    conclusion=failure
+    title="Review in progress"
+    summary="A review round is under way on $sha."
     ;;
   clean)
     conclusion=success
