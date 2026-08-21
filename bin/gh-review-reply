@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Reply to an existing PR review thread as sbfnk-bot — the author answering a
+# finding, which is why this one uses the plain account token rather than the
+# app's.
+#
+# in_reply_to is mandatory, so this can only append to a thread that already
+# exists: it cannot open a thread, comment at the top level of a PR, or touch an
+# issue. That constraint is what makes it safe to allow without also gating it on
+# an open review round, which matters because /wait-for-review answers sbfnk's
+# own review comments long after a round has gone green.
+#
+# Usage:
+#   gh-review-reply <owner>/<repo> <pr> <comment-id> <body>
+#   gh-review-reply <owner>/<repo> <pr> <comment-id> -     # body from stdin
+set -euo pipefail
+
+if [[ $# -ne 4 || $1 != */* ]]; then
+  echo "usage: $(basename "$0") <owner>/<repo> <pr> <comment-id> <body|->" >&2
+  exit 64
+fi
+repo=$1 pr=$2 comment_id=$3 body=$4
+
+[[ $comment_id =~ ^[0-9]+$ ]] || { echo "comment id must be numeric" >&2; exit 64; }
+[[ $body == - ]] && body=$(cat)
+[[ -n $body ]] || { echo "empty reply body" >&2; exit 64; }
+
+gh api --method POST "repos/$repo/pulls/$pr/comments" \
+  -f body="$body" -F in_reply_to="$comment_id" \
+  --jq '"replied: \(.html_url)"'

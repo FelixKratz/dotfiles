@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Post a round of review findings on a PR as sbfnk-review-bot[bot]: one review
+# carrying an overall body plus its inline comments, so a round arrives as a
+# single notification rather than one per line.
+#
+# Refuses unless the claude-review check on the PR head is currently red. A
+# round publishes that check before it starts and clears it when it ends, so
+# this can only post while a review is genuinely open on that exact commit.
+#
+# `event` is hardcoded to COMMENT, so this can never approve a PR or request
+# changes. The endpoint is hardcoded too: it cannot comment on issues, merge, or
+# write anywhere else.
+#
+# findings.json:
+#   {"body": "overall commentary",
+#    "comments": [{"path": "src/x.jl", "line": 42, "side": "RIGHT",
+#                  "body": "what is wrong here"}]}
+#
+# A comment whose body carries a ```suggestion fence renders with an Apply
+# button; add "start_line" alongside "line" for a multi-line suggestion.
+#
+# Usage:
+#   gh-review-post <owner>/<repo> <pr> --findings <file.json>
+#
+# Exits 2 if the app is not installed, 4 if no review round is open on the head.
+set -euo pipefail
+
+if [[ $# -ne 4 || $1 != */* || $3 != --findings ]]; then
+  echo "usage: $(basename "$0") <owner>/<repo> <pr> --findings <file.json>" >&2
+  exit 64
+fi
+repo=$1 pr=$2 findings=$4
+
+[[ -r $findings ]] || { echo "cannot read $findings" >&2; exit 66; }
+jq -e '.comments | type == "array"' "$findings" >/dev/null ||
+  { echo "$findings needs a .comments array" >&2; exit 65; }
+
+head_sha=$(gh api "repos/$repo/pulls/$pr" --jq .head.sha)
+
+# The interlock: only post while a round is open on this exact head.
+verdict=$(gh api "repos/$repo/commits/$head_sha/check-runs" \
+  --jq '.check_runs[] | select(.name == "claude-review") | .conclusion' 2>/dev/null | head -1 || true)
+if [[ $verdict != failure ]]; then
+  echo "no review round is open on $head_sha (claude-review: ${verdict:-absent})" >&2
+  echo "publish the red verdict first: gh-publish-review-check $repo $head_sha not-reviewed" >&2
+  exit 4
+fi
+
+payload=$(jq --arg sha "$head_sha" \
+  '{commit_id: $sha, event: "COMMENT", body: (.body // ""), comments: .comments}' \
+  "$findings")
+
+token=$(gh-review-bot-token "$repo") || exit 2
+GITHUB_TOKEN=$token gh api --method POST "repos/$repo/pulls/$pr/reviews" \
+  --input - \
+  --jq '"posted review \(.id) carrying \(.body | length) chars of body"' <<<"$payload"

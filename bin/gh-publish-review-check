@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Publish the claude-review verdict on a PR head, as sbfnk-review-bot[bot].
+#
+# The check is red until a review has cleared that exact commit. An absent check
+# is invisible, and "nobody has reviewed this commit" is the state worth
+# noticing, so the failing verdict carries the information and the passing one is
+# just the absence of a problem.
+#
+# Creates the check on the first call for a SHA and updates it thereafter, so a
+# head never ends up carrying two runs of the same name — which would be
+# ambiguous to anything reading statusCheckRollup.
+#
+# The endpoint is hardcoded. This cannot post comments, merge, or write anywhere
+# else; that is the reason it exists rather than allowing `gh api` outright.
+#
+# Usage:
+#   gh-publish-review-check <owner>/<repo> <sha> not-reviewed
+#   gh-publish-review-check <owner>/<repo> <sha> clean
+#   gh-publish-review-check <owner>/<repo> <sha> findings <count>
+#
+# Exits 2 if the app is not installed on the repo, 3 if it lacks Checks: write,
+# 5 if another app already owns the check on that SHA.
+set -euo pipefail
+
+if [[ $# -lt 3 || $1 != */* ]]; then
+  echo "usage: $(basename "$0") <owner>/<repo> <sha> not-reviewed|clean|findings [count]" >&2
+  exit 64
+fi
+repo=$1 sha=$2 verdict=$3
+
+case $verdict in
+  not-reviewed)
+    conclusion=failure
+    title="Not reviewed yet"
+    summary="No review has cleared $sha."
+    ;;
+  clean)
+    conclusion=success
+    title="No findings"
+    summary="A full review pass over $sha found nothing."
+    ;;
+  findings)
+    count=${4:-}
+    [[ -n $count ]] || { echo "findings needs a count" >&2; exit 64; }
+    conclusion=failure
+    title="$count finding(s) open"
+    summary="Review stopped with $count finding(s) open on $sha; see the inline comments."
+    ;;
+  *)
+    echo "unknown verdict: $verdict" >&2
+    exit 64
+    ;;
+esac
+
+token=$(gh-review-bot-token "$repo") || exit 2
+export GITHUB_TOKEN=$token
+
+# A failed lookup still prints a JSON error body, which --jq happily passes
+# through; only a bare integer is a usable check-run id.
+existing=$(gh api "repos/$repo/commits/$sha/check-runs" \
+  --jq '.check_runs[] | select(.name == "claude-review") | .id' 2>/dev/null | head -1 || true)
+[[ $existing =~ ^[0-9]+$ ]] || existing=
+
+run() {
+  if ! out=$(gh api "$@" 2>&1); then
+    case $out in
+      *"can only be modified by the GitHub App that created it"*)
+        echo "claude-review on $sha belongs to another app, so this cannot update it." >&2
+        echo "A CI workflow is publishing the same check name; drop one of the two lanes." >&2
+        exit 5
+        ;;
+      *403*|*"Resource not accessible"*)
+        echo "sbfnk-review-bot lacks Checks: read and write on $repo" >&2
+        echo "$out" >&2
+        exit 3
+        ;;
+    esac
+    echo "$out" >&2
+    exit 1
+  fi
+}
+
+if [[ -n $existing ]]; then
+  run --method PATCH "repos/$repo/check-runs/$existing" \
+    -f status=completed -f conclusion="$conclusion" \
+    -f 'output[title]'="$title" -f 'output[summary]'="$summary" \
+    --jq '.conclusion'
+else
+  run --method POST "repos/$repo/check-runs" \
+    -f name=claude-review -f head_sha="$sha" \
+    -f status=completed -f conclusion="$conclusion" \
+    -f 'output[title]'="$title" -f 'output[summary]'="$summary" \
+    --jq '.conclusion'
+fi
+
+echo "claude-review on $sha: $conclusion — $title"
