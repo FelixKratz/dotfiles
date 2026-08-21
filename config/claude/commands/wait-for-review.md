@@ -113,6 +113,11 @@ Then:
   Go on to Step 3 and note it in the summary.
 - **`FAILURE`, title `Not reviewed yet`** — a push landed and nothing has
   reviewed it. Run `/review-loop <PR>`, as below.
+- **`FAILURE`, title `Review in progress`** — a review round was under way when
+  the check was last written. If it was yours, earlier this session, wait for it
+  rather than starting a second one. Otherwise treat it as not reviewed and run
+  the loop: a loop that died partway leaves this state behind, and nothing else
+  will clear it.
 - **No check on this head** — run `/review-loop <PR>` now, before waiting on
   anyone. It pushes its own commits, which moves the head; re-read the state
   afterwards rather than reasoning from what you fetched in Step 1.

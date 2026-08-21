@@ -153,12 +153,19 @@ The PR carries a `claude-review` check run on its head SHA, published under the
 app token. It is **red until a review has cleared that exact commit**:
 
 - **Before round one**, as the very first thing the loop does — publish
-  `conclusion=failure`, title `Not reviewed yet`, against the current head. Do
-  this before spawning any reviewer, so the PR is visibly unreviewed for the
-  whole time the review is running, not only afterwards.
+  `conclusion=failure`, title **`Review in progress`**, against the current head.
+  Do this before spawning any reviewer.
 - **Whenever you push** — a fix round, a merge of main, anything that moves the
-  head — publish the same red verdict against the new SHA. A push invalidates
-  whatever the previous head was cleared for.
+  head — publish `conclusion=failure`, title **`Not reviewed yet`**, against the
+  new SHA. A push invalidates whatever the previous head was cleared for. Once
+  the next round starts, move it back to `Review in progress`.
+
+Both running states are red, and the title is what separates them. Someone
+looking at the PR can tell "a review is under way, wait for it" from "nothing has
+looked at this" without having to ask you. Red is the right colour for both,
+because neither has verified anything yet — and it is the safe resting state if
+the loop dies partway, where a yellow spinner would read as still working when
+nothing is.
 - **When a full pass comes back clean** — update it to `conclusion=success`,
   title `No findings`.
 - **When you stop at the round cap** — leave it red, title naming the count of
