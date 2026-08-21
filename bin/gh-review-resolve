@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-# Resolve a PR review thread as sbfnk-review-bot[bot] — closing a finding is the
-# reviewer's call, not the author's, so each thread reads as a real exchange:
-# raised by the reviewer, answered by the author, closed by the reviewer.
+# Resolve a PR review thread.
+#
+# This runs as the plain authenticated account, not as sbfnk-review-bot[bot].
+# Closing a finding is conceptually the reviewer's call, but GitHub Apps cannot
+# call `resolveReviewThread`: the installation holds `pull_requests: write` and
+# `checks: write` (check with `gh-review-bot-token --permissions <owner>/<repo>`)
+# and the mutation still returns "Resource not accessible by integration". There
+# is no permission to grant, so the author resolves and the reply above records
+# who actually found the problem.
 #
 # Thread ids come from the reviewThreads GraphQL query; the REST comments
 # endpoint does not expose them:
@@ -15,18 +21,15 @@
 # The mutation is hardcoded, so this cannot write anything else.
 #
 # Usage:
-#   gh-review-resolve <owner>/<repo> <thread-id>
-#
-# Exits 2 if the app is not installed on the repo.
+#   gh-review-resolve <thread-id>
 set -euo pipefail
 
-if [[ $# -ne 2 || $1 != */* ]]; then
-  echo "usage: $(basename "$0") <owner>/<repo> <thread-id>" >&2
+if [[ $# -ne 1 ]]; then
+  echo "usage: $(basename "$0") <thread-id>" >&2
   exit 64
 fi
-repo=$1 thread=$2
+thread=$1
 
-token=$(gh-review-bot-token "$repo") || exit 2
-GITHUB_TOKEN=$token gh api graphql \
+gh api graphql \
   -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
   -f id="$thread" --jq '"resolved: \(.data.resolveReviewThread.thread.isResolved)"'

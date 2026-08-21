@@ -17,8 +17,14 @@ set -euo pipefail
 app_id=4359973
 key=$HOME/.config/sbfnk-review-bot/key.pem
 
+show_permissions=false
+if [[ ${1-} == --permissions ]]; then
+  show_permissions=true
+  shift
+fi
+
 if [[ $# -ne 1 || $1 != */* ]]; then
-  echo "usage: $(basename "$0") <owner>/<repo>" >&2
+  echo "usage: $(basename "$0") [--permissions] <owner>/<repo>" >&2
   exit 64
 fi
 repo=$1
@@ -46,8 +52,15 @@ installation_id=$(curl -sf \
   exit 2
 }
 
-curl -sf -X POST \
+response=$(curl -sf -X POST \
   -H "Authorization: Bearer $jwt" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/app/installations/$installation_id/access_tokens" |
-  jq -r .token
+  "https://api.github.com/app/installations/$installation_id/access_tokens")
+
+# --permissions reports what the installation actually grants, which is the only
+# way to tell a missing scope from an endpoint the app simply may not call.
+if [[ $show_permissions == true ]]; then
+  jq -r '.permissions' <<<"$response"
+else
+  jq -r .token <<<"$response"
+fi
