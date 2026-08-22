@@ -85,7 +85,8 @@ overlay first:
   fill in your accounts. Run `~/.config/email/generate.py --write` to emit
   `~/.mbsyncrc`, `~/.msmtprc`, `~/.config/doom-private/email-accounts.el`,
   and one `~/Library/LaunchAgents/none.mail.<account>.plist` per account
-  (polls inbox every 5 min via `getmail.sh`).
+  (polls inbox every 15 min via `getmail.sh`, as a backstop for the IMAP IDLE
+  agent).
 - `config/doom-private/signatures.el` — `(setq sf/email-signatures '(("name"
   . "body") ...))`. Loaded with no-error by `email.el`.
 - launchagents: keep the `__HOME__` placeholder in the plist source. `link.sh`
@@ -114,5 +115,11 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   `email-accounts.el` by `config/email/generate.py`; signatures live in
   `signatures.el` in the private overlay. Office365 XOAUTH2 setup and
   troubleshooting: `docs/email-xoauth2.md`.
+- **Fetching mail** - `bin/getmail.sh <account>...`, `--key <notmuch key>` or
+  `all`. Accounts sync in parallel, and a running account is listed in
+  `~/.cache/mail-sync/`, which locks it against a second run and drives the
+  sketchybar spinner. Three ways to trigger it by hand: AeroSpace `alt-m` then
+  the account's notmuch search key (`a` for all), the Alfred `mail` keyword, or
+  a click on the sketchybar mail item (syncs all).
 - **kitty** - `config/kitty/`
 - **Alfred workflows** - `config/alfred/workflows/`

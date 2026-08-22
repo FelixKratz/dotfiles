@@ -1,18 +1,151 @@
 #!/bin/bash
-# Sync mail for a specific account using mbsync, then update both indexes
+# Sync mail accounts with mbsync, then update both indexes.
+#
+# Usage:
+#   getmail.sh <account>...     sync the named accounts, in parallel
+#   getmail.sh --key <k>...     sync by notmuch search_key from accounts.yaml
+#   getmail.sh all              sync every account that has IMAP
+#
+# While a sync runs the account is listed in ~/.cache/mail-sync/, which both
+# locks it against a second run and drives the sketchybar spinner.
 
-ACCOUNT="$1"
+ACCOUNTS_YAML="$HOME/.config/email/accounts.yaml"
+STATE_DIR="$HOME/.cache/mail-sync"
+YQ=/opt/homebrew/bin/yq
+MBSYNC=/opt/homebrew/bin/mbsync
+NOTMUCH=/opt/homebrew/bin/notmuch
+TIMELIMIT=/opt/homebrew/bin/timelimit
+SYNC_TIMEOUT=600
 
-if [[ -z "$ACCOUNT" ]]; then
-  echo "Usage: getmail.sh <account>"
-  exit 1
-fi
+usage() {
+  sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
+}
 
-# Run mbsync for the account
-/opt/homebrew/bin/mbsync "$ACCOUNT" 2>&1
+# Account name and search key of every non-smtp-only account. Without the
+# private accounts.yaml the arguments are used as mbsync channel names.
+NAMES=()
+KEYS=()
+read_accounts() {
+  [[ -x $YQ && -r $ACCOUNTS_YAML ]] || return 1
+  local name key
+  while IFS=$'\t' read -r name key; do
+    [[ -n $name ]] || continue
+    NAMES+=("$name")
+    KEYS+=("${key:-${name:0:1}}")
+  done < <($YQ -r '.accounts[] | select(.smtp_only != true)
+                   | [.name, (.search_key // "")] | @tsv' "$ACCOUNTS_YAML")
+  [[ ${#NAMES[@]} -gt 0 ]]
+}
 
-# Update notmuch index (always works, no server dependency)
-/opt/homebrew/bin/notmuch new 2>/dev/null
+by_key() {
+  local i
+  for i in "${!KEYS[@]}"; do
+    [[ ${KEYS[$i]} == "$1" ]] && { echo "${NAMES[$i]}"; return 0; }
+  done
+  return 1
+}
 
-# Tell mu4e to reindex if loaded (mu server holds the database lock)
-/opt/homebrew/bin/emacsclient -e '(when (fboundp (quote mu4e-update-index)) (mu4e-update-index))' 2>/dev/null || /opt/homebrew/bin/mu index 2>/dev/null
+known_account() {
+  local n
+  for n in "${NAMES[@]}"; do [[ $n == "$1" ]] && return 0; done
+  return 1
+}
+
+# Append to TARGETS unless already there, so `getmail.sh all work` syncs once
+TARGETS=()
+add_target() {
+  local t
+  for t in "${TARGETS[@]}"; do [[ $t == "$1" ]] && return; done
+  TARGETS+=("$1")
+}
+
+have_accounts=false
+read_accounts && have_accounts=true
+
+[[ $# -gt 0 ]] || usage
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage 0
+      ;;
+    -k|--key)
+      shift
+      name=$(by_key "$1") || { echo "getmail.sh: no account with key '$1'" >&2; exit 1; }
+      add_target "$name"
+      ;;
+    all)
+      $have_accounts || { echo "getmail.sh: 'all' needs $ACCOUNTS_YAML" >&2; exit 1; }
+      for name in "${NAMES[@]}"; do add_target "$name"; done
+      ;;
+    -*)
+      usage
+      ;;
+    *)
+      if $have_accounts && ! known_account "$1"; then
+        echo "getmail.sh: unknown account '$1'" >&2
+        exit 1
+      fi
+      add_target "$1"
+      ;;
+  esac
+  shift
+done
+
+bar_update() {
+  command -v sketchybar >/dev/null 2>&1 && sketchybar --trigger mail_sync
+  return 0
+}
+
+# One marker file per running account, holding the pid that claimed it. A
+# marker whose process is gone is stale and gets taken over.
+mkdir -p "$STATE_DIR"
+claim() {
+  local marker="$STATE_DIR/$1" owner
+  if (set -o noclobber; echo $$ > "$marker") 2>/dev/null; then
+    return 0
+  fi
+  owner=$(cat "$marker" 2>/dev/null)
+  if [[ -n $owner ]] && kill -0 "$owner" 2>/dev/null; then
+    return 1
+  fi
+  echo $$ > "$marker"
+}
+
+CLAIMED=()
+for account in "${TARGETS[@]}"; do
+  if claim "$account"; then
+    CLAIMED+=("$account")
+  else
+    echo "[$account] already syncing, skipped"
+  fi
+done
+
+release_all() {
+  local account
+  for account in "${CLAIMED[@]}"; do rm -f "$STATE_DIR/$account"; done
+  bar_update
+}
+
+[[ ${#CLAIMED[@]} -gt 0 ]] || exit 0
+trap release_all EXIT INT TERM
+bar_update
+
+for account in "${CLAIMED[@]}"; do
+  (
+    if [[ -x $TIMELIMIT ]]; then
+      $TIMELIMIT -t $SYNC_TIMEOUT $MBSYNC "$account" 2>&1
+    else
+      $MBSYNC "$account" 2>&1
+    fi | sed "s/^/[$account] /"
+    # Drop the marker as soon as this account is done so the bar shrinks to
+    # the accounts still running
+    rm -f "$STATE_DIR/$account"
+    bar_update
+  ) &
+done
+wait
+
+# Update the notmuch index; Emacs reads the database directly, so there is
+# nothing else to tell
+$NOTMUCH new 2>/dev/null

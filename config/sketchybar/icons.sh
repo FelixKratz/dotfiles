@@ -59,3 +59,12 @@ MODE_PENDING=􀈏
 # Mail Icons
 MAIL=􀍜
 MAIL_UNREAD=􀍛
+
+# Sync spinner: braille frames need a Braille-capable face (Hack Nerd Font)
+MAIL_ICON_FONT="SF Pro:Regular:16.0"
+SPINNER_FONT="Hack Nerd Font:Bold:17.0"
+SPINNER_FRAMES=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+# Braille sits high in the em box, and sketchybar measures the dots rather
+# than the cell, so a one-column frame would shift the bar without a fixed width
+SPINNER_Y_OFFSET=-2
+SPINNER_WIDTH=15

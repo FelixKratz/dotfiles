@@ -109,9 +109,10 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     alt-f = 'fullscreen'
     alt-shift-space = 'layout floating tiling'
 
-    # Enter service/apps modes
+    # Enter service/apps/mail modes
     alt-shift-semicolon = 'mode service'
     alt-a = 'mode apps'
+    alt-m = 'mode mail'
 
 # === Service mode (for less common operations) ===
 [mode.service.binding]
@@ -140,6 +141,19 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     v = ['exec-and-forget open /Applications/Visual\ Studio\ Code.app', 'mode main']
     z = ['exec-and-forget open /Applications/Zen.app', 'mode main']
     space = ['exec-and-forget open /Applications/kitty.app', 'mode main']
+
+# === Mail mode (sync mail, spinner shows in sketchybar) ===
+# Keys mirror the notmuch search_key of each account in
+# ~/.config/email/accounts.yaml; `a` is reserved for all accounts.
+[mode.mail.binding]
+    esc = 'mode main'
+    a = ['exec-and-forget ~/.local/bin/getmail.sh all', 'mode main']
+    w = ['exec-and-forget ~/.local/bin/getmail.sh --key w', 'mode main']
+    p = ['exec-and-forget ~/.local/bin/getmail.sh --key p', 'mode main']
+    j = ['exec-and-forget ~/.local/bin/getmail.sh --key j', 'mode main']
+    x = ['exec-and-forget ~/.local/bin/getmail.sh --key x', 'mode main']
+    b = ['exec-and-forget ~/.local/bin/getmail.sh --key b', 'mode main']
+    k = ['exec-and-forget ~/.local/bin/getmail.sh --key k', 'mode main']
 
 # === Window rules ===
 # Workspace assignments (1=emacs, 2=terminal, 3=mail, 4=web, 5=calendar, 6=social, 7=media)
