@@ -14,8 +14,8 @@ STATE_DIR="$HOME/.cache/mail-sync"
 YQ=/opt/homebrew/bin/yq
 MBSYNC=/opt/homebrew/bin/mbsync
 NOTMUCH=/opt/homebrew/bin/notmuch
-TIMELIMIT=/opt/homebrew/bin/timelimit
 SYNC_TIMEOUT=600
+SYNC_GRACE=20
 
 usage() {
   sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -131,13 +131,35 @@ release_all() {
 trap release_all EXIT INT TERM
 bar_update
 
+# mbsync forks a PassCmd helper to fetch each account's password, and the
+# helper inherits mbsync's output pipe. The OAuth2 helper blocks on a socket
+# read with no timeout, so a connection that drops mid-request leaves it
+# hanging: it outlives a killed mbsync, holds the pipe open, and the account
+# stays locked for as long as the machine is up. Give mbsync its own process
+# group and signal the group, so the helpers go down with it.
+run_sync() {
+  local account=$1 pid watchdog rc
+  set -m
+  $MBSYNC "$account" 2>&1 &
+  pid=$!
+  { sleep "$SYNC_TIMEOUT"
+    kill -TERM -"$pid" 2>/dev/null
+    sleep "$SYNC_GRACE"
+    kill -KILL -"$pid" 2>/dev/null; } >/dev/null 2>&1 &
+  watchdog=$!
+  set +m
+  wait "$pid" 2>/dev/null
+  rc=$?
+  kill -KILL -"$watchdog" 2>/dev/null
+  # A helper that survived a clean exit would hold the pipe open just as well
+  kill -KILL -"$pid" 2>/dev/null
+  (( rc > 128 )) && echo "timed out after ${SYNC_TIMEOUT}s"
+  return $rc
+}
+
 for account in "${CLAIMED[@]}"; do
   (
-    if [[ -x $TIMELIMIT ]]; then
-      $TIMELIMIT -t $SYNC_TIMEOUT $MBSYNC "$account" 2>&1
-    else
-      $MBSYNC "$account" 2>&1
-    fi | sed "s/^/[$account] /"
+    run_sync "$account" | sed "s/^/[$account] /"
     # Drop the marker as soon as this account is done so the bar shrinks to
     # the accounts still running
     rm -f "$STATE_DIR/$account"
