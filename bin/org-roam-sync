@@ -10,7 +10,48 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/us
 REPO="${ORG_ROAM_DIR:-$HOME/org-roam}"
 BRANCH="${ORG_ROAM_BRANCH:-main}"
 
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/org-roam-sync"
+STALL_FILE="$STATE_DIR/stalled"
+FAIL_FILE="$STATE_DIR/failures"
+# Runs are 15 min apart, so this waits out an hour of network trouble before
+# calling an unreachable remote a real outage.
+FAIL_THRESHOLD=4
+
 log() { echo "$(date '+%F %T') $*"; }
+
+notify() {
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"$1\" with title \"org-roam sync stalled\"" >/dev/null 2>&1
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send "org-roam sync stalled" "$1" >/dev/null 2>&1
+  fi
+}
+
+# Raise the marker the shell greets you with (see zshrc). The desktop
+# notification fires only when the reason is new, so a sync that stays stuck
+# doesn't pop a banner every 15 minutes.
+stall() {
+  local reason="$1" previous=""
+  mkdir -p "$STATE_DIR"
+  [ -f "$STALL_FILE" ] && previous=$(sed -n 2p "$STALL_FILE")
+  printf '%s\n%s\n' "$(date '+%F %T')" "$reason" > "$STALL_FILE"
+  log "STALLED: $reason"
+  [ "$reason" = "$previous" ] || notify "$reason"
+}
+
+# Network failures are usually a blip — count them and only stall once they
+# persist, so a closed lid or a dropped VPN stays quiet.
+transient_failure() {
+  local reason="$1" count
+  mkdir -p "$STATE_DIR"
+  count=$(cat "$FAIL_FILE" 2>/dev/null)
+  [[ "$count" =~ ^[0-9]+$ ]] || count=0
+  count=$((count + 1))
+  echo "$count" > "$FAIL_FILE"
+  log "$reason (failure $count of $FAIL_THRESHOLD)"
+  [ "$count" -ge "$FAIL_THRESHOLD" ] && stall "$reason ($count consecutive failures)"
+  exit 1
+}
 
 cd "$REPO" 2>/dev/null || { log "repo not found: $REPO"; exit 1; }
 
@@ -31,14 +72,18 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 # 2. Rebase onto the remote; abort cleanly on conflict so the tree stays sane.
-git fetch -q origin "$BRANCH" || { log "fetch failed"; exit 1; }
+git fetch -q origin "$BRANCH" || transient_failure "cannot reach origin/$BRANCH"
 if ! git rebase -q "origin/$BRANCH"; then
   git rebase --abort
-  log "CONFLICT rebasing onto origin/$BRANCH — aborted, resolve manually"
+  stall "conflict rebasing onto origin/$BRANCH — resolve by hand in $REPO"
   exit 1
 fi
 
 # 3. Push if we have unpushed commits.
 if [ -n "$(git log "origin/$BRANCH..$BRANCH" --oneline 2>/dev/null)" ]; then
-  git push -q origin "$BRANCH" && log "pushed"
+  git push -q origin "$BRANCH" || transient_failure "push to origin/$BRANCH failed"
+  log "pushed"
 fi
+
+# A clean run clears whatever the last bad one left behind.
+rm -f "$STALL_FILE" "$FAIL_FILE"

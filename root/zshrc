@@ -267,3 +267,12 @@ if (( $+functions[_rm_trash] )); then
 fi
 
 export PATH="$HOME/.local/bin:$PATH"
+
+# org-roam-sync raises this marker when it needs a hand — a rebase conflict, or
+# a remote it hasn't reached in an hour. It clears itself on the next good sync,
+# so the greeting stops once syncing resumes.
+_org_roam_stall="${XDG_STATE_HOME:-$HOME/.local/state}/org-roam-sync/stalled"
+if [[ -f "$_org_roam_stall" ]]; then
+  print -P "%F{yellow}org-roam sync stalled%f: $(sed -n 2p "$_org_roam_stall") (since $(sed -n 1p "$_org_roam_stall"))"
+fi
+unset _org_roam_stall

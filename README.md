@@ -110,6 +110,12 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
 - **Doom Emacs** - `config/doom/` (vulpea for org-roam notes). `config.org` is
   the source: `doom sync` tangles it into `config.el` and `packages.el`, so
   edit the org file. `profile.el` decides which modules a machine gets.
+- **org-roam sync** - `bin/org-roam-sync` commits, rebases and pushes
+  `~/org-roam` every 15 min (launchd on macOS, systemd timer on Linux). When it
+  needs a hand — a rebase conflict, or a remote unreachable for four runs — it
+  writes `~/.local/state/org-roam-sync/stalled`, sends a desktop notification,
+  and every new shell greets you with the reason until the next good sync
+  clears it. Log: `~/.log/org-roam-sync.log`.
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in
