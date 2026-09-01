@@ -135,5 +135,12 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   sketchybar spinner. Three ways to trigger it by hand: AeroSpace `alt-m` then
   the account's notmuch search key (`a` for all), the Alfred `mail` keyword, or
   a click on the sketchybar mail item (syncs all).
+- **Claude/Codex skills** - skills you write live in
+  `config/claude/skills/` (and a condensed twin in `config/codex/skills/`, which
+  Codex reads); `link.sh` links them entry-by-entry, so they reach every machine
+  by `git pull`. A skill tracking an upstream stays its own clone instead —
+  `humanizer` is a fork we merge releases into, cloned by `install.sh` and kept
+  current by a hook in the private Claude settings. Skills needing Python
+  packages declare them in a `requirements.txt` beside `SKILL.md`.
 - **kitty** - `config/kitty/`
 - **Alfred workflows** - `config/alfred/workflows/`

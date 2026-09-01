@@ -1,0 +1,4 @@
+# Imported by the extraction steps in SKILL.md. install.sh installs these.
+pymupdf
+numpy
+scipy

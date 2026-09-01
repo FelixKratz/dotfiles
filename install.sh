@@ -199,6 +199,28 @@ git -C "$CODE_DIR/dotfiles" config core.hooksPath .githooks
 
 $CODE_DIR/dotfiles/link.sh --$PROFILE
 
+# humanizer is a fork we merge upstream releases into, so it stays its own clone
+# rather than being vendored here; a hook in the private Claude settings keeps it
+# current once it exists. link.sh links skills entry-by-entry, so this sits
+# happily beside the symlinked ones.
+if [ ! -d "$HOME/.claude/skills/humanizer/.git" ]; then
+  echo "Cloning humanizer skill..."
+  mkdir -p $HOME/.claude/skills
+  git clone -q git@github.com:sbfnk/humanizer.git $HOME/.claude/skills/humanizer 2>/dev/null || \
+    echo "  Skipped humanizer (no repo access yet — re-run once SSH keys are set up)"
+fi
+
+# Packages the pdf-annotations skill imports. Homebrew's and Debian's pythons
+# are both externally managed (PEP 668), so install into the user site with the
+# override rather than a venv the skill would have to know about. Desktop-only:
+# reading ink off a marked-up PDF is not work the remote boxes do.
+if [[ "$PROFILE" != "minimal" ]]; then
+  PDF_SKILL_REQS=$CODE_DIR/dotfiles/config/claude/skills/pdf-annotations/requirements.txt
+  echo "Checking Python packages for the pdf-annotations skill..."
+  run_onchange pdf-annotations-deps "$PDF_SKILL_REQS" \
+    python3 -m pip install --quiet --user --break-system-packages -r "$PDF_SKILL_REQS"
+fi
+
 # Doom Emacs, in both profiles — the config gates its desktop-only modules on
 # the profile marker link.sh just wrote. Installed after link.sh so ~/.config/
 # doom is already the symlink into this repo and `doom install` picks up the
