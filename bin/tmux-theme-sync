@@ -33,9 +33,9 @@ fi
 
 tmux set-option -g status-style "bg=$MANTLE,fg=$FG"
 tmux set-option -g status-left "#[fg=$MANTLE,bg=$BLUE,bold]  #S #[fg=$BLUE,bg=$MANTLE,nobold] "
-# The org-roam segment prints only while the sync is stalled, so an attached
-# session shows it without waiting for a new shell to greet you.
-tmux set-option -g status-right "#[fg=$MANTLE,bg=$RED,bold]#(~/.local/bin/org-roam-stall-status)#[bg=$MANTLE,nobold]#[fg=$OVERLAY,bg=$MANTLE]#[fg=$BG,bg=$OVERLAY] %H:%M #[fg=$SUBTEXT,bg=$OVERLAY]#[fg=$BG,bg=$SUBTEXT] %d %b "
+# The nudge segment prints only while something is standing (see bin/nudge), so
+# an attached session shows it without waiting for a new shell to greet you.
+tmux set-option -g status-right "#[fg=$MANTLE,bg=$RED,bold]#(~/.local/bin/nudge bar)#[bg=$MANTLE,nobold]#[fg=$OVERLAY,bg=$MANTLE]#[fg=$BG,bg=$OVERLAY] %H:%M #[fg=$SUBTEXT,bg=$OVERLAY]#[fg=$BG,bg=$SUBTEXT] %d %b "
 tmux set-window-option -g window-status-current-format "#[fg=$MANTLE,bg=$PEACH]#[fg=$MANTLE,bg=$PEACH,bold] #I  #W #[fg=$PEACH,bg=$MANTLE,nobold]"
 tmux set-window-option -g window-status-format "  #[fg=$OVERLAY]#I #[fg=$SUBTEXT]#W  "
 tmux set-window-option -g window-status-separator ""

@@ -1,0 +1,6 @@
+[Unit]
+Description=Re-run the polled nudge checks
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/nudge check

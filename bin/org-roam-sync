@@ -11,7 +11,6 @@ REPO="${ORG_ROAM_DIR:-$HOME/org-roam}"
 BRANCH="${ORG_ROAM_BRANCH:-main}"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/org-roam-sync"
-STALL_FILE="$STATE_DIR/stalled"
 FAIL_FILE="$STATE_DIR/failures"
 # Runs are 15 min apart, so this waits out an hour of network trouble before
 # calling an unreachable remote a real outage.
@@ -19,24 +18,19 @@ FAIL_THRESHOLD=4
 
 log() { echo "$(date '+%F %T') $*"; }
 
-notify() {
-  if command -v osascript >/dev/null 2>&1; then
-    osascript -e "display notification \"$1\" with title \"org-roam sync stalled\"" >/dev/null 2>&1
-  elif command -v notify-send >/dev/null 2>&1; then
-    notify-send "org-roam sync stalled" "$1" >/dev/null 2>&1
-  fi
+# Hand the condition to `nudge`, which surfaces it in the tmux bar and new
+# shells and handles snoozing and notification. Keyed on the reason, so a
+# different failure resurfaces something you snoozed.
+stall() {
+  local reason="$1"
+  log "STALLED: $reason"
+  command -v nudge >/dev/null 2>&1 &&
+    nudge raise org-roam-sync -p 20 -k "$reason" "org-roam sync stalled: $reason"
 }
 
-# Raise the marker the shell greets you with (see zshrc). The desktop
-# notification fires only when the reason is new, so a sync that stays stuck
-# doesn't pop a banner every 15 minutes.
-stall() {
-  local reason="$1" previous=""
-  mkdir -p "$STATE_DIR"
-  [ -f "$STALL_FILE" ] && previous=$(sed -n 2p "$STALL_FILE")
-  printf '%s\n%s\n' "$(date '+%F %T')" "$reason" > "$STALL_FILE"
-  log "STALLED: $reason"
-  [ "$reason" = "$previous" ] || notify "$reason"
+unstall() {
+  command -v nudge >/dev/null 2>&1 && nudge clear org-roam-sync
+  return 0
 }
 
 # Network failures are usually a blip — count them and only stall once they
@@ -86,4 +80,5 @@ if [ -n "$(git log "origin/$BRANCH..$BRANCH" --oneline 2>/dev/null)" ]; then
 fi
 
 # A clean run clears whatever the last bad one left behind.
-rm -f "$STALL_FILE" "$FAIL_FILE"
+rm -f "$FAIL_FILE"
+unstall

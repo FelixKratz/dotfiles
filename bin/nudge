@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+# nudge — the small standing conditions this machine wants you to know about.
+#
+# A nudge describes a condition, so producers raise it while the condition holds
+# and clear it once it resolves: nothing here has to be dismissed by hand. Three
+# things keep the bar from turning into wallpaper —
+#   * a nudge whose condition resolves disappears on its own;
+#   * `nudge snooze` buys quiet, and expires when the condition itself changes;
+#   * after DECAY_DAYS a nudge drops out of the bar and greeting, staying in
+#     `nudge list` — a week of being ignored says it was never urgent.
+#
+# `shell` runs on every new shell and `bar` on every tmux status interval, so
+# the read path parses state files in bash with no subprocesses. The expensive
+# polling lives in `check`, which launchd/systemd runs hourly.
+set -uo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nudges"
+DECAY_DAYS="${NUDGE_DECAY_DAYS:-7}"
+DEFAULT_SNOOZE="${NUDGE_DEFAULT_SNOOZE:-4h}"
+BAR_WIDTH="${NUDGE_BAR_WIDTH:-44}"
+
+NOW=$(date +%s)
+
+usage() {
+  cat <<'USAGE'
+nudge — standing conditions worth surfacing
+
+  nudge raise NAME [-p PRIORITY] [-k KEY] MESSAGE
+        Raise or refresh a nudge. PRIORITY sorts ascending (default 50).
+        KEY identifies the condition for snoozing (default: MESSAGE), so a
+        message that merely recounts ("8d old" -> "9d old") stays snoozed.
+  nudge clear NAME              Condition resolved; drop it silently.
+  nudge snooze [NAME|--top] [DURATION]
+        Quiet until DURATION passes (default 4h) or the condition changes.
+  nudge list                    Everything, including snoozed and decayed.
+  nudge bar                     One line for the tmux status bar.
+  nudge shell                   Greeting for new shells.
+  nudge check                   Re-run the polled checks (hourly job).
+USAGE
+}
+
+# cksum is everywhere; this only has to notice that a condition changed.
+keysum() { printf '%s' "$1" | cksum | tr -s ' ' '-' | tr -d ' \n'; }
+
+notify() {
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"$1\" with title \"nudge\"" >/dev/null 2>&1
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send "nudge" "$1" >/dev/null 2>&1
+  fi
+}
+
+valid_name() {
+  case "$1" in
+    "" | *[!a-z0-9._-]*) echo "nudge: bad name '$1' (use a-z 0-9 . _ -)" >&2; return 1 ;;
+  esac
+}
+
+parse_duration() {
+  local spec="$1" n="${1%[mhd]}" unit="${1#"${1%?}"}"
+  case "$n" in "" | *[!0-9]*) echo "nudge: bad duration '$spec' (e.g. 30m, 4h, 2d)" >&2; return 1 ;; esac
+  case "$unit" in
+    m) echo $((n * 60)) ;;
+    d) echo $((n * 86400)) ;;
+    *) echo $((n * 3600)) ;;
+  esac
+}
+
+# Fills the f_* globals from a key=value file, without forking. Unknown keys are
+# ignored, and the message may hold anything but a newline.
+read_state() {
+  f_raised=""; f_priority=""; f_key=""; f_message=""; f_until=""
+  local key value
+  while IFS='=' read -r key value; do
+    case "$key" in
+      raised) f_raised="$value" ;;
+      priority) f_priority="$value" ;;
+      key) f_key="$value" ;;
+      message) f_message="$value" ;;
+      until) f_until="$value" ;;
+    esac
+  done < "$1"
+}
+
+cmd_raise() {
+  local name="$1"; shift
+  valid_name "$name" || return 1
+  local priority=50 key="" message=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -p) priority="$2"; shift 2 ;;
+      -k) key="$2"; shift 2 ;;
+      *) message="$1"; shift ;;
+    esac
+  done
+  [ -n "$message" ] || { echo "nudge: raise needs a message" >&2; return 1; }
+  [ -n "$key" ] || key="$message"
+
+  mkdir -p "$STATE_DIR"
+  local file="$STATE_DIR/$name.nudge" sum raised is_new=1
+  sum=$(keysum "$key")
+  raised=$NOW
+  if [ -f "$file" ]; then
+    read_state "$file"
+    if [ "$f_key" = "$sum" ]; then
+      # Same condition still holding: keep the original time so decay measures
+      # how long it has stood, and stay quiet.
+      raised="$f_raised"
+      is_new=0
+    fi
+  fi
+  if [ "$is_new" = 1 ]; then
+    # New, or the condition changed under an existing name: any snooze was
+    # bought against the old condition, so it no longer applies.
+    rm -f "$STATE_DIR/$name.snooze"
+    notify "$message"
+  fi
+  printf 'raised=%s\npriority=%s\nkey=%s\nmessage=%s\n' \
+    "$raised" "$priority" "$sum" "$message" > "$file"
+}
+
+cmd_clear() {
+  valid_name "$1" || return 1
+  rm -f "$STATE_DIR/$1.nudge" "$STATE_DIR/$1.snooze"
+  return 0
+}
+
+# Fills NUDGES with "state|priority|raised|name|message", sorted by priority
+# then age. State is current, snoozed or decayed.
+NUDGES=()
+scan() {
+  NUDGES=()
+  [ -d "$STATE_DIR" ] || return 0
+  local file name state raised priority sum snooze message
+  for file in "$STATE_DIR"/*.nudge; do
+    [ -f "$file" ] || continue
+    name="${file##*/}"; name="${name%.nudge}"
+    read_state "$file"
+    raised="${f_raised:-$NOW}"; priority="${f_priority:-50}"; sum="$f_key"; message="$f_message"
+    state=current
+    snooze="$STATE_DIR/$name.snooze"
+    if [ -f "$snooze" ]; then
+      read_state "$snooze"
+      if [ "$f_key" = "$sum" ] && [ "${f_until:-0}" -gt "$NOW" ]; then
+        state=snoozed
+      else
+        rm -f "$snooze"
+      fi
+    fi
+    [ "$state" = current ] && [ $(( (NOW - raised) / 86400 )) -ge "$DECAY_DAYS" ] && state=decayed
+    NUDGES[${#NUDGES[@]}]="$state|$priority|$raised|$name|$message"
+  done
+  [ ${#NUDGES[@]} -gt 1 ] || return 0
+  local sorted line
+  sorted=$(printf '%s\n' "${NUDGES[@]}" | sort -t'|' -k2,2n -k3,3n)
+  NUDGES=()
+  while IFS= read -r line; do NUDGES[${#NUDGES[@]}]="$line"; done <<< "$sorted"
+}
+
+# Splits a scan line into the globals n_state, n_name and n_message.
+split() {
+  local rest="$1"
+  n_state="${rest%%|*}"; rest="${rest#*|}"
+  rest="${rest#*|}"; rest="${rest#*|}"
+  n_name="${rest%%|*}"; n_message="${rest#*|}"
+}
+
+cmd_bar() {
+  scan
+  local line count=0 top="" limit=$((BAR_WIDTH - 1)) head
+  for line in ${NUDGES[@]+"${NUDGES[@]}"}; do
+    case "$line" in current\|*) count=$((count + 1)); [ -n "$top" ] || top="$line" ;; esac
+  done
+  [ -n "$top" ] || return 0
+  split "$top"
+  if [ ${#n_message} -gt "$BAR_WIDTH" ]; then
+    # Cut at a space so the ellipsis can never land inside a UTF-8 character.
+    head="${n_message:0:$limit}"
+    case "$head" in
+      *\ *) n_message="${head% *}…" ;;
+      *) n_message="$(printf '%s' "$n_message" | cut -c1-"$limit")…" ;;
+    esac
+  fi
+  printf ' %s ' "$n_message"
+  [ "$count" -gt 1 ] && printf '+%s ' $((count - 1))
+  return 0
+}
+
+cmd_shell() {
+  scan
+  local line quiet=0
+  local yellow=$'\033[33m' dim=$'\033[2m' reset=$'\033[0m'
+  [ -t 1 ] || { yellow=""; dim=""; reset=""; }
+  for line in ${NUDGES[@]+"${NUDGES[@]}"}; do
+    case "$line" in
+      current\|*)
+        split "$line"
+        printf '%s⚠ %s%s %s(nudge snooze %s)%s\n' "$yellow" "$n_message" "$reset" "$dim" "$n_name" "$reset" ;;
+      *) quiet=$((quiet + 1)) ;;
+    esac
+  done
+  [ "$quiet" -gt 0 ] && printf '%s(%s snoozed or set aside — nudge list)%s\n' "$dim" "$quiet" "$reset"
+  return 0
+}
+
+cmd_list() {
+  scan
+  [ ${#NUDGES[@]} -gt 0 ] || { echo "nothing to nudge about"; return 0; }
+  local line
+  for line in "${NUDGES[@]}"; do
+    split "$line"
+    printf '%-8s %-22s %s\n' "$n_state" "$n_name" "$n_message"
+  done
+}
+
+cmd_snooze() {
+  local target="${1:---top}" spec="${2:-$DEFAULT_SNOOZE}" secs line
+  if [ "$target" = "--top" ]; then
+    scan
+    target=""
+    for line in ${NUDGES[@]+"${NUDGES[@]}"}; do
+      case "$line" in current\|*) split "$line"; target="$n_name"; break ;; esac
+    done
+    [ -n "$target" ] || { echo "nothing to snooze"; return 0; }
+  fi
+  valid_name "$target" || return 1
+  [ -f "$STATE_DIR/$target.nudge" ] || { echo "nudge: no such nudge '$target'" >&2; return 1; }
+  secs=$(parse_duration "$spec") || return 1
+  read_state "$STATE_DIR/$target.nudge"
+  printf 'until=%s\nkey=%s\n' "$((NOW + secs))" "$f_key" > "$STATE_DIR/$target.snooze"
+  echo "snoozed $target for $spec"
+}
+
+# --- polled checks ------------------------------------------------------
+# Conditions nobody pushes at us. Each one raises or clears, so a resolved
+# condition drops off by itself on the next run.
+
+check_reboot() {
+  if [ -f /var/run/reboot-required ]; then
+    local pkgs=""
+    [ -f /var/run/reboot-required.pkgs ] &&
+      pkgs=" ($(sort -u /var/run/reboot-required.pkgs | wc -l | tr -d ' ') packages)"
+    cmd_raise reboot -p 20 -k reboot-required "restart required$pkgs"
+    return
+  fi
+  # macOS has no reboot flag; its own pending-update list is what Notification
+  # Centre shows, and `defaults read` uses the cached background scan.
+  if [ "$(uname -s)" = Darwin ]; then
+    local pending
+    pending=$(defaults read /Library/Preferences/com.apple.SoftwareUpdate RecommendedUpdates 2>/dev/null |
+      sed -n 's/.*"Display Name" = \(.*\);/\1/p' | tr -d '"' | paste -sd, - | sed 's/,/, /g')
+    if [ -n "$pending" ]; then
+      cmd_raise reboot -p 20 -k "macos-updates:$pending" "macOS updates pending: $pending"
+      return
+    fi
+  fi
+  cmd_clear reboot
+}
+
+check_claude_backup() {
+  local dir="$HOME/pCloud Drive/Backups/claude-projects" newest mtime age
+  [ -d "$dir" ] || { cmd_clear claude-backup; return; }
+  newest=$(ls -t "$dir"/claude-projects-*.tar.gz 2>/dev/null | head -1)
+  if [ -z "$newest" ]; then
+    cmd_raise claude-backup -p 40 -k claude-backup-missing \
+      "no claude-projects backup yet — run backup-claude-projects"
+    return
+  fi
+  mtime=$(stat -f %m "$newest" 2>/dev/null || stat -c %Y "$newest" 2>/dev/null)
+  [ -n "$mtime" ] || return
+  age=$(( (NOW - mtime) / 86400 ))
+  if [ "$age" -gt 7 ]; then
+    cmd_raise claude-backup -p 40 -k claude-backup-overdue \
+      "claude-projects backup is ${age}d old — run backup-claude-projects"
+  else
+    cmd_clear claude-backup
+  fi
+}
+
+cmd_check() {
+  check_reboot
+  check_claude_backup
+}
+
+case "${1:-shell}" in
+  raise) shift; cmd_raise "$@" ;;
+  clear) shift; cmd_clear "$@" ;;
+  snooze) shift; cmd_snooze "$@" ;;
+  list) cmd_list ;;
+  bar) cmd_bar ;;
+  shell) cmd_shell ;;
+  check) cmd_check ;;
+  -h | --help | help) usage ;;
+  *) echo "nudge: unknown command '$1'" >&2; usage >&2; exit 1 ;;
+esac
