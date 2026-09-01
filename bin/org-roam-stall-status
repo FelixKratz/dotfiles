@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# org-roam-stall-status — tmux status-right segment: prints a short warning
+# while org-roam-sync is stalled, nothing otherwise. Runs on whichever machine
+# hosts the tmux server, so a remote session reports that machine's own sync.
+STALL="${XDG_STATE_HOME:-$HOME/.local/state}/org-roam-sync/stalled"
+[ -f "$STALL" ] && printf ' roam sync stalled '
+exit 0

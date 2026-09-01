@@ -15,6 +15,7 @@ if [[ "$KITTY_THEME_LINK" == *"latte"* ]] || [[ "$KITTY_THEME_LINK" == *"light"*
     TEXT="#4c4f69"
     SUBTEXT="#6c6f85"
     MANTLE="#e6e9ef"
+    RED="#d20f39"
 else
     THEME="dark"
     # Catppuccin Mocha
@@ -27,11 +28,14 @@ else
     TEXT="#cdd6f4"
     SUBTEXT="#a6adc8"
     MANTLE="#181825"
+    RED="#f38ba8"
 fi
 
 tmux set-option -g status-style "bg=$MANTLE,fg=$FG"
 tmux set-option -g status-left "#[fg=$MANTLE,bg=$BLUE,bold]  #S #[fg=$BLUE,bg=$MANTLE,nobold] "
-tmux set-option -g status-right "#[fg=$OVERLAY,bg=$MANTLE]#[fg=$BG,bg=$OVERLAY] %H:%M #[fg=$SUBTEXT,bg=$OVERLAY]#[fg=$BG,bg=$SUBTEXT] %d %b "
+# The org-roam segment prints only while the sync is stalled, so an attached
+# session shows it without waiting for a new shell to greet you.
+tmux set-option -g status-right "#[fg=$MANTLE,bg=$RED,bold]#(~/.local/bin/org-roam-stall-status)#[bg=$MANTLE,nobold]#[fg=$OVERLAY,bg=$MANTLE]#[fg=$BG,bg=$OVERLAY] %H:%M #[fg=$SUBTEXT,bg=$OVERLAY]#[fg=$BG,bg=$SUBTEXT] %d %b "
 tmux set-window-option -g window-status-current-format "#[fg=$MANTLE,bg=$PEACH]#[fg=$MANTLE,bg=$PEACH,bold] #I  #W #[fg=$PEACH,bg=$MANTLE,nobold]"
 tmux set-window-option -g window-status-format "  #[fg=$OVERLAY]#I #[fg=$SUBTEXT]#W  "
 tmux set-window-option -g window-status-separator ""
@@ -39,5 +43,5 @@ tmux set-option -g pane-active-border-style "fg=$BLUE"
 tmux set-option -g pane-border-style "fg=$SURFACE"
 tmux set-option -g message-style "bg=$BLUE,fg=$MANTLE"
 tmux set-option -g status-left-length 30
-tmux set-option -g status-right-length 50
+tmux set-option -g status-right-length 70
 tmux set-option -g '@theme' "$THEME"
