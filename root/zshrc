@@ -225,6 +225,9 @@ brew() {
 
 path=("$HOME/.juliaup/bin" $path)
 export PATH
+# Tab completion for juliaup and julia channel selection. juliaup rewrites this
+# block with literal paths on update — keep $HOME so it works on every machine.
+[ -f "$HOME/.julia/juliaup/completions/zsh.zsh" ] && source "$HOME/.julia/juliaup/completions/zsh.zsh"
 
 # <<< juliaup initialize <<<
 
