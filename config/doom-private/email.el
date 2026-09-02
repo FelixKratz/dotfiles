@@ -1077,6 +1077,37 @@ toggled to a value that never fires in the body."
         "C-c C-s" #'sf/insert-signature)
   (setq message-hidden-headers '("Fcc"))
 
+  ;; `mml-expand-html-into-multipart-related' locates each inline image by
+  ;; searching the raw HTML for the src path that libxml handed back, but
+  ;; libxml has already decoded the entities the exporter wrote.  A local
+  ;; image whose filename contains "&", "<" or ">" is therefore never found,
+  ;; point stays where it was, and the enclosing `while' rescans the same
+  ;; <img> tag forever, so C-c C-c wedges Emacs at 100% CPU with no way out
+  ;; but C-g.  Outlook attachments carry such names routinely, and gnus
+  ;; writes them to disk verbatim when it extracts cid: parts for a reply.
+  ;; Retry the search against the escaped spelling, and if even that misses,
+  ;; step over the tag so the loop always advances.
+  (defun sf/mml-html-escape (string)
+    "Escape STRING the way an HTML exporter escapes an attribute value."
+    (thread-last string
+                 (replace-regexp-in-string "&" "&amp;")
+                 (replace-regexp-in-string "<" "&lt;")
+                 (replace-regexp-in-string ">" "&gt;")))
+
+  (defun sf/mml-find-escaped-image-path (fn cont)
+    "Keep `mml-expand-html-into-multipart-related' out of an infinite loop."
+    (cl-letf* ((search (symbol-function 'search-forward))
+               ((symbol-function 'search-forward)
+                (lambda (string &optional bound noerror count)
+                  (or (funcall search string bound noerror count)
+                      (funcall search (sf/mml-html-escape string)
+                               bound noerror count)
+                      (progn (when bound (goto-char bound)) nil)))))
+      (funcall fn cont)))
+
+  (advice-add 'mml-expand-html-into-multipart-related :around
+              #'sf/mml-find-escaped-image-path)
+
   ;; Suppress org export buffer when org-msg generates text/plain
   (setq org-export-show-temporary-export-buffer nil)
 
