@@ -1,0 +1,42 @@
+#!/bin/zsh
+# Apply the hidutil keyboard remaps.
+#
+# hidutil mappings live on the IOHIDDevice service, so they vanish on reboot
+# and whenever a keyboard is unplugged and reconnected — hence the launch
+# agent that runs this at login and every minute after.
+
+command -v hidutil >/dev/null 2>&1 || exit 0
+
+# Caps → Esc, right cmd → right alt, right alt → right ctrl. Every keyboard,
+# built-in included.
+base='
+  {"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x700000029},
+  {"HIDKeyboardModifierMappingSrc":0x7000000E7,"HIDKeyboardModifierMappingDst":0x7000000E6},
+  {"HIDKeyboardModifierMappingSrc":0x7000000E6,"HIDKeyboardModifierMappingDst":0x7000000E4}'
+
+# F10/F11/F12 → mute / volume down / volume up, for PC keyboards with no media
+# keys. macOS only maps F-keys to media functions on keyboards it recognises as
+# Apple-shaped, and the Keyboard settings "function keys" toggle does nothing
+# for these two, so the mapping has to happen at the HID level.
+media='
+  {"HIDKeyboardModifierMappingSrc":0x700000043,"HIDKeyboardModifierMappingDst":0xC000000E2},
+  {"HIDKeyboardModifierMappingSrc":0x700000044,"HIDKeyboardModifierMappingDst":0xC000000EA},
+  {"HIDKeyboardModifierMappingSrc":0x700000045,"HIDKeyboardModifierMappingDst":0xC000000E9}'
+
+# Keyboards that get the media keys. Scoped per device so the built-in keyboard
+# keeps fn+F10-F12 as real function keys. Add new keyboards here; the vendor and
+# product IDs come from:
+#   ioreg -c IOHIDDevice -r -d1 | grep -E '"(Product|VendorID|ProductID)"'
+media_keyboards=(
+  '{"VendorID":0x0853,"ProductID":0x0119}'  # Realforce 105U
+  '{"VendorID":0x413C,"ProductID":0x2113}'  # Dell KB216
+)
+
+hidutil property --set "{\"UserKeyMapping\":[$base]}" >/dev/null
+
+# A per-device mapping replaces the global one for that device rather than
+# adding to it, so these have to repeat the base mappings.
+for matching in $media_keyboards; do
+  hidutil property --matching "$matching" \
+    --set "{\"UserKeyMapping\":[$base,$media]}" >/dev/null 2>&1
+done

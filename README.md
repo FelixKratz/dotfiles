@@ -93,6 +93,25 @@ overlay first:
   substitutes `$HOME` at install time and writes real files to
   `~/Library/LaunchAgents/`.
 
+### Keyboard remapping
+
+`bin/hidutil-remap` applies the `hidutil` key mappings, run at login and every
+minute by `none.hidutil.remap`. Globally: caps lock → escape, right cmd → right
+alt, right alt → right ctrl. On external PC keyboards it additionally maps
+F10/F11/F12 to mute, volume down and volume up, since macOS gives those
+keyboards no media keys and the Keyboard settings function-key toggle has no
+effect on them.
+
+To cover another keyboard, add its IDs to `media_keyboards` in the script:
+
+```sh
+ioreg -c IOHIDDevice -r -d1 | grep -E '"(Product|VendorID|ProductID)"'
+```
+
+A per-device mapping replaces the global one for that device rather than adding
+to it, which is why the script repeats the base mappings for each keyboard it
+lists.
+
 ### Updating
 
 Safe to re-run — brew/apt skip already-installed packages, links are
