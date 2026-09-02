@@ -112,6 +112,15 @@ A per-device mapping replaces the global one for that device rather than adding
 to it, which is why the script repeats the base mappings for each keyboard it
 lists.
 
+If the built-in keyboard's F-keys stop acting as media keys — a giveaway is one
+of them revealing the desktop instead — the culprit is System Settings →
+Keyboard → Keyboard Shortcuts → Function Keys. That switch is global despite
+the per-keyboard picker sitting above it, and the pane holds the live state:
+`defaults write`/`delete` on `com.apple.keyboard.fnState` changes the stored
+value without changing behaviour, so trust the switch rather than the pref.
+Leave it off; the external keyboards get their volume keys from `hidutil`
+regardless of how it is set.
+
 ### Updating
 
 Safe to re-run — brew/apt skip already-installed packages, links are
