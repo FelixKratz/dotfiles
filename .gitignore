@@ -27,3 +27,4 @@ notmuch-*.html
 
 # Local-only Claude Code settings (machine-specific paths)
 .claude/settings.local.json
+
