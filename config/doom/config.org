@@ -16,8 +16,10 @@ These package declarations are tangled to =packages.el=. Doom uses these to
 install packages from MELPA, ELPA, or directly from git repos.
 
 ** Profile
-Desktop-only packages are gated on the install profile, so a =--minimal=
-machine does not build org-roam, mail or social clients. See =profile.el=.
+Optional packages are gated on the config groups this machine declares in
+=~/.config/dotfiles/profile=, so a machine without =notes= does not build
+org-roam and one without =mail= does not build the mail clients. See
+=profile.el= and =docs/profiles.md=.
 #+begin_src emacs-lisp
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
@@ -38,7 +40,7 @@ machine does not build org-roam, mail or social clients. See =profile.el=.
 
 ** Org Extensions
 #+begin_src emacs-lisp
-(when sf/doom-full
+(when (sf/doom-group-p 'notes)
   (package! org-ref)               ; citations and cross-references
   (package! vulpea)                ; org-roam workflow helpers
   (package! consult-vulpea
@@ -47,7 +49,7 @@ machine does not build org-roam, mail or social clients. See =profile.el=.
 
 ** Communication
 #+begin_src emacs-lisp
-(when sf/doom-full
+(when (sf/doom-group-p 'mail)
   (package! telega)                ; Telegram client
   (package! mastodon)              ; Mastodon client
   (package! mu4e-column-faces)     ; coloured columns in mu4e headers
@@ -82,9 +84,9 @@ machine does not build org-roam, mail or social clients. See =profile.el=.
 #+end_src
 
 * Profile
-=profile.el= records whether this machine was installed with =--minimal=;
-=init.el= reads it to pick the module list, and the sections below use it to
-skip desktop-only setup. Loading it again here is a no-op.
+=profile.el= reads =~/.config/dotfiles/profile= into =sf/doom-groups=; =init.el=
+uses =sf/doom-group-p= to pick the module list, and the sections below use it to
+skip setup this machine has not asked for. Loading it again here is a no-op.
 #+begin_src emacs-lisp
 (load! "profile" doom-user-dir)
 #+end_src
@@ -203,10 +205,10 @@ which makes repeated selection quicker.
 :PROPERTIES:
 :header-args:emacs-lisp: :tangle mail-config.el
 :END:
-This chapter tangles to =mail-config.el=, which only full machines load, so
-anything added here stays off servers without needing its own guard.
+This chapter tangles to =mail-config.el=, loaded only where the =mail= group is
+declared, so anything added here stays off other machines without its own guard.
 #+begin_src emacs-lisp :tangle config.el
-(when sf/doom-full
+(when (sf/doom-group-p 'mail)
   (load! "mail-config" doom-user-dir))
 #+end_src
 
@@ -614,10 +616,11 @@ The buffer is still accessible via =SPC b B= (global buffer list).
 
 * Org and Notes
 Org-mode, the vulpea note-taking workflow and the bibliography setup tangle to
-=notes.el=, which minimal machines skip — they have no =~/org-roam= and no
-=:lang org= module, and these blocks evaluate vulpea variables at load time.
+=notes.el=, loaded only where the =notes= group is declared — machines without it
+have no =~/org-roam= and no =:lang org= module, and these blocks evaluate vulpea
+variables at load time.
 #+begin_src emacs-lisp
-(when sf/doom-full
+(when (sf/doom-group-p 'notes)
   (load! "notes" doom-user-dir))
 #+end_src
 
@@ -680,6 +683,15 @@ evil-org-agenda binds =gt= to =org-agenda-show-tags=, shadowing workspace switch
 
 ** Agenda Views
 Custom agenda with vulpea integration.
+
+Dates do the filtering here, rather than tags. Anything carrying a =SCHEDULED=
+or =DEADLINE= stays out of sight until its date comes round — so a submission
+due on 16 November costs no attention in September — and the block that is meant
+to reach zero is the list of tasks with *no* date at all. Clearing that list
+means deciding when to do things, which is the decision worth making daily.
+
+=org-todo-list= still shows everything, undated and dated alike, and is the
+right tool for a monthly stocktake rather than for daily work.
 #+begin_src emacs-lisp
 (setq org-agenda-prefix-format
       '((agenda . " %i %(vulpea-agenda-category 12)%?-12t% s")
@@ -687,11 +699,32 @@ Custom agenda with vulpea integration.
         (tags . " %i %(vulpea-agenda-category 12) ")
         (search . " %i %(vulpea-agenda-category 12) ")))
 
+;; Make `org-todo-list' honour dates too, so reaching for it out of habit gives
+;; a sensible answer rather than every open task at once. What survives: tasks
+;; with no date, tasks due or overdue, and deadlines inside the warning window.
+;; A submission due in November stays out of it until November.
+(setq org-agenda-todo-ignore-scheduled 'future
+      org-agenda-todo-ignore-deadlines 'far
+      org-agenda-todo-ignore-timestamp 'future
+      org-agenda-tags-todo-honor-ignore-options t)
+
+;; Tasks with no date of any kind. This is the scan: give each one a date, or
+;; kill it. Project containers are excluded — they are headings, not actions.
+(defconst sf/agenda-cmd-unscheduled
+  '(tags-todo "-project/TODO|STRT"
+    ((org-agenda-overriding-header "Unscheduled — give these a date")
+     (org-agenda-skip-function
+      '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
+     (org-agenda-sorting-strategy '(priority-down category-keep)))))
+
+;; `vulpea-agenda-cmd-focus' is not in this list: it matches the tag "FOCUS",
+;; org tag matching is case-sensitive, and nothing here is tagged focus in any
+;; case. Add it back if you ever start tagging.
 (setq org-agenda-custom-commands
    `((" " "Agenda"
       (,vulpea-agenda-cmd-refile
        ,vulpea-agenda-cmd-today
-       ,vulpea-agenda-cmd-focus
+       ,sf/agenda-cmd-unscheduled
        ,vulpea-agenda-cmd-waiting)
       ((org-agenda-buffer-name vulpea-agenda-main-buffer-name)))))
 #+end_src
@@ -719,6 +752,15 @@ Todo capture with vulpea auto-tagging. Prompts for person/project and files todo
         (vulpea-note-path note)
       (user-error "No project selected"))))
 
+(defun sf/org-capture-mail-sender ()
+  "Sender of the message being captured, as a display name.
+`ol-notmuch' stores only `:from' (the full \"Name <address>\" string),
+with no `:fromname' of the kind mu4e provides, so pull the name out
+here and fall back to the address."
+  (let* ((from (or (plist-get org-store-link-plist :from) ""))
+         (parts (ignore-errors (mail-extract-address-components from))))
+    (or (car parts) (cadr parts) from)))
+
 (after! org
   (setq org-capture-templates
         '(("t" "Todo (person)" entry
@@ -729,15 +771,55 @@ Todo capture with vulpea auto-tagging. Prompts for person/project and files todo
            "* TODO %?\n%U\n" :prepend t)
           ("n" "Note" entry
            (file+headline "~/org-roam/inbox.org" "Notes")
-           "* %?\n%U\n"))))
+           "* %?\n%U\n")
+          ;; Mail. Reached from notmuch via `sf/notmuch-capture' (C), which
+          ;; clears the flagged tag once the capture is finalised.
+          ("e" "Mail")
+          ("er" "Reply needed" entry
+           (file+headline "~/org-roam/mail.org" "Reply")
+           "* TODO Reply to %(sf/org-capture-mail-sender) — %:subject\nDEADLINE: %^{Reply by}t\n%a\n%?"
+           :empty-lines 1)
+          ("ed" "Decision needed" entry
+           (file+headline "~/org-roam/mail.org" "Decide")
+           "* TODO %^{Decide what?}\nDEADLINE: %^{Decide by}t\n%a\n%?"
+           :empty-lines 1)
+          ("eR" "Read later" entry
+           (file+headline "~/org-roam/mail.org" "Read")
+           "* TODO Read: %:subject — %(sf/org-capture-mail-sender)\n%a"
+           :immediate-finish t :empty-lines 1)
+          ;; Vulpea targets. These used to be set separately in the vulpea
+          ;; module, which `setq' the whole list and so silently replaced
+          ;; whichever definition loaded first. One list, defined here.
+          ("m" "Meeting" entry
+           (function vulpea-capture-meeting-target)
+           (function vulpea-capture-meeting-template)
+           :clock-in t :clock-resume t)
+          ("r" "Review" plain
+           (function sf/capture-review-target)
+           (function sf/capture-review-template)
+           :unnarrowed t))))
 #+end_src
+
+The mail templates file into =~/org-roam/mail.org=, which carries the
+=:active:= filetag so =sf/org-active-files= picks it up for the agenda.
+Flags arrive from Outlook and the phone, so =tag:flagged= is the capture
+inbox and =sf/notmuch-capture= drains it.
 
 ** Vulpea Keybindings
 Keybindings for vulpea note-taking. All note commands work with current context.
 Switch context with =SPC n r p= (private) or =SPC n r w= (work).
+=SPC n a= opens the date-filtered agenda, which is the view to work from.
+=org-todo-list= ignores dates and lists every open task, so it belongs to the
+occasional stocktake rather than to a working day.
 #+begin_src emacs-lisp
+(defun sf/org-agenda-main ()
+  "Open the main agenda: today, unscheduled tasks, and what is waiting."
+  (interactive)
+  (org-agenda nil " "))
+
 (map! :leader
       (:prefix ("n" . "notes")
+       :desc "Agenda" "a" #'sf/org-agenda-main
        (:prefix ("r" . "roam")
         :desc "Find note" "f" #'vulpea-find
         :desc "Grep notes" "g" #'consult-vulpea-grep

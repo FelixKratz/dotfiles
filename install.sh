@@ -197,7 +197,25 @@ echo "Cloning dotfiles..."
 # Enable the gitleaks pre-commit hook (idempotent — safe to re-run).
 git -C "$CODE_DIR/dotfiles" config core.hooksPath .githooks
 
-$CODE_DIR/dotfiles/link.sh --$PROFILE
+# Declare the machine's config groups, once. link.sh reads this and never
+# writes it, so later relinks cannot change what this machine is; edit the file
+# by hand to add or drop a group. See docs/profiles.md.
+PROFILE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/profile"
+if [ ! -e "$PROFILE_FILE" ]; then
+  mkdir -p "$(dirname "$PROFILE_FILE")"
+  {
+    echo "# Config groups this machine runs. One per line; # comments ignored."
+    echo "# Written once at install; edit by hand thereafter. See docs/profiles.md."
+    if [[ "$PROFILE" != "minimal" ]]; then
+      printf '%s\n' desktop mail notes
+    fi
+  } > "$PROFILE_FILE"
+  echo "Wrote profile: $PROFILE_FILE"
+else
+  echo "Keeping existing profile: $PROFILE_FILE"
+fi
+
+$CODE_DIR/dotfiles/link.sh
 
 # humanizer is a fork we merge upstream releases into, so it stays its own clone
 # rather than being vendored here; a hook in the private Claude settings keeps it
@@ -212,19 +230,23 @@ fi
 
 # Packages the pdf-annotations skill imports. Homebrew's and Debian's pythons
 # are both externally managed (PEP 668), so install into the user site with the
-# override rather than a venv the skill would have to know about. Desktop-only:
-# reading ink off a marked-up PDF is not work the remote boxes do.
-if [[ "$PROFILE" != "minimal" ]]; then
+# override rather than a venv the skill would have to know about. Read off the
+# group file rather than the install-time profile, so a machine that drops the
+# group later stops pulling them in: reading ink off a marked-up PDF is not work
+# the remote boxes do. Same parse as link.sh, so the two cannot disagree.
+typeset -a GROUPS
+GROUPS=(${(f)"$(sed -e 's/#.*//' -e 's/[[:space:]]//g' $PROFILE_FILE | grep -v '^$')"})
+if (( ${GROUPS[(Ie)desktop]} )); then
   PDF_SKILL_REQS=$CODE_DIR/dotfiles/config/claude/skills/pdf-annotations/requirements.txt
   echo "Checking Python packages for the pdf-annotations skill..."
   run_onchange pdf-annotations-deps "$PDF_SKILL_REQS" \
     python3 -m pip install --quiet --user --break-system-packages -r "$PDF_SKILL_REQS"
 fi
 
-# Doom Emacs, in both profiles — the config gates its desktop-only modules on
-# the profile marker link.sh just wrote. Installed after link.sh so ~/.config/
-# doom is already the symlink into this repo and `doom install` picks up the
-# real config instead of writing a template over it.
+# Doom Emacs, on every machine — the config gates its optional modules on the
+# groups declared above. Installed after link.sh so ~/.config/doom is already
+# the symlink into this repo and `doom install` picks up the real config
+# instead of writing a template over it.
 if [ -d "$HOME/.emacs.d" ]; then
   # Emacs prefers ~/.emacs.d over ~/.config/emacs, so a leftover install there
   # shadows the one we manage.

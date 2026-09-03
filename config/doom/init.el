@@ -14,9 +14,9 @@
 ;;      Alternatively, press 'gd' (or 'C-c c d') on a module to browse its
 ;;      directory (for easy access to its source code).
 
-;; Desktop-only modules are gated on the install profile: `./install.sh
-;; --minimal' machines get Emacs for magit and editing, without org-mode,
-;; notes, mail or the writing tools.
+;; Optional modules are gated on the config groups this machine declares in
+;; ~/.config/dotfiles/profile (desktop / mail / notes). A machine declaring none
+;; still gets Emacs for magit and editing. See docs/profiles.md.
 (load! "profile" doom-user-dir)
 
 (doom! :input
@@ -113,7 +113,7 @@
        ;;tmux              ; an API for interacting with tmux
        tree-sitter       ; syntax and parsing, sitting in a tree...
        ;;upload            ; map local to remote projects via ssh/ftp
-       (:when sf/doom-full vulpea) ; org-roam workflow
+       (:when (sf/doom-group-p 'notes) vulpea) ; org-roam workflow
 
        :os
        (:if (featurep :system 'macos) macos)  ; improve compatibility with macOS
@@ -161,7 +161,7 @@
        ;;nim               ; python + lisp at the speed of c
        ;;nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (:when sf/doom-full
+       (:when (sf/doom-group-p 'notes)
          (org +present +pretty))          ; organize your plain life in plain text (vulpea replaces +roam)
        ;;php               ; perl's insecure younger brother
        ;;plantuml          ; diagrams for confusing people more
@@ -188,7 +188,7 @@
 
        :email
        ;;(mu4e +mbsync +org +gmail)
-       (:when sf/doom-full notmuch)
+       (:when (sf/doom-group-p 'mail) notmuch)
        ;;(wanderlust +gmail)
 
        :app

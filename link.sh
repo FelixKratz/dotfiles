@@ -3,35 +3,67 @@
 # Re-link dotfiles (safe to run multiple times, works on macOS and Linux)
 #
 # Usage:
-#   ./link.sh --full     # full desktop setup
-#   ./link.sh --minimal  # shell, tmux, nvim, emacs, starship, Claude, Codex
+#   ./link.sh
+#
+# What gets linked is decided by ~/.config/dotfiles/profile, which lists the
+# config groups this machine runs (one per line; # comments ignored):
+#
+#   desktop  window manager, launcher, terminal, browser integration
+#   mail     mail config and its supporting daemons
+#   notes    org-roam notes (no config dirs of its own; Doom modules only)
+#
+# This script only ever READS that file. It used to take --full/--minimal and
+# write the answer as a side effect, which meant relinking a desktop with
+# --minimal quietly demoted it and took mail and notes out of Emacs. The
+# profile is a property of the machine, so it is declared once, by hand.
 
 CODE_DIR=$HOME/code
 OS="$(uname)"
+PROFILE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/profile"
 
-case "${1:-}" in
-  --full)    PROFILE=full ;;
-  --minimal) PROFILE=minimal ;;
-  *)
-    echo "Usage: ./link.sh --full|--minimal"
-    echo "  --full     Full desktop setup (org-mode, email, window manager, etc.)"
-    echo "  --minimal  Shell, tmux, nvim, emacs, starship, Claude, Codex"
-    exit 1
-    ;;
-esac
+if [[ ! -r "$PROFILE_FILE" ]]; then
+  cat >&2 <<EOF
+link.sh: no profile at $PROFILE_FILE
+
+Declare what this machine runs before linking, one group per line:
+
+  mkdir -p ${PROFILE_FILE:h}
+  cat > $PROFILE_FILE <<'PROFILE'
+  desktop
+  mail
+  notes
+  PROFILE
+
+A machine that declares nothing still gets the shell, editors and CLI tools.
+See docs/profiles.md.
+EOF
+  exit 1
+fi
+
+# Strip comments and blanks; anything left is a group name.
+typeset -a GROUPS
+GROUPS=(${(f)"$(sed -e 's/#.*//' -e 's/[[:space:]]//g' $PROFILE_FILE | grep -v '^$')"})
+echo "Profile: ${GROUPS:-(none)}"
 
 # macOS ln uses -h, GNU ln uses -n to avoid following existing symlinks
 [[ "$OS" == "Darwin" ]] && LN_FLAG="-sfh" || LN_FLAG="-sfn"
 
-# Record the profile where other tools can read it. Doom checks this to decide
-# whether to load org-mode, notes and mail (see config/doom/profile.el).
-mkdir -p $HOME/.cache/dotfiles
-print -r -- "$PROFILE" > $HOME/.cache/dotfiles/profile
-
-# Desktop-only configs (skipped in minimal mode). `doom` is linked in both
-# profiles — Emacs is there for magit and file editing on servers too — and
-# gates its own desktop modules on the profile marker above.
-DESKTOP_ONLY=(aerospace alfred kitty sketchybar svim email doom-private goimapnotify oauth2ms github-copilot)
+# Configs owned by a group. Anything not listed here is linked on every
+# machine — `doom` included, since Emacs is there for magit and file editing on
+# servers too, and gates its own optional modules on the same profile file.
+typeset -A CONFIG_GROUP
+CONFIG_GROUP=(
+  aerospace      desktop
+  alfred         desktop
+  kitty          desktop
+  sketchybar     desktop
+  svim           desktop
+  github-copilot desktop
+  email          mail
+  doom-private   mail
+  goimapnotify   mail
+  oauth2ms       mail
+)
 
 mkdir -p $HOME/.config
 [[ "$OS" == "Darwin" ]] && mkdir -p $HOME/Library/LaunchAgents
@@ -42,9 +74,10 @@ for dir in $CODE_DIR/dotfiles*; do
     for file in $dir/config/*; do
       name="$(basename $file)"
 
-      # Skip desktop-only configs in minimal mode
-      if [[ "$PROFILE" == "minimal" ]] && (( ${DESKTOP_ONLY[(Ie)$name]} )); then
-        echo "Skipped $name (minimal mode)"
+      # Skip configs owned by a group this machine has not declared
+      owner="${CONFIG_GROUP[$name]:-}"
+      if [[ -n "$owner" ]] && (( ! ${GROUPS[(Ie)$owner]} )); then
+        echo "Skipped $name (no '$owner' group)"
         continue
       fi
 
@@ -265,11 +298,17 @@ if [[ "$OS" == "Linux" ]] && [[ "$PROFILE" != "minimal" ]] && command -v systemc
     echo "Enabled nudge-check.timer"
 fi
 
-# Link scripts to ~/.local/bin
+# Link scripts to ~/.local/bin. dotfiles-private is the companion repo for
+# anything that should not be published; it is optional, so a machine without
+# it links the public scripts and carries on.
 mkdir -p ~/.local/bin ~/.msmtpq
-for file in $CODE_DIR/dotfiles/bin/*; do
-  ln $LN_FLAG $file ~/.local/bin/
-  echo "Linked $file → ~/.local/bin/$(basename $file)"
+for dir in $CODE_DIR/dotfiles/bin $CODE_DIR/dotfiles-private/bin; do
+  [ -d "$dir" ] || continue
+  for file in $dir/*; do
+    [ -e "$file" ] || continue
+    ln $LN_FLAG $file ~/.local/bin/
+    echo "Linked $file → ~/.local/bin/$(basename $file)"
+  done
 done
 
 echo "\nDone."

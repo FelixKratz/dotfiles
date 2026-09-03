@@ -64,12 +64,13 @@ cd ~/code/dotfiles
 | window manager, terminal, launcher and other GUI configs | | ✅ |
 | systemd timers / launch agents (org-roam sync, mail polling) | | ✅ |
 
-`link.sh` records the profile in `~/.cache/dotfiles/profile`, and
-`config/doom/profile.el` reads it into `sf/doom-full`. `init.el` gates the
-desktop-only Doom modules on that variable and `config.org` gates the matching
-packages, so a `--minimal` machine builds Emacs for magit and editing without
-pulling in org-roam, mail or the writing tools. Machines with no marker file
-are treated as full, so existing setups are unaffected.
+`--minimal` and `--full` are install-time shorthands. What a machine actually
+runs is a list of config groups — `desktop`, `mail`, `notes` — declared in
+`~/.config/dotfiles/profile`, one per line. `install.sh` writes that file once;
+after that it is yours to edit, and `link.sh` only ever reads it, so relinking
+can never change what a machine is. `config/doom/profile.el` parses it into
+`sf/doom-groups`, and `init.el` and `config.org` gate modules and packages with
+`sf/doom-group-p`. Details and the reasoning: `docs/profiles.md`.
 
 On Linux, Emacs installs as the text-only build with weak dependencies
 disabled: the `emacs` metapackage otherwise brings in the GTK build along with
@@ -127,7 +128,7 @@ Safe to re-run — brew/apt skip already-installed packages, links are
 overwritten.
 
 ```bash
-cd ~/code/dotfiles && git pull && ./install.sh --full    # or --minimal
+cd ~/code/dotfiles && git pull && ./link.sh   # groups come from ~/.config/dotfiles/profile
 cd ~/code/dotfiles_private && git pull  # if using private configs
 ```
 
@@ -157,6 +158,11 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   `email-accounts.el` by `config/email/generate.py`; signatures live in
   `signatures.el` in the private overlay. Office365 XOAUTH2 setup and
   troubleshooting: `docs/email-xoauth2.md`.
+- **Triaging mail** - flag anywhere (Outlook, phone, `F` in notmuch), then `C`
+  on the message captures it as a dated TODO in `~/org-roam/mail.org` and clears
+  the flag, so `tag:flagged` is the untriaged queue. `docs/mail-workflow.md`.
+  `bin/org-roam-active-tags` repairs the `:active:` filetag that decides which
+  notes reach the agenda; notes written outside Emacs never get it on their own.
 - **Fetching mail** - `bin/getmail.sh <account>...`, `--key <notmuch key>` or
   `all`. Accounts sync in parallel, and a running account is listed in
   `~/.cache/mail-sync/`, which locks it against a second run and drives the
