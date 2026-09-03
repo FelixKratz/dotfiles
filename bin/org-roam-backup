@@ -23,6 +23,16 @@ KEEP="${ORG_ROAM_BACKUP_KEEP:-30}"
 log() { print -r -- "$(date '+%F %T') $*" }
 
 [[ -d "$REPO/.git" ]] || { print -u2 "org-roam-backup: no repo at $REPO"; exit 1 }
+
+# Only ever create the leaf. If the cloud root is absent — the folder is not
+# installed on this machine, or the client has not signed in yet — mkdir -p
+# would happily build a plain local directory and fill it with bundles that
+# sync nowhere. That is worse than no backup, because it looks like one.
+if [[ ! -d "${DEST:h:h}" ]]; then
+  print -u2 "org-roam-backup: ${DEST:h:h} does not exist, so $DEST would be local only."
+  print -u2 "  Install the cloud folder here, or point ORG_ROAM_BACKUP_DIR somewhere off-site."
+  exit 1
+fi
 mkdir -p "$DEST"
 
 HEAD_NOW=$(git -C "$REPO" rev-parse HEAD)
