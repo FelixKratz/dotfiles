@@ -300,11 +300,11 @@ if [[ "$OS" == "Linux" ]] && command -v systemctl >/dev/null 2>&1; then
     echo "Enabled nudge-check.timer"
 fi
 
-# Link scripts to ~/.local/bin. dotfiles-private is the companion repo for
-# anything that should not be published; it is optional, so a machine without
-# it links the public scripts and carries on.
+# Link scripts to ~/.local/bin, from the public repo and from dotfiles_private
+# for anything that should not be published. Same dotfiles* glob the config
+# loop uses, so a machine without the private repo carries on regardless.
 mkdir -p ~/.local/bin ~/.msmtpq
-for dir in $CODE_DIR/dotfiles/bin $CODE_DIR/dotfiles-private/bin; do
+for dir in $CODE_DIR/dotfiles*/bin; do
   [ -d "$dir" ] || continue
   for file in $dir/*; do
     [ -e "$file" ] || continue
