@@ -266,10 +266,26 @@ if [ -e "$HOME/.codex/hooks.json" ]; then
   echo "Enabled Codex lifecycle hooks"
 fi
 
+# Agents owned by a group, keyed on the filename prefix. Anything unlisted runs
+# everywhere. Without this the macOS side ignored groups entirely and installed
+# the mail agents on machines that link no mail config, leaving daemons running
+# against configuration that was never put there.
+typeset -A AGENT_GROUP
+AGENT_GROUP=(
+  none.mail      mail
+  none.orgroam   notes
+)
+
 if [[ "$OS" == "Darwin" ]]; then
   mkdir -p $HOME/Library/LaunchAgents
   for file in $CODE_DIR/dotfiles/launchagents/*; do
-    dest=$HOME/Library/LaunchAgents/$(basename $file)
+    base=$(basename $file)
+    owner="${AGENT_GROUP[${(j:.:)${(s:.:)base}[1,2]}]:-}"
+    if [[ -n "$owner" ]] && (( ! ${GROUPS[(Ie)$owner]} )); then
+      echo "Skipped $base (no '$owner' group)"
+      continue
+    fi
+    dest=$HOME/Library/LaunchAgents/$base
     # Plists can't expand $HOME at runtime, so we substitute it at install
     # time. Remove any legacy symlink first to avoid writing through it
     # back into the repo.
