@@ -139,13 +139,19 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   the source: `doom sync` tangles it into `config.el` and `packages.el`, so
   edit the org file. `profile.el` decides which modules a machine gets.
 - **org-roam sync** - `bin/org-roam-sync` commits, rebases and pushes
-  `~/org-roam` every 15 min (launchd on macOS, systemd timer on Linux). When it
-  needs a hand — a rebase conflict, or a remote unreachable for four runs — it
-  writes `~/.local/state/org-roam-sync/stalled`, sends a desktop notification,
-  and every new shell greets you with the reason until the next good sync
-  clears it. Attached tmux sessions show a red `roam sync stalled` segment in
-  the status bar (`bin/org-roam-stall-status`, wired in by `bin/tmux-theme-sync`),
-  which is what surfaces it over `ssht`. Log: `~/.log/org-roam-sync.log`.
+  `~/org-roam` every 15 min (launchd on macOS, systemd timer on Linux). A rebase
+  conflict, or a remote unreachable for four runs, raises a nudge (below);
+  the next good sync clears it. Log: `~/.log/org-roam-sync.log`.
+- **nudges** - `bin/nudge` collects the standing conditions a machine wants you
+  to know about: a stalled sync, an overdue `claude-projects` backup, a pending
+  restart (`/var/run/reboot-required` on Linux, macOS's own pending-update list).
+  Producers raise a condition and clear it when it resolves, so nothing needs
+  dismissing by hand. It surfaces in the tmux status bar (`nudge bar`, wired in
+  by `bin/tmux-theme-sync` — this is what reaches you over `ssht`) and in new
+  shells (`nudge shell`). `nudge snooze` (prefix + `N` in tmux) buys 4h of quiet
+  that expires early if the condition changes, and anything standing for a week
+  drops out of the bar into `nudge list`. Polled checks run hourly from
+  `launchagents/none.nudge.check.plist` or `systemd/nudge-check.timer`.
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in
@@ -157,5 +163,12 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   sketchybar spinner. Three ways to trigger it by hand: AeroSpace `alt-m` then
   the account's notmuch search key (`a` for all), the Alfred `mail` keyword, or
   a click on the sketchybar mail item (syncs all).
+- **Claude/Codex skills** - skills you write live in
+  `config/claude/skills/` (and a condensed twin in `config/codex/skills/`, which
+  Codex reads); `link.sh` links them entry-by-entry, so they reach every machine
+  by `git pull`. A skill tracking an upstream stays its own clone instead —
+  `humanizer` is a fork we merge releases into, cloned by `install.sh` and kept
+  current by a hook in the private Claude settings. Skills needing Python
+  packages declare them in a `requirements.txt` beside `SKILL.md`.
 - **kitty** - `config/kitty/`
 - **Alfred workflows** - `config/alfred/workflows/`

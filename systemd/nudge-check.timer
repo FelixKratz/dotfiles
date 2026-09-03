@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly nudge checks (restart pending, overdue backups)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

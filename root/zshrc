@@ -192,22 +192,6 @@ ssht() {
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
-# Nudge if ~/.claude/projects backup to pCloud is overdue (>7 days)
-() {
-  local dir="$HOME/pCloud Drive/Backups/claude-projects"
-  [ -d "$dir" ] || return
-  local -a files
-  files=( "$dir"/claude-projects-*.tar.gz(N.om) )
-  if (( ${#files} == 0 )); then
-    print -P "%F{yellow}⚠ no claude-projects backup yet — run: backup-claude-projects%f"
-    return
-  fi
-  local mtime
-  mtime=$(stat -f %m "${files[1]}" 2>/dev/null) || return
-  [[ -n "$mtime" ]] || return
-  local age_days=$(( ( $(date +%s) - mtime ) / 86400 ))
-  (( age_days > 7 )) && print -P "%F{yellow}⚠ claude-projects backup is ${age_days}d old — run: backup-claude-projects%f"
-}
 
 # Created by `pipx` on 2026-01-28 15:13:53
 export PATH="$PATH:$HOME/.local/bin"
@@ -271,11 +255,7 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-# org-roam-sync raises this marker when it needs a hand — a rebase conflict, or
-# a remote it hasn't reached in an hour. It clears itself on the next good sync,
-# so the greeting stops once syncing resumes.
-_org_roam_stall="${XDG_STATE_HOME:-$HOME/.local/state}/org-roam-sync/stalled"
-if [[ -f "$_org_roam_stall" ]]; then
-  print -P "%F{yellow}org-roam sync stalled%f: $(sed -n 2p "$_org_roam_stall") (since $(sed -n 1p "$_org_roam_stall"))"
-fi
-unset _org_roam_stall
+# Standing conditions this machine wants you to know about — a stalled sync, an
+# overdue backup, a pending restart. Each clears itself once it resolves; `nudge
+# snooze` buys quiet, and `nudge list` shows what is set aside.
+command -v nudge >/dev/null && nudge shell

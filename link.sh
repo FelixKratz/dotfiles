@@ -261,6 +261,8 @@ if [[ "$OS" == "Linux" ]] && [[ "$PROFILE" != "minimal" ]] && command -v systemc
     systemctl --user enable --now org-roam-sync.timer 2>/dev/null && \
       echo "Enabled org-roam-sync.timer"
   fi
+  systemctl --user enable --now nudge-check.timer 2>/dev/null && \
+    echo "Enabled nudge-check.timer"
 fi
 
 # Link scripts to ~/.local/bin
