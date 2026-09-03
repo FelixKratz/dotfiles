@@ -1,0 +1,68 @@
+#!/bin/zsh
+# org-roam-backup — off-site copy of the notes as a git bundle.
+#
+# A bundle is one file holding the complete history, so Dropbox uploads a
+# single atomic object instead of thousands of loose git objects. Syncing
+# .git/ itself would be the alternative and a bad one: the object files are
+# immutable and would survive, but HEAD and refs/heads/main are rewritten
+# constantly, and a cloud client resolving two machines' writes by picking a
+# winner corrupts the repo. The bundle sidesteps that entirely.
+#
+# The git remote already protects against a dead laptop. This protects
+# against losing the house that the hub sits in, so the destination wants to
+# be somewhere off-site.
+#
+# Restore with:  git clone org-roam-latest.bundle org-roam
+
+set -euo pipefail
+
+REPO="${ORG_ROAM_DIR:-$HOME/org-roam}"
+DEST="${ORG_ROAM_BACKUP_DIR:-$HOME/Dropbox/backup/org-roam}"
+KEEP="${ORG_ROAM_BACKUP_KEEP:-30}"
+
+log() { print -r -- "$(date '+%F %T') $*" }
+
+[[ -d "$REPO/.git" ]] || { print -u2 "org-roam-backup: no repo at $REPO"; exit 1 }
+mkdir -p "$DEST"
+
+HEAD_NOW=$(git -C "$REPO" rev-parse HEAD)
+STAMP="$DEST/.last-head"
+
+# Nothing new since the last run means nothing to upload. Dropbox charges for
+# churn in battery and bandwidth, and an hourly job that rewrites an identical
+# file all day is pure cost.
+if [[ -r "$STAMP" && "$(cat "$STAMP")" == "$HEAD_NOW" ]]; then
+  exit 0
+fi
+
+LATEST="$DEST/org-roam-latest.bundle"
+TMP="$DEST/.org-roam-$$.bundle"
+trap 'rm -f "$TMP"' EXIT
+
+git -C "$REPO" bundle create "$TMP" --all >/dev/null 2>&1
+
+# A bundle that cannot be verified is worse than no bundle, because it looks
+# like a backup. Check before it replaces the one that is known good.
+if ! git -C "$REPO" bundle verify "$TMP" >/dev/null 2>&1; then
+  print -u2 "org-roam-backup: bundle failed verification, keeping the previous one"
+  exit 1
+fi
+
+mv "$TMP" "$LATEST"
+print -r -- "$HEAD_NOW" > "$STAMP"
+log "wrote $LATEST at $(git -C "$REPO" rev-parse --short HEAD)"
+
+# One dated copy per day alongside the rolling latest, so a corruption noticed
+# late can still be walked back past the point it was introduced.
+DAILY="$DEST/org-roam-$(date +%F).bundle"
+[[ -e "$DAILY" ]] || { cp "$LATEST" "$DAILY"; log "kept daily $DAILY:t" }
+
+# Rotate, newest first, counting only the dated ones.
+typeset -a OLD
+OLD=("$DEST"/org-roam-[0-9]*.bundle(NOm))
+if (( ${#OLD} > KEEP )); then
+  for f in "${OLD[@]:$KEEP}"; do
+    rm -f "$f"
+    log "pruned $f:t"
+  done
+fi

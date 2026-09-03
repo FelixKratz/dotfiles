@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>none.orgroam.backup</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__HOME__/.local/bin/org-roam-backup</string>
+	</array>
+	<key>StandardOutPath</key>
+	<string>__HOME__/.log/org-roam-backup.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/.log/org-roam-backup.err</string>
+	<key>StartInterval</key>
+	<integer>3600</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+</dict>
+</plist>
