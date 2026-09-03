@@ -61,6 +61,15 @@ fi
 
 # 1. Commit local changes (tracked and new files) if there are any.
 if [ -n "$(git status --porcelain)" ]; then
+  # vulpea maintains the :active: filetag from find-file-hook and
+  # before-save-hook, so notes written by anything other than Emacs — an AI
+  # session, a sync from another machine — can gain their first TODO and never
+  # get tagged, leaving those tasks invisible to the agenda. Repair here, where
+  # we already know something changed, so a quiet run costs nothing.
+  if command -v org-roam-active-tags >/dev/null 2>&1; then
+    ORG_ROAM_DIR="$REPO" org-roam-active-tags --fix >/dev/null 2>&1 \
+      || log "active-tag repair failed"
+  fi
   git add -A
   git commit -q -m "Auto-sync $(hostname -s) $(date '+%F %T')" && log "committed local changes"
 fi

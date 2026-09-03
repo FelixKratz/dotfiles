@@ -1,0 +1,104 @@
+#!/bin/zsh
+# Audit (and repair) the auto-managed :active: filetag in ~/org-roam.
+#
+# vulpea keeps that tag in step with whether a file holds an undone TODO, but
+# it only does so from `find-file-hook' and `before-save-hook' — i.e. when the
+# file passes through an Emacs buffer. Notes written by anything else (an AI
+# session, a sync from another machine, a script) keep whatever tag they had.
+# A file that gains its first TODO that way never gets tagged, and because
+# `org-agenda-files' is built from a vulpea DB query over :active:, those TODOs
+# are invisible to the agenda for as long as the file stays out of Emacs.
+#
+# Run with no arguments to list mismatches; --fix to correct them.
+
+set -euo pipefail
+
+NOTES="${ORG_ROAM_DIR:-$HOME/org-roam}"
+FIX=0
+[[ "${1:-}" == "--fix" ]] && FIX=1
+
+if [[ ! -d "$NOTES" ]]; then
+  print -u2 "org-roam-active-tags: no notes directory at $NOTES"
+  exit 1
+fi
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+# Classify every note. The keyword list mirrors Doom's org module: anything
+# before the "|" is an undone state. Note the third sequence puts "|" first,
+# so OKAY/YES/NO are all done states and do not make a file active.
+cat > "$WORK/classify.el" <<'ELISP'
+(require 'org)
+(setq org-todo-keywords
+      '((sequence "TODO(t)" "PROJ(p)" "LOOP(r)" "STRT(s)" "WAIT(w)" "HOLD(h)" "IDEA(i)"
+                  "|" "DONE(d)" "KILL(k)")
+        (sequence "[ ](T)" "[-](S)" "[?](W)" "|" "[X](D)")
+        (sequence "|" "OKAY(o)" "YES(y)" "NO(n)")))
+(dolist (f (directory-files-recursively (getenv "NOTES") "\\.org\\'"))
+  (with-temp-buffer
+    (insert-file-contents f)
+    (let ((org-inhibit-startup t)) (org-mode))
+    (princ (format "%s\t%s\n"
+                   (if (seq-find (lambda (ty) (eq ty 'todo))
+                                 (org-element-map (org-element-parse-buffer 'headline)
+                                     'headline
+                                   (lambda (h) (org-element-property :todo-type h))))
+                       "ACTIVE" "INACTIVE")
+                   f))))
+ELISP
+
+NOTES="$NOTES" emacs --batch -l "$WORK/classify.el" 2>/dev/null > "$WORK/state.tsv"
+
+FIX="$FIX" python3 - "$WORK/state.tsv" <<'PY'
+import os, re, sys
+
+fix = os.environ["FIX"] == "1"
+add, remove = [], []
+
+for line in open(sys.argv[1]):
+    state, path = line.rstrip("\n").split("\t")
+    text = open(path, encoding="utf8", errors="replace").read()
+    m = re.search(r"^#\+filetags:(.*)$", text, re.M | re.I)
+    tagged = bool(m and re.search(r":active:", m.group(1), re.I))
+    if state == "ACTIVE" and not tagged:
+        add.append(path)
+    elif state == "INACTIVE" and tagged:
+        remove.append(path)
+
+
+def set_tag(path, on):
+    text = open(path, encoding="utf8").read()
+    m = re.search(r"^#\+filetags:(.*)$", text, re.M | re.I)
+    if m:
+        tags = [t for t in m.group(1).strip().strip(":").split(":") if t]
+        tags = [t for t in tags if t.lower() != "active"]
+        if on:
+            tags.insert(0, "active")
+        line = "#+filetags: :" + ":".join(tags) + ":" if tags else "#+filetags:"
+        text = text[: m.start()] + line + text[m.end():]
+    elif on:
+        title = re.search(r"^#\+title:.*$", text, re.M | re.I)
+        line = "#+filetags: :active:"
+        text = (text[: title.end()] + "\n" + line + text[title.end():]
+                if title else line + "\n" + text)
+    open(path, "w", encoding="utf8").write(text)
+
+
+for path in add:
+    print(f"  + {os.path.basename(path)}")
+    if fix:
+        set_tag(path, True)
+for path in remove:
+    print(f"  - {os.path.basename(path)}")
+    if fix:
+        set_tag(path, False)
+
+if not add and not remove:
+    print("all :active: tags are in step")
+elif fix:
+    print(f"\nfixed: {len(add)} added, {len(remove)} removed."
+          " Restart Emacs (or resync vulpea) for the agenda to notice.")
+else:
+    print(f"\n{len(add)} to add, {len(remove)} to remove. Re-run with --fix.")
+PY
