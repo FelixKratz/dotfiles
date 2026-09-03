@@ -282,15 +282,17 @@ fi
 # systemd user timers (the Linux analogue of the launchd agents above). Units
 # reference %h, so they can be symlinked straight from the repo — no $HOME
 # substitution needed.
-if [[ "$OS" == "Linux" ]] && [[ "$PROFILE" != "minimal" ]] && command -v systemctl >/dev/null 2>&1; then
+if [[ "$OS" == "Linux" ]] && command -v systemctl >/dev/null 2>&1; then
   mkdir -p $HOME/.config/systemd/user
   for file in $CODE_DIR/dotfiles/systemd/*; do
     ln $LN_FLAG $file $HOME/.config/systemd/user/
     echo "Linked $file → ~/.config/systemd/user/$(basename $file)"
   done
   systemctl --user daemon-reload 2>/dev/null
-  # Enable the org-roam sync timer only where the repo is actually present.
-  if [ -d "$HOME/org-roam/.git" ]; then
+  # Enable the org-roam sync timer where the machine runs notes and the repo is
+  # actually present. The repo check alone is not enough: a clone can outlive
+  # the decision that the machine should be syncing it.
+  if (( ${GROUPS[(Ie)notes]} )) && [ -d "$HOME/org-roam/.git" ]; then
     systemctl --user enable --now org-roam-sync.timer 2>/dev/null && \
       echo "Enabled org-roam-sync.timer"
   fi
