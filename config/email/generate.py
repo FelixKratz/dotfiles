@@ -297,7 +297,7 @@ def generate_email_accounts(config):
         f'"{a.get("full_name", default_full_name)} <{a["email"]}>"'
         for a in accounts
     )
-    fcc_block = "\n        ".join(
+    fcc_block = "\n          ".join(
         f'("{a["email"]}" . "{_fcc_path(a["name"], a["sent_folder"])}")'
         for a in accounts
     )
@@ -345,10 +345,17 @@ def generate_email_accounts(config):
 (setq notmuch-identities
       '({identities_block}))
 
-;; Fcc dirs — where each identity saves sent mail
-(setq notmuch-fcc-dirs
-      '({fcc_block}
-        (".*" . "{fallback_fcc}")))
+;; Fcc dirs — where each identity saves sent mail. Doom's own notmuch module
+;; sets `notmuch-fcc-dirs' to nil inside `use-package! notmuch :defer t
+;; :config', which lands in a `with-eval-after-load' hook registered while the
+;; module loads — long before this file. A plain `setq' here is therefore
+;; undone the moment notmuch is first loaded, leaving every message without an
+;; Fcc header and every account without a local copy of its sent mail. Set it
+;; from a hook of our own so it runs after Doom's and wins.
+(with-eval-after-load 'notmuch
+  (setq notmuch-fcc-dirs
+        '({fcc_block}
+          (".*" . "{fallback_fcc}"))))
 
 ;; Trash folder per account — used by sf/notmuch-move-to-trash in email.el
 (defvar sf/notmuch-trash-folders
