@@ -353,23 +353,42 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
 
   (setq notmuch-maildir-use-notmuch-insert t)
 
-  ;; Auto-detect identity from To/Cc when replying
-  (defun sf/notmuch-guess-identity ()
-    "Guess identity based on To/Cc of message being replied to."
-    (when-let* ((original-to (notmuch-show-get-to))
-                (original-cc (notmuch-show-get-cc))
-                (all-recipients (concat original-to " " original-cc)))
-      (seq-find (lambda (identity)
-                  (let ((addr (cadr (mail-extract-address-components identity))))
-                    (string-match-p (regexp-quote addr) all-recipients)))
-                notmuch-identities)))
+  ;; Replies pick their own identity: `notmuch reply' matches the original
+  ;; recipients against `user.primary_email' and `user.other_email' in
+  ;; ~/.notmuch-config and sets the From accordingly, so a message addressed
+  ;; to the gmx account is answered from it. Keep those two settings in step
+  ;; with the accounts and there is nothing to do here. A prefix argument to
+  ;; the compose commands prompts for the sender when the guess is wrong, or
+  ;; for a new message, which always starts as the primary address.
 
-  (defun sf/notmuch-set-from-for-reply ()
-    "Set From header based on detected identity."
-    (when-let ((identity (sf/notmuch-guess-identity)))
-      (message-replace-header "From" identity)))
+  ;; `notmuch-mua-mail' sets the Fcc header once, while it is building the
+  ;; buffer, so it reflects whichever identity the buffer started with. Change
+  ;; the From afterwards — by picking, by cycling, or by typing the address
+  ;; over — and the Fcc still points at the old account, so the message is
+  ;; sent from one address and filed under another. Recompute it at send time,
+  ;; which is the one point every route to a changed From passes through.
+  ;; `notmuch-fcc-header-setup' keeps any Fcc header it already finds, and
+  ;; clearing it first needs the buffer narrowed to the headers, so match the
+  ;; From against `notmuch-fcc-dirs' the way notmuch does and write the result
+  ;; with `message-replace-header', which does that narrowing itself.
+  (defun sf/notmuch-refresh-fcc ()
+    "Recompute the Fcc header from the current From header."
+    (when (and notmuch-fcc-dirs (listp notmuch-fcc-dirs))
+      (let* ((from (or (message-field-value "From") ""))
+             (folder (seq-some (pcase-lambda (`(,regexp . ,folder))
+                                 (and (string-match-p regexp from) folder))
+                               notmuch-fcc-dirs)))
+        (when folder
+          (message-replace-header "Fcc" folder)))))
 
-  (add-hook 'notmuch-mua-reply-hook #'sf/notmuch-set-from-for-reply)
+  (add-hook 'message-send-hook #'sf/notmuch-refresh-fcc)
+
+  (defun sf/notmuch-set-identity (identity)
+    "Pick the From identity for this message from `notmuch-identities'."
+    (interactive (list (completing-read "From: " notmuch-identities nil t)))
+    (message-replace-header "From" identity)
+    (sf/notmuch-refresh-fcc)
+    (message "From: %s" identity))
 
   (defun sf/notmuch-cycle-identity ()
     "Cycle through notmuch identities for From header."
@@ -386,10 +405,12 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
            (next-idx (mod (1+ current-idx) (length notmuch-identities)))
            (next-identity (nth next-idx notmuch-identities)))
       (message-replace-header "From" next-identity)
+      (sf/notmuch-refresh-fcc)
       (message "From: %s" next-identity)))
 
   (map! :map notmuch-message-mode-map
-        "C-c C-f f" #'sf/notmuch-cycle-identity
+        "C-c C-f f" #'sf/notmuch-set-identity
+        "C-c C-f F" #'sf/notmuch-cycle-identity
         "C-c TAB"   #'notmuch-address-expand-name
         [remap save-buffer] #'sf/notmuch-compose-save)
 
@@ -623,6 +644,37 @@ toggled to a value that never fires in the body."
         (notmuch-search-tag '("-flagged"))
       (notmuch-search-tag '("+flagged"))))
 
+  ;; Capture to org. Flags arrive from Outlook and the phone, so the flagged
+  ;; queue is the capture inbox: capturing here drains it, and because
+  ;; notmuch synchronises maildir flags the clear propagates back out over
+  ;; IMAP. An aborted capture leaves the flag alone.
+  (defun sf/notmuch-message-id-query ()
+    "Return an `id:' query for the message at point."
+    (cond
+     ((derived-mode-p 'notmuch-show-mode) (notmuch-show-get-message-id))
+     ((derived-mode-p 'notmuch-tree-mode) (notmuch-tree-get-message-id))
+     (t (user-error "Not in a notmuch message buffer"))))
+
+  (defun sf/notmuch-capture ()
+    "Capture the message at point as an Org TODO, then clear its flag."
+    (interactive)
+    (let ((query (sf/notmuch-message-id-query)))
+      ;; `ol-notmuch' tests `major-mode' with `memq', so it does not
+      ;; recognise `notmuch-unthreaded-mode' even though that derives from
+      ;; `notmuch-tree-mode' — and unthreaded is how the flagged search
+      ;; opens. Present the parent mode for the duration of the store.
+      (let ((major-mode (if (derived-mode-p 'notmuch-tree-mode)
+                            'notmuch-tree-mode
+                          major-mode)))
+        (org-store-link nil))
+      (letrec ((unflag
+                (lambda ()
+                  (remove-hook 'org-capture-after-finalize-hook unflag)
+                  (unless org-note-abort
+                    (notmuch-tag query '("-flagged"))))))
+        (add-hook 'org-capture-after-finalize-hook unflag))
+      (org-capture nil)))
+
   (defun sf/notmuch-open-or-default ()
     "Open URL at point, or do default RET action."
     (interactive)
@@ -664,6 +716,7 @@ toggled to a value that never fires in the body."
     "d" #'sf/notmuch-delete-message
     "A" #'sf/notmuch-show-archive
     "F" #'sf/notmuch-show-toggle-flag
+    "C" #'sf/notmuch-capture
     "cb" #'sf/notmuch-bounce-message
     "U" #'sf/notmuch-show-filter-unread
     "gl" #'sf/notmuch-next-link
@@ -705,6 +758,7 @@ toggled to a value that never fires in the body."
     "q" #'notmuch-bury-or-kill-this-buffer)
 
   (evil-define-key 'normal notmuch-tree-mode-map
+    "C" #'sf/notmuch-capture
     "s" #'notmuch-unthreaded
     "S" #'notmuch-tree-filter
     "V" #'sf/notmuch-view-in-browser
