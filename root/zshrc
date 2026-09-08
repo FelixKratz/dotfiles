@@ -76,6 +76,10 @@ _tmux_title_precmd() {
       tmux rename-window -t "$TMUX_PANE" "$name" 2>/dev/null
     fi
   else
+    # Outside tmux the terminal tab is titled by the command line, so an ssh
+    # session starts out labelled by its host and this hook would replace that
+    # with a bare directory. Keep the host in front of it.
+    [[ -n "$SSH_CONNECTION" ]] && name="${HOST%%.*}:$name"
     print -Pn "\E]0;${name}\a"
   fi
 }
