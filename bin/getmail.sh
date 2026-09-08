@@ -16,6 +16,7 @@ MBSYNC=/opt/homebrew/bin/mbsync
 NOTMUCH=/opt/homebrew/bin/notmuch
 SYNC_TIMEOUT=600
 SYNC_GRACE=20
+NOTMUCH_ERR="$HOME/.log/getmail-notmuch.err"
 
 usage() {
   sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -169,5 +170,20 @@ done
 wait
 
 # Update the notmuch index; Emacs reads the database directly, so there is
-# nothing else to tell
-$NOTMUCH new 2>/dev/null
+# nothing else to tell.
+#
+# Stderr used to go to /dev/null. That hid a post-new hook which could not find
+# notmuch on the launchd PATH, so sent mail stopped being tagged for four days
+# with nothing to show for it. Keep stderr, minus the note notmuch prints for
+# every mbsync state file it walks past, which runs to thousands of lines a day
+# and would bury the one line that matters.
+scratch="$(mktemp)"
+$NOTMUCH new 2>"$scratch"
+if grep -v '^Note: Ignoring non-mail file:' "$scratch" | grep -q '[^[:space:]]'; then
+  mkdir -p "$(dirname "$NOTMUCH_ERR")"
+  {
+    date '+%Y-%m-%d %H:%M:%S notmuch new:'
+    grep -v '^Note: Ignoring non-mail file:' "$scratch"
+  } >>"$NOTMUCH_ERR"
+fi
+rm -f "$scratch"

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Tag messages in Sent folders so they show up under tag:sent.
+# Runs after every `notmuch new`.
+#
+# launchd hands its jobs a minimal PATH, and the usual caller is
+# goimapnotify -> getmail.sh -> notmuch new, so Homebrew is not on PATH by
+# the time this runs. A bare `notmuch` here is not found, `set -eu` aborts
+# the hook, and getmail.sh has already sent stderr to /dev/null, so sent
+# mail silently stops being tagged. Resolve the binary explicitly, as
+# getmail.sh does, and fall back to PATH for an interactive run.
+set -eu
+
+NOTMUCH=/opt/homebrew/bin/notmuch
+[ -x "$NOTMUCH" ] || NOTMUCH=notmuch
+
+"$NOTMUCH" tag +sent -inbox -unread -- \
+  'not tag:sent and (folder:/Sent/ or folder:/Gesendet/)'

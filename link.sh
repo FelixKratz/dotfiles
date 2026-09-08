@@ -62,6 +62,7 @@ CONFIG_GROUP=(
   email          mail
   doom-private   mail
   goimapnotify   mail
+  notmuch        mail
   oauth2ms       mail
 )
 
@@ -206,6 +207,24 @@ for dir in $CODE_DIR/dotfiles*; do
             ln $LN_FLAG "$f" "$HOME/.config/$name/"
             echo "Linked $f → ~/.config/$name/$(basename $f)"
           done
+          ;;
+        notmuch)
+          # Hooks belong beside the Xapian database rather than in ~/.config,
+          # so they follow database.path. Ask notmuch where that is and fall
+          # back to the usual spot, so a machine that syncs mail but has not
+          # built an index yet still gets the hooks in place.
+          maildir="$(notmuch config get database.path 2>/dev/null)"
+          [ -n "$maildir" ] || maildir="$HOME/Maildir"
+          if [ -d "$maildir" ]; then
+            mkdir -p "$maildir/.notmuch/hooks"
+            for hook in $file/hooks/*; do
+              [ -e "$hook" ] || continue
+              ln $LN_FLAG "$hook" "$maildir/.notmuch/hooks/"
+              echo "Linked $hook → $maildir/.notmuch/hooks/$(basename $hook)"
+            done
+          else
+            echo "Skipped notmuch hooks (no maildir at $maildir)"
+          fi
           ;;
         *)
           ln $LN_FLAG $file $HOME/.config
