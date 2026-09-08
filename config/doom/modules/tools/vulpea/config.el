@@ -43,23 +43,11 @@
         '(:file-name "${timestamp}-${slug}.org"
           :head "#+filetags:\n")))
 
-;; Capture templates - defined outside use-package to avoid timing issues
-(after! (:all vulpea org)
-  (setq org-capture-templates
-        '(("t" "todo" entry (file vulpea-capture-inbox-file)
-           "* TODO %?\n%U\n" :clock-in t :clock-resume t)
-          ("T" "todo with project" entry
-           (function vulpea-capture-project-task-target)
-           "* TODO %?\n%U\n" :clock-in t :clock-resume t)
-          ("m" "Meeting" entry
-           (function vulpea-capture-meeting-target)
-           (function vulpea-capture-meeting-template)
-           :clock-in t
-           :clock-resume t)
-          ("r" "Review" plain
-           (function sf/capture-review-target)
-           (function sf/capture-review-template)
-           :unnarrowed t))))
+;; Capture templates live in config.org (tangled to notes.el), which is the
+;; single definition of `org-capture-templates'. They were also set here, and
+;; because `setq' replaces the list rather than adding to it, whichever of the
+;; two loaded last silently dropped the other's templates. The Meeting and
+;; Review entries moved there unchanged; the targets below are still theirs.
 
 ;; Review capture: prompt for title, create file in reviews/
 (defvar sf/capture-review--title nil
@@ -241,7 +229,7 @@ Creates file with template if it doesn't exist."
 
 (defconst vulpea-agenda-cmd-stuck-projects
   '(tags-todo
-    "PROJECT-CANCELLED-HOLD/!"
+    "project-CANCELLED-HOLD/!"
     ((org-agenda-overriding-header "Stuck Projects")
      (org-agenda-skip-function 'vulpea-agenda-skip-non-stuck-projects)
      (org-agenda-sorting-strategy
@@ -249,7 +237,7 @@ Creates file with template if it doesn't exist."
 
 (defconst vulpea-agenda-cmd-projects
   '(tags-todo
-    "PROJECT-HOLD"
+    "project-HOLD"
     ((org-agenda-overriding-header (concat "Projects"))
      (org-tags-match-list-sublevels t)
      (org-agenda-skip-function 'vulpea-agenda-skip-non-projects)
