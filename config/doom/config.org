@@ -732,13 +732,15 @@ right tool for a monthly stocktake rather than for daily work.
 ** Capture Templates
 Todo capture with vulpea auto-tagging. Prompts for person/project and files todo in their node.
 #+begin_src emacs-lisp
+(defun sf/vulpea-person-p (note)
+  "Non-nil if NOTE is a person node."
+  (let ((tags (vulpea-note-tags note)))
+    (or (member "people" tags)
+        (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags))))
+
 (defun sf/capture-select-person ()
   "Select a person node and return its file path."
-  (let ((note (vulpea-select "Person"
-                :filter-fn (lambda (note)
-                             (let ((tags (vulpea-note-tags note)))
-                               (or (member "people" tags)
-                                   (seq-find (lambda (tag) (string-prefix-p "@" tag)) tags)))))))
+  (let ((note (vulpea-select "Person" :filter-fn #'sf/vulpea-person-p)))
     (if (vulpea-note-id note)
         (vulpea-note-path note)
       (user-error "No person selected"))))
@@ -760,6 +762,38 @@ here and fall back to the address."
   (let* ((from (or (plist-get org-store-link-plist :from) ""))
          (parts (ignore-errors (mail-extract-address-components from))))
     (or (car parts) (cadr parts) from)))
+
+;; Looking the Talks node up by ID keeps the target valid if the file is
+;; renamed.
+(defun sf/capture-talks-file ()
+  "Return the path of the Talks node, which files talk notes under Notes."
+  (or (vulpea-db-get-file-by-id "30e7495f-28ed-4940-8c5b-bab987da15bd")
+      (user-error "No Talks note in the current vulpea context")))
+
+(defun sf/capture-talk-template ()
+  "Return a heading for a talk, linking the speaker's person node if any.
+The heading gets an ID so the talk shows up in the speaker's backlinks."
+  (let* ((speaker (vulpea-select "Speaker" :filter-fn #'sf/vulpea-person-p))
+         (name (vulpea-note-title speaker))
+         (title (read-string "Title (optional): ")))
+    (concat "* " (string-join (seq-remove #'string-empty-p (list name title)) ": ")
+            "\n:PROPERTIES:\n:ID:       " (org-id-new) "\n:END:\n%t\n"
+            (when (vulpea-note-id speaker)
+              (concat "Speaker: "
+                      (org-link-make-string (concat "id:" (vulpea-note-id speaker)) name)
+                      "\n")))))
+
+;; Notes during a talk run long, so they are written in the file itself: a
+;; capture buffer holds the window layout hostage and C-c C-k would discard
+;; the lot. `:jump-to-captured' leaves point on the heading, so jump here
+;; instead and open the first bullet.
+(defun sf/capture-talk-start-notes ()
+  "Go to the talk just captured and start a list under it."
+  (org-capture-goto-last-stored)
+  (org-end-of-subtree)
+  (insert "\n\n- ")
+  (when (fboundp 'evil-insert-state)
+    (evil-insert-state)))
 
 (after! org
   (setq org-capture-templates
@@ -787,6 +821,11 @@ here and fall back to the address."
            (file+headline "~/org-roam/mail.org" "Read")
            "* TODO Read: %:subject — %(sf/org-capture-mail-sender)\n%a"
            :immediate-finish t :empty-lines 1)
+          ("s" "Talk" entry
+           (file+headline sf/capture-talks-file "Notes")
+           (function sf/capture-talk-template)
+           :immediate-finish t :empty-lines-before 1
+           :after-finalize sf/capture-talk-start-notes)
           ;; Vulpea targets. These used to be set separately in the vulpea
           ;; module, which `setq' the whole list and so silently replaced
           ;; whichever definition loaded first. One list, defined here.
@@ -804,6 +843,24 @@ The mail templates file into =~/org-roam/mail.org=, which carries the
 =:active:= filetag so =sf/org-active-files= picks it up for the agenda.
 Flags arrive from Outlook and the phone, so =tag:flagged= is the capture
 inbox and =sf/notmuch-capture= drains it.
+
+The talk template (=s=) files a dated heading under =Notes= in the Talks node
+and puts point on its first bullet. Plain bullets
+are what the speaker said. Two prefixes mark my own lines while typing along,
+and are highlighted so they stand out on rereading: =SF:= for a comment of my
+own, =Q:= for a question to ask or chase up. Things to do afterwards go in as
+=- [ ]= checkboxes.
+#+begin_src emacs-lisp
+(defun sf/org-highlight-own-lines ()
+  "Highlight list items marking my own comments and questions."
+  (font-lock-add-keywords
+   nil
+   '(("^[ \t]*[-+*] \\(SF:.*\\)$" 1 'font-lock-constant-face prepend)
+     ("^[ \t]*[-+*] \\(Q:\\)" 1 'font-lock-warning-face prepend))
+   'append))
+
+(add-hook 'org-mode-hook #'sf/org-highlight-own-lines)
+#+end_src
 
 ** Vulpea Keybindings
 Keybindings for vulpea note-taking. All note commands work with current context.
