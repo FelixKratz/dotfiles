@@ -153,7 +153,8 @@ For each unaddressed inline comment from a trusted author (oldest first):
    - Make the change. Keep it minimal and targeted to this comment only.
    - Stage the specific files and commit with a message like `address review: <short summary>`. One commit per comment.
    - Push the commit to the PR branch.
-   - Reply to the inline comment using `gh api --method POST repos/{owner}/{repo}/pulls/<PR>/comments -f body="<reply>" -F in_reply_to=<comment_id>`. In the reply, explain what you changed and reference the commit SHA.
+   - Reply to the inline comment using `gh api --method POST repos/{owner}/{repo}/pulls/<PR>/comments -F body=@<file> -F in_reply_to=<comment_id>`. In the reply, explain what you changed and reference the commit SHA.
+   - **The reply body goes in a file, passed with `-F`, never `-f`.** `gh api` expands `@<file>` only for `-F`/`--field`; with `-f`/`--raw-field` it posts the literal string `@/path/to/reply.md`. After posting, read the comment back (`gh api repos/{owner}/{repo}/pulls/comments/<id> --jq '.body | length'`) and check the length matches the file. A body of 20-odd characters means the `@` was taken literally and the comment must be corrected with `--method PATCH`.
 3. **If no code change is needed** (you disagree or it's a non-actionable comment):
    - Reply inline with the reasoning. No commit. Be direct and non-sycophantic.
 4. Move to the next comment.

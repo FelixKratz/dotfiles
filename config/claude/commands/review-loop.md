@@ -89,6 +89,15 @@ Repeat until a round comes back clean or you hit the cap:
          repos/{owner}/{repo}/pulls/<PR>/comments \
          -f body="..." -f commit_id="<head sha>" -f path="..." -F line=N -f side=RIGHT
 
+   **Pass the body from a file with `-F`, never `-f`.** `gh api` expands
+   `@<file>` only for `-F`/`--field`; with `-f`/`--raw-field` it posts the
+   literal string `@/path/to/body.md` as the comment. Findings and replies are
+   long enough that inline quoting mangles backticks and newlines, so write the
+   body to a file and pass `-F body=@<file>`. Then read it back and check the
+   length matches the file — `gh api repos/{owner}/{repo}/pulls/comments/<id>
+   --jq '.body | length'`. A body of 20-odd characters means the `@` was taken
+   literally and the comment must be corrected with `--method PATCH`.
+
    The PR is authored by `sbfnk-bot`, so posting findings from that same account
    puts author and reviewer under one identity, and you cannot tell at a glance
    whether a comment came from the change or from the critique of it. Separating
