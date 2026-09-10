@@ -2,12 +2,13 @@
 # Resolve a PR review thread.
 #
 # This runs as the plain authenticated account, not as sbfnk-review-bot[bot].
-# Closing a finding is conceptually the reviewer's call, but GitHub Apps cannot
-# call `resolveReviewThread`: the installation holds `pull_requests: write` and
-# `checks: write` (check with `gh-review-bot-token --permissions <owner>/<repo>`)
-# and the mutation still returns "Resource not accessible by integration". There
-# is no permission to grant, so the author resolves and the reply above records
-# who actually found the problem.
+# Closing a finding is conceptually the reviewer's call, but GitHub lets only the
+# pull request's author, or an actor with write access to the repository, resolve
+# a conversation. With `pull_requests: write` and `checks: write` (check with
+# `gh-review-bot-token --permissions <owner>/<repo>`) the bot's call returns
+# "Resource not accessible by integration". Granting the app Contents: Read and
+# write would allow it, but would also give every bot token push access, so the
+# author resolves instead and the reply records who actually found the problem.
 #
 # Thread ids come from the reviewThreads GraphQL query; the REST comments
 # endpoint does not expose them:

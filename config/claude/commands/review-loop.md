@@ -123,17 +123,18 @@ Repeat until a round comes back clean or you hit the cap:
          gh api --method POST repos/{owner}/{repo}/pulls/<PR>/comments \
            -f body="..." -F in_reply_to=<comment id>
 
-     Then resolve the thread as **`sbfnk-review-bot[bot]`**, because closing a
-     finding is the reviewer's call, not the author's:
+     Then resolve the thread as **`sbfnk-bot`**, with the helper:
 
-         GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api graphql \
-           -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' \
-           -f id="<thread id>"
+         gh-review-resolve <thread id>
 
-     So each thread reads as a real exchange: raised by the reviewer, answered
-     and fixed by the author, closed by the reviewer. Thread ids come from the
-     `reviewThreads` GraphQL query; the REST comments endpoint does not expose
-     them. Resolving needs only the `pull_requests` write the app already has.
+     Closing a finding is conceptually the reviewer's call, but the bot cannot
+     do it. GitHub lets only the pull request's author, or an actor with write
+     access to the repository, resolve a conversation, and for an app that means
+     Contents: Read and write. The bot is deliberately not granted that, because
+     it would give every bot token push access. So a thread reads as raised by
+     the reviewer, then answered, fixed and closed by the author, with the reply
+     recording what changed. Thread ids come from the `reviewThreads` GraphQL
+     query; the REST comments endpoint does not expose them.
    - **Push back** — if you disagree, or it needs a decision only the human can
      make, do not fix it. Reply to the thread with your reasoning as
      `sbfnk-bot`, and leave it **unresolved**, so it is waiting when the human
@@ -148,7 +149,7 @@ Repeat until a round comes back clean or you hit the cap:
 
 ### Tidy up on the way out
 
-When a full pass finally comes back clean, resolve any of your own threads that
+When a full pass finally comes back clean, use `gh-review-resolve` on any of your own threads that
 GitHub has since marked **outdated** — the code they pointed at is gone, and the
 pass that just ran read the whole diff and found nothing, so there is nothing
 left for them to be about. Left open they look like outstanding findings.
