@@ -151,8 +151,9 @@ case "$cmd" in
       printf 'parked %s, cost $%s\n\n' "$(meta "$id" .created)" \
         "$(meta "$id" '.cost_usd // "?"')"
       if [ "$(meta "$id" '.fixed // [] | length')" -gt 0 ]; then
-        echo "== flagged, then fixed by the bot =="
-        jq -r '.fixed[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
+        echo "== removed before you saw it (the text below no longer has these) =="
+        jq -r '.fixed[] | "- \(.reason)\n  was: \"\(.quote)\""' \
+          "$PENDING/$id/meta.json"
         echo
       fi
       if [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
