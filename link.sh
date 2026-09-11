@@ -293,6 +293,7 @@ typeset -A AGENT_GROUP
 AGENT_GROUP=(
   none.mail      mail
   none.orgroam   notes
+  none.claude    desktop
 )
 
 if [[ "$OS" == "Darwin" ]]; then

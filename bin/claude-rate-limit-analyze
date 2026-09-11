@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Analyse a Claude Code session JSONL and report rate-limit state.
+
+Claude persists each usage-limit hit as an api-error entry, e.g.
+
+    {"isApiErrorMessage": true, "apiErrorStatus": 429,
+     "message": {"content": [{"type": "text",
+       "text": "You've hit your session limit · resets
+                2:50am (Europe/London)"}]}}
+
+Reading this is far more reliable than scraping the terminal: the
+text carries an explicit timezone, the entry order tells us whether
+the session has moved on since, and server-side throttling
+("not your usage limit") and policy refusals are distinguishable
+from genuine usage caps.
+
+Used by claude-rate-limit-resume. Based on the analyser in
+seabbs/dotfiles (scripts/claude-rate-limit-analyze.py).
+
+A session is "stuck" when the most recent substantive entry is a
+usage-limit error — i.e. nothing real happened after it. We then
+compute the reset moment as the next occurrence of the stated
+wall-clock time, in the stated timezone, at or after the error's own
+timestamp.
+
+Output: a single JSON object on stdout, e.g.
+
+    {"stuck": true, "limit_type": "session",
+     "reset_epoch": 1780537800, "reset_human": "2:50am (Europe/London)",
+     "err_epoch": 1780525657, "reason": "usage limit, awaiting reset"}
+
+Usage: claude-rate-limit-analyze <session.jsonl> [--now EPOCH]
+"""
+
+import json
+import re
+import sys
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+# The reset clause shared by every timed usage-limit message:
+#   "· resets 2:50am (Europe/London)"  /  "resets 8am (America/New_York)"
+# Detecting this clause structurally (clock + parenthesised IANA zone)
+# is what survives wording drift in the surrounding sentence.
+RESET_RE = re.compile(
+    r"resets?\s+(\d{1,2}(?::\d{2})?\s*[ap]m)\s*\(([^)]+)\)",
+    re.IGNORECASE,
+)
+
+# Untimed caps (no reset clock is ever shown for these). The spend
+# variant is what this machine's transcripts carry: "You've hit your
+# monthly spend limit · raise it at claude.ai/settings/usage".
+MONTHLY_RE = re.compile(r"monthly (usage|spend) limit", re.IGNORECASE)
+
+# 429s that are NOT a personal usage cap — must never trigger a resume.
+NON_CAP_RE = re.compile(
+    r"not your usage limit"      # transient server throttle
+    r"|temporarily limiting"
+    r"|overloaded"
+    r"|usage policy"             # policy refusal
+    r"|server-side issue"
+    r"|connection|socket|timeout|connect to api",
+    re.IGNORECASE,
+)
+
+
+def entry_text(entry):
+    """Best-effort flatten of an entry's message text."""
+    msg = entry.get("message")
+    if isinstance(msg, str):
+        return msg
+    if not isinstance(msg, dict):
+        return ""
+    content = msg.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(block.get("text", ""))
+        return " ".join(parts)
+    return ""
+
+
+def is_api_error(entry):
+    return bool(
+        entry.get("isApiErrorMessage")
+        or entry.get("apiErrorStatus") is not None
+    )
+
+
+def classify_limit(text):
+    """Return a limit_type if text is a genuine usage cap, else None."""
+    if NON_CAP_RE.search(text):
+        return None
+    if MONTHLY_RE.search(text):
+        return "monthly"
+    if not RESET_RE.search(text):
+        return None
+    low = text.lower()
+    if "out of extra usage" in low:
+        return "extra_usage"
+    if "weekly limit" in low:
+        return "weekly"
+    if "session limit" in low:
+        return "session"
+    return "generic"
+
+
+def is_substantive(entry):
+    """A real conversational turn that means the session has progressed.
+
+    Excludes api-error entries (the limit notices themselves) and
+    non-conversational rows (summaries, meta).
+    """
+    if is_api_error(entry):
+        return False
+    if entry.get("type") not in ("user", "assistant"):
+        return False
+    if entry.get("isMeta") or entry.get("isSidechain"):
+        return False
+    return bool(entry_text(entry).strip()) or _has_tool_use(entry)
+
+
+def _has_tool_use(entry):
+    msg = entry.get("message")
+    if not isinstance(msg, dict):
+        return False
+    content = msg.get("content")
+    if isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") in (
+                "tool_use", "tool_result",
+            ):
+                return True
+    return False
+
+
+def parse_ts(ts):
+    """ISO-8601 (with trailing Z) -> epoch seconds, or None."""
+    if not ts:
+        return None
+    try:
+        return int(
+            datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def compute_reset_epoch(err_epoch, clock, tz_name):
+    """Next occurrence of `clock` in `tz_name` at/after the error time."""
+    m = re.match(r"(\d{1,2})(?::(\d{2}))?\s*([ap])m", clock.strip().lower())
+    if not m:
+        return None
+    hh = int(m.group(1))
+    mm = int(m.group(2) or 0)
+    ap = m.group(3)
+    if ap == "p" and hh != 12:
+        hh += 12
+    if ap == "a" and hh == 12:
+        hh = 0
+    try:
+        zone = ZoneInfo(tz_name.strip())
+    except Exception:  # noqa: BLE001 — unknown zone, give up cleanly
+        return None
+    err_dt = datetime.fromtimestamp(err_epoch, zone)
+    cand = err_dt.replace(hour=hh, minute=mm, second=0, microsecond=0)
+    if cand <= err_dt:
+        cand += timedelta(days=1)
+    return int(cand.timestamp())
+
+
+def analyse(path):
+    entries = []
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    last_limit_idx = None
+    last_limit = None
+    last_substantive_idx = -1
+    for idx, entry in enumerate(entries):
+        if is_api_error(entry):
+            ltype = classify_limit(entry_text(entry))
+            if ltype:
+                last_limit_idx = idx
+                last_limit = (entry, ltype)
+        elif is_substantive(entry):
+            last_substantive_idx = idx
+
+    if last_limit_idx is None or last_limit_idx < last_substantive_idx:
+        return {"stuck": False, "reason": "no unresolved usage-limit error"}
+
+    entry, ltype = last_limit
+    text = entry_text(entry)
+    err_epoch = parse_ts(entry.get("timestamp"))
+    reset_epoch = None
+    reset_human = ""
+    m = RESET_RE.search(text)
+    if m and err_epoch is not None:
+        reset_human = f"{m.group(1)} ({m.group(2)})"
+        reset_epoch = compute_reset_epoch(err_epoch, m.group(1), m.group(2))
+
+    return {
+        "stuck": True,
+        "limit_type": ltype,
+        "reset_epoch": reset_epoch,
+        "reset_human": reset_human,
+        "err_epoch": err_epoch,
+        "reason": (
+            "monthly cap, no reset time"
+            if ltype == "monthly"
+            else "usage limit, awaiting reset"
+        ),
+    }
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    path = argv[0]
+    # --now is accepted for deterministic tests; the analyser itself
+    # does not need the current time (bash compares reset_epoch to now).
+    try:
+        verdict = analyse(path)
+    except FileNotFoundError:
+        verdict = {"stuck": False, "reason": "no session transcript"}
+    print(json.dumps(verdict))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

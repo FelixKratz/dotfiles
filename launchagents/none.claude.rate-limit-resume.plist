@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>none.claude.rate-limit-resume</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__HOME__/.local/bin/claude-rate-limit-resume</string>
+	</array>
+	<key>StandardOutPath</key>
+	<string>__HOME__/.log/claude-rate-limit-resume.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/.log/claude-rate-limit-resume.err</string>
+	<key>StartInterval</key>
+	<integer>600</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+</dict>
+</plist>

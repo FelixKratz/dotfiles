@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# claude-rate-limit-resume — carry on Claude sessions in kitty that stopped on a
+# usage limit, once the limit has reset.
+#
+# Detection reads the session transcript, not the screen. Claude records each
+# usage-limit hit as a 429 api-error entry carrying the reset clock and its
+# timezone, and claude-rate-limit-analyze turns that into "stuck until EPOCH".
+# That survives CLI wording changes and tells real caps from server throttling
+# and policy refusals. The screen is only read once the reset has passed, to
+# see whether a menu is in the way or input is queued.
+#
+# The out-of-usage menu offers "Add funds" and "Upgrade your plan", so a menu is
+# only ever dismissed with Escape. Enter is pressed only once no menu shows.
+#
+# Only live kitty windows whose foreground process is an interactive claude
+# with a sessions/<pid>.json in ~/.claude (or $CLAUDE_CONFIG_DIR) are looked
+# at, so a closed session whose transcript ends on a 429 is never revived. A
+# session mid-turn is left alone.
+#
+# launchd runs this every 10 minutes (none.claude.rate-limit-resume). Run from
+# a terminal it only reports what it would do; pass --apply to act.
+#
+# Needs allow_remote_control and listen_on in kitty.conf. Based on
+# claude-rate-limit-resume.sh in seabbs/dotfiles, which drives tmux.
+set -uo pipefail
+
+# Schedulers start with a minimal PATH; kitten, jq and python3 live in brew.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+usage() {
+  cat <<'USAGE'
+claude-rate-limit-resume — resume kitty Claude sessions stuck on a usage limit
+
+  claude-rate-limit-resume              act if run by launchd, report if run by hand
+  claude-rate-limit-resume --apply      act, even from a terminal
+  claude-rate-limit-resume --dry-run    report only, even from launchd
+  claude-rate-limit-resume --window ID  look at one kitty window only
+USAGE
+}
+
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SESSIONS_DIR="$CLAUDE_DIR/sessions"
+PROJECTS_DIR="$CLAUDE_DIR/projects"
+ANALYSER="${0%/*}/claude-rate-limit-analyze"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/claude-rate-limit-resume"
+# A session that was just nudged may be mid-turn, or may have hit a fresh
+# limit; either way it should not be poked again straight away.
+COOLDOWN_SECS=1800
+
+# A blocking selection menu or confirmation is showing.
+MENU_RE='Esc to cancel|Stop and wait for limit|Add funds'
+MENU_RE="$MENU_RE|Upgrade your plan|out of extra usage"
+
+RESUME_MSG="Rate limit has reset. Please resume where you left off and report status before continuing."
+
+INTERACTIVE=false
+[ -t 1 ] && INTERACTIVE=true
+APPLY=true
+$INTERACTIVE && APPLY=false
+ONLY_WINDOW=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apply) APPLY=true; shift ;;
+    --dry-run) APPLY=false; shift ;;
+    --window) ONLY_WINDOW="${2:?--window needs a kitty window id}"; shift 2 ;;
+    -h | --help) usage; exit 0 ;;
+    *) echo "claude-rate-limit-resume: unknown option $1" >&2; usage >&2; exit 64 ;;
+  esac
+done
+
+log() { echo "$(date '+%F %T') $*"; }
+# Detail that only helps someone watching a terminal run.
+say() { $INTERACTIVE && log "$*"; return 0; }
+
+for cmd in kitten jq python3; do
+  command -v "$cmd" >/dev/null || { log "missing $cmd, exiting"; exit 1; }
+done
+
+# kitty @ talks to the kitty instance behind SOCK, about window WIN.
+kitty_rc() { kitten @ --to "unix:$SOCK" "$@"; }
+screen_text() { kitty_rc get-text --match "id:$WIN" 2>/dev/null; }
+
+# In a dry run, say what would be sent and send nothing.
+send() {
+  if $APPLY; then
+    kitty_rc "$@" >/dev/null 2>&1
+  else
+    log "  (dry run) would run: kitten @ $*"
+  fi
+}
+
+# Submit queued input if there is any, else ask the session to carry on.
+nudge() {
+  local content="$1" input_text
+  # The prompt box is the last line starting with ❯.
+  input_text=$(printf '%s\n' "$content" | awk '/^❯/{l=$0} END{print l}' |
+    sed -E 's/^❯[[:space:]]*//; s/[[:space:]]+$//')
+
+  if [ -n "$input_text" ]; then
+    log "  submitting queued input"
+    send send-key --match "id:$WIN" enter
+  else
+    log "  sending resume message"
+    send send-text --match "id:$WIN" "$RESUME_MSG"
+    $APPLY && sleep 0.5
+    send send-key --match "id:$WIN" enter
+  fi
+}
+
+process_window() {
+  local pid="$1" sfile kind status sid jsonl verdict
+  local stuck limit_type reset_epoch reset_human now cooldown last age content
+
+  sfile="$SESSIONS_DIR/$pid.json"
+  [ -f "$sfile" ] || return 0
+  kind=$(jq -r '.kind // empty' "$sfile")
+  status=$(jq -r '.status // empty' "$sfile")
+  sid=$(jq -r '.sessionId // empty' "$sfile")
+  [ "$kind" = interactive ] && [ -n "$sid" ] || return 0
+
+  jsonl=$(ls -t "$PROJECTS_DIR"/*/"$sid".jsonl 2>/dev/null | head -1)
+  [ -n "$jsonl" ] || { say "window $WIN: no transcript for $sid"; return 0; }
+
+  verdict=$(python3 "$ANALYSER" "$jsonl" 2>/dev/null) || return 0
+  stuck=$(jq -r '.stuck // false' <<<"$verdict")
+  if [ "$stuck" != true ]; then
+    say "window $WIN (claude $pid, $status): $(jq -r '.reason' <<<"$verdict")"
+    return 0
+  fi
+
+  limit_type=$(jq -r '.limit_type // "generic"' <<<"$verdict")
+  reset_epoch=$(jq -r '.reset_epoch // empty' <<<"$verdict")
+  reset_human=$(jq -r '.reset_human // "unknown"' <<<"$verdict")
+  now=$(date +%s)
+  local tag="window $WIN (claude $pid, session ${sid:0:8})"
+
+  # A monthly cap shows no reset time and will not clear on its own.
+  if [ "$limit_type" = monthly ]; then
+    log "$tag: monthly cap, needs manual action"
+    return 0
+  fi
+  if [ -z "$reset_epoch" ]; then
+    log "$tag: $limit_type limit with no reset time parsed, leaving it"
+    return 0
+  fi
+  if [ "$now" -lt "$reset_epoch" ]; then
+    log "$tag: $limit_type limit, waiting until $reset_human"
+    return 0
+  fi
+  if [ "$status" = busy ]; then
+    log "$tag: reset passed but the session is busy, leaving it"
+    return 0
+  fi
+
+  # Keyed on the session, which outlives any one window id.
+  cooldown="$STATE_DIR/cooldown-$sid"
+  if [ -f "$cooldown" ]; then
+    last=$(stat -f %m "$cooldown" 2>/dev/null || stat -c %Y "$cooldown" 2>/dev/null)
+    age=$((now - ${last:-0}))
+    if [ "$age" -lt "$COOLDOWN_SECS" ]; then
+      say "$tag: nudged ${age}s ago, cooling down"
+      return 0
+    fi
+  fi
+
+  log "$tag: $limit_type limit reset at $reset_human"
+  content=$(screen_text) || { log "$tag: could not read the screen"; return 0; }
+
+  # Each Escape waits for the screen to show the menu still there: two in
+  # quick succession on an empty prompt open Claude's rewind menu.
+  local tries=0
+  while grep -qE "$MENU_RE" <<<"$content"; do
+    if [ "$tries" -ge 2 ]; then
+      log "  menu still showing after Escape, leaving it"
+      return 0
+    fi
+    log "  dismissing a menu with Escape"
+    send send-key --match "id:$WIN" escape
+    $APPLY || break
+    tries=$((tries + 1))
+    sleep 2
+    content=$(screen_text) || return 0
+  done
+
+  # Marked before acting, so a failed poke still holds off the next run.
+  if $APPLY; then
+    mkdir -p "$STATE_DIR"
+    touch "$cooldown"
+  fi
+  nudge "$content"
+}
+
+$APPLY || say "dry run: nothing will be sent (pass --apply to act)"
+
+found=false
+for SOCK in /tmp/kitty-*; do
+  [ -S "$SOCK" ] || continue
+  windows=$(kitty_rc ls 2>/dev/null) || { say "no answer from $SOCK"; continue; }
+  found=true
+  # One line per claude process in a window's foreground: "window pid".
+  while read -r WIN pid; do
+    [ -n "$WIN" ] || continue
+    [ -z "$ONLY_WINDOW" ] || [ "$WIN" = "$ONLY_WINDOW" ] || continue
+    process_window "$pid" || true
+  done < <(jq -r '.[].tabs[].windows[] | .id as $w
+      | .foreground_processes[]
+      | select((.cmdline[0] // "") | test("(^|/)claude$"))
+      | "\($w) \(.pid)"' <<<"$windows")
+done
+
+$found || say "no kitty remote-control socket answered under /tmp/kitty-*"
+exit 0
