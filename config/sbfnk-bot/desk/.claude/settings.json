@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(sbfnk-bot-review)",
+      "Bash(sbfnk-bot-review list:*)",
+      "Bash(sbfnk-bot-review show:*)",
+      "Bash(sbfnk-bot-review log:*)",
+      "Bash(sbfnk-bot-review count:*)",
+      "Bash(sbfnk-bot-review --help)"
+    ],
+    "ask": [
+      "Bash(sbfnk-bot-review approve:*)",
+      "Bash(sbfnk-bot-review answer:*)",
+      "Bash(sbfnk-bot-review discard:*)"
+    ]
+  }
+}

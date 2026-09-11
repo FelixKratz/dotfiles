@@ -457,20 +457,47 @@ pattern_screen() {
       | {quote: ., reason: "pattern check"})'
 }
 
+# Claude Code's bylines. Commits here carry sbfnk as co-author and nobody else.
+BYLINE_RE='^Co-Authored-By: Claude|noreply@anthropic\.com'
+BYLINE_RE="$BYLINE_RE"'|Generated with \[Claude Code\]|^Claude-Session:'
+
+# Rewrite the branch's commit messages without them. Trees, authors and dates
+# stay as they were, so the diff is untouched; only messages change.
+strip_bylines() {
+  local work="$1" base="$2" new c msg
+  git -C "$work" log --format=%B "origin/$base..HEAD" | grep -qiE "$BYLINE_RE" \
+    || return 0
+  new="$(git -C "$work" rev-parse "origin/$base")"
+  for c in $(git -C "$work" rev-list --reverse "origin/$base..HEAD"); do
+    msg="$(git -C "$work" log -1 --format=%B "$c" | grep -viE "$BYLINE_RE")"
+    new="$(cd "$work" && \
+      GIT_AUTHOR_NAME="$(git log -1 --format=%an "$c")" \
+      GIT_AUTHOR_EMAIL="$(git log -1 --format=%ae "$c")" \
+      GIT_AUTHOR_DATE="$(git log -1 --format=%aI "$c")" \
+      GIT_COMMITTER_NAME="$(git log -1 --format=%cn "$c")" \
+      GIT_COMMITTER_EMAIL="$(git log -1 --format=%ce "$c")" \
+      GIT_COMMITTER_DATE="$(git log -1 --format=%cI "$c")" \
+      git commit-tree "$c^{tree}" -p "$new" -m "$msg")" || return 1
+  done
+  git -C "$work" update-ref HEAD "$new"
+  log "  removed Claude bylines from the commit messages"
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
   local id="$1" repo="$2" n="$3" event="$4" outcome="$5" title="$6"
   local body="$7" work="$8" base="$9" branch="${10}" cost="${11}"
-  local dir="$PENDING/$id" run="$RUNS_DIR/$id" flags model_flags
+  local dir="$PENDING/$id" run="$RUNS_DIR/$id" flags model_flags seq
 
   mkdir -p "$dir"
   {
     [ "$outcome" = pr ] && printf '# %s\n\n' "$title"
-    printf '%s\n' "$body"
+    printf '%s\n' "$body" | grep -viE "$BYLINE_RE"
   } > "$dir/text.md"
   if [ "$outcome" = pr ]; then
-    { git -C "$work" log --format='%h %s' "origin/$base..HEAD"; echo
+    strip_bylines "$work" "$base"
+    { git -C "$work" log --format='commit %h%n%B' "origin/$base..HEAD"
       git -C "$work" diff "origin/$base..HEAD"; } > "$dir/diff.patch"
   else
     : > "$dir/diff.patch"
@@ -485,15 +512,20 @@ park() {
   flags="$(jq -c -n --argjson a "${flags:-[]}" --argjson b "$model_flags" \
     '$a + $b')"
 
-  jq -n --arg id "$id" --arg repo "$repo" --argjson n "$n" \
+  # A short number to refer to it by, never reused.
+  seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
+  echo "$seq" > "$STATE_DIR/seq"
+
+  jq -n --arg id "$id" --argjson seq "$seq" --arg repo "$repo" --argjson n "$n" \
     --arg event "$event" --arg outcome "$outcome" --arg title "$title" \
     --arg base "$base" --arg branch "$branch" --arg work "$work" \
     --arg cost "$cost" --arg at "$(now_iso)" --argjson flags "$flags" \
-    '{id: $id, repo: $repo, number: $n, event: $event, outcome: $outcome,
+    '{id: $id, seq: $seq, repo: $repo, number: $n, event: $event,
+      outcome: $outcome,
       title: $title, base: $base, branch: $branch, work: $work,
       cost_usd: $cost, created: $at, flags: $flags}' > "$dir/meta.json"
   chmod -R go+rX "$dir"
-  log "  parked $id for review ($(jq length <<< "$flags") flag(s))"
+  log "  parked #$seq ($id) for review ($(jq length <<< "$flags") flag(s))"
 }
 
 push_and_open() {
@@ -539,7 +571,7 @@ act_on_decisions() {
     body="$(sed '1,2d' "$PENDING/$id/text.md")"
     [ "$outcome" = pr ] || body="$(cat "$PENDING/$id/text.md")"
     # Claude Code's own byline, should the attribution setting ever miss.
-    body="$(printf '%s\n' "$body" | grep -v 'Generated with \[Claude Code\]')"
+    body="$(printf '%s\n' "$body" | grep -viE "$BYLINE_RE")"
 
     case "$verb" in
       approve|force)

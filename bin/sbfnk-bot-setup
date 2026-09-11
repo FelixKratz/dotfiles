@@ -21,6 +21,9 @@
 #   sudo $S check                show the bot cannot read your files
 #   sudo $S enable               start the daemon
 #   sudo $S disable              stop it; everything else stays
+#   $S desk                      (no sudo) a Remote Control session as you, for
+#                                reviewing from claude.ai or the Claude app
+#   $S desk-off                  (no sudo) stop it
 #
 # Run install again after pulling dotfiles, to update the installed copies.
 # To move the bot to another machine: disable here, set it up there, and put
@@ -39,13 +42,76 @@ SECRETS=$BOT_HOME/.config/sbfnk-bot
 die() { echo "sbfnk-bot-setup: $*" >&2; exit 1; }
 say() { echo "- $*"; }
 
-case "${1:-}" in -h|--help|"") sed -n '2,27p' "$0"; exit 0 ;; esac
+case "${1:-}" in -h|--help|"") sed -n '2,30p' "$0"; exit 0 ;; esac
+# The checkout this script lives in, through the ~/.local/bin symlink.
+DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0")")")"
+
+# The desk: `claude remote-control` as you, in a folder whose CLAUDE.md and
+# settings keep it to sbfnk-bot-review, and which asks before every decision.
+# Spawned sessions run in default permission mode whatever your own default
+# is, so text the bot wrote cannot get a decision recorded unseen.
+DESK_LABEL=none.bots.desk
+desk() {
+  local dir="$HOME/.local/share/sbfnk-bot-desk"
+  local plist="$HOME/Library/LaunchAgents/$DESK_LABEL.plist"
+  [ "$(id -u)" -ne 0 ] || die "run desk without sudo, as yourself"
+  [ -x "$HOME/.local/bin/claude" ] || die "no claude in ~/.local/bin"
+  mkdir -p "$dir/.claude" "$HOME/.log" "$(dirname "$plist")"
+  cp "$DOTFILES/config/sbfnk-bot/desk/CLAUDE.md" "$dir/"
+  cp "$DOTFILES/config/sbfnk-bot/desk/.claude/settings.json" "$dir/.claude/"
+  cat > "$plist" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$DESK_LABEL</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>$HOME/.local/bin/claude</string>
+		<string>remote-control</string>
+		<string>--name</string>
+		<string>sbfnk-bot desk</string>
+		<string>--permission-mode</string>
+		<string>default</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>$dir</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>60</integer>
+	<key>StandardOutPath</key>
+	<string>$HOME/.log/sbfnk-bot-desk.out</string>
+	<key>StandardErrorPath</key>
+	<string>$HOME/.log/sbfnk-bot-desk.err</string>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+</dict>
+</plist>
+PLISTEOF
+  launchctl bootout "gui/$(id -u)/$DESK_LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$plist"
+  say "desk running: open claude.ai/code or the Claude app and pick 'sbfnk-bot desk'"
+}
+
+case "${1:-}" in
+  desk) desk; exit 0 ;;
+  desk-off)
+    launchctl bootout "gui/$(id -u)/$DESK_LABEL" 2>/dev/null || true
+    rm -f "$HOME/Library/LaunchAgents/$DESK_LABEL.plist"
+    say "desk stopped"; exit 0 ;;
+esac
+
 [ "$(id -u)" -eq 0 ] || die "run with sudo"
 OWNER="${SUDO_USER:-}"
 [ -n "$OWNER" ] && [ "$OWNER" != root ] || die "run with sudo from your own account"
 OWNER_HOME="$(dscl . -read "/Users/$OWNER" NFSHomeDirectory | awk '{print $2}')"
-# The checkout this script lives in, through the ~/.local/bin symlink.
-DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0")")")"
 
 # From the bot's home: the caller's working directory is usually inside a
 # home folder the bot cannot enter, and the installers need a readable one.

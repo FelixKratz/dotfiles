@@ -21,7 +21,8 @@
 #   sbfnk-bot-review log                 the bot's recent activity
 #   sbfnk-bot-review count               how many wait (used by nudge)
 #
-# ID may be any unique prefix, and may be left out when only one item waits.
+# ID is the number list shows, or any unique prefix of the long id, and may
+# be left out when only one item waits.
 
 set -uo pipefail
 
@@ -38,7 +39,7 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   for a in "$@"; do args="$args $(printf '%q' "$a")"; done
   tty=()
   [ -t 0 ] && [ -t 1 ] && tty=(-t)
-  exec ssh -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
+  exec ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
     "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
 fi
 
@@ -68,8 +69,14 @@ waiting() {
 # The one waiting item whose id starts with $1; any item will do for an
 # empty $1, as long as there is only one.
 resolve() {
-  local matches
-  matches="$(waiting all | awk -v p="${1:-}" 'index($0, p) == 1')"
+  local matches="" id
+  case "${1:-}" in
+    [0-9]*)
+      for id in $(waiting all); do
+        [ "$(meta "$id" '.seq // empty')" = "$1" ] && matches="$id"
+      done ;;
+    *) matches="$(waiting all | awk -v p="${1:-}" 'index($0, p) == 1')" ;;
+  esac
   case "$(printf '%s' "$matches" | grep -c .)" in
     0) die "nothing waiting matches '${1:-}'" ;;
     1) echo "$matches" ;;
@@ -97,7 +104,8 @@ case "$cmd" in
     ids="$(waiting)"
     [ -n "$ids" ] || { echo "nothing waiting for review"; exit 0; }
     for id in $ids; do
-      printf '%s\n  %s %s#%s: %s (%s flag(s))\n' "$id" "$(meta "$id" .outcome)" \
+      printf '#%-3s %s %s#%s: %s (%s flag(s))\n' \
+        "$(meta "$id" '.seq // "-"')" "$(meta "$id" .outcome)" \
         "$(meta "$id" .repo)" "$(meta "$id" .number)" \
         "$(meta "$id" .title | clean)" "$(meta "$id" '.flags | length')"
     done ;;
@@ -105,9 +113,10 @@ case "$cmd" in
     # grep -c exits 1 on a count of 0, which is an answer, not a failure.
     waiting | grep -c . || true ;;
   show)
-    id="$(resolve "${1:-}")"
+    id="$(resolve "${1:-}")" || exit 1
     {
-      printf '%s %s#%s: %s\n' "$(meta "$id" .outcome)" "$(meta "$id" .repo)" \
+      printf '#%s %s %s#%s: %s\n' "$(meta "$id" '.seq // "-"')" \
+        "$(meta "$id" .outcome)" "$(meta "$id" .repo)" \
         "$(meta "$id" .number)" "$(meta "$id" .title)"
       printf 'https://github.com/%s/issues/%s\n' "$(meta "$id" .repo)" \
         "$(meta "$id" .number)"
@@ -132,13 +141,13 @@ case "$cmd" in
   approve)
     force=false
     [ "${1:-}" = --force ] && { force=true; shift; }
-    id="$(resolve "${1:-}")"
+    id="$(resolve "${1:-}")" || exit 1
     if [ "$(meta "$id" '.flags | length')" -gt 0 ] && ! $force; then
       die "the screen flagged $id; read 'show' and use approve --force if it is fine"
     fi
     if $force; then decide "$id" force; else decide "$id" approve; fi ;;
   answer)
-    id="$(resolve "${1:-}")"
+    id="$(resolve "${1:-}")" || exit 1
     shift 2>/dev/null
     text="$*"
     if [ -z "$text" ]; then
@@ -148,7 +157,7 @@ case "$cmd" in
     [ -n "$text" ] || die "empty answer"
     decide "$id" answer "$text" ;;
   discard)
-    id="$(resolve "${1:-}")"
+    id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean ;;
