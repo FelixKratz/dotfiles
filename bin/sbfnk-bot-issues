@@ -19,7 +19,8 @@
 #   approve   push the branch and open the draft PR, or post the question
 #   answer    run again with a private reply: an answer, or what to change
 #   discard   drop the work; reassign the issue to have it tried again
-#   polish    edit, screen and fix the parked text again
+#   polish    edit, screen and fix the parked text again, optionally with
+#             sbfnk's instructions for the text
 #
 # A poll with nothing to do costs one search request and no model tokens.
 #
@@ -508,6 +509,15 @@ $body
 </description>
 PROMPT
 )"
+  if [ -n "${EDIT_NOTE:-}" ]; then
+    prompt="$prompt
+
+$OWNER_LOGIN asks for these changes to the text. They come before the rules
+above, and you may add what he asks for:
+<changes>
+$EDIT_NOTE
+</changes>"
+  fi
   mkdir -p "$config"
   out="$(cd "$config" && run_model "$config" -p "$prompt" --tools "" \
     ${EDIT_MODEL:+--model "$EDIT_MODEL"} --json-schema "$EDIT_SCHEMA" \
@@ -792,8 +802,11 @@ act_on_decisions() {
       polish)
         log "  $id: polishing the text again"
         echo "$sig" >> "$PENDING/$id/done"
+        # Whatever follows the verb is sbfnk's instruction for the text.
+        EDIT_NOTE="$(sed '1d' "$decision")"
         park "$id" "$repo" "$n" "$event" "$outcome" "$title" "$body" "$work" \
           "$base" "$branch" "$cost"
+        EDIT_NOTE=""
         continue ;;
       *)
         log "  $id: unknown decision '$verb'"

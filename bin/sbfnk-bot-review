@@ -18,7 +18,9 @@
 #                                        answer its question, or say what to
 #                                        change in a PR; the bot runs again
 #   sbfnk-bot-review discard [ID]        drop the work
-#   sbfnk-bot-review polish [ID]         edit, screen and fix its text again
+#   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
+#                                        following TEXT if given; the work
+#                                        itself is not redone
 #   sbfnk-bot-review log                 the bot's recent activity, and why
 #                                        its latest failed run failed
 #   sbfnk-bot-review count               how many wait (used by nudge)
@@ -196,7 +198,8 @@ case "$cmd" in
     decide "$id" discard ;;
   polish)
     id="$(resolve "${1:-}")" || exit 1
-    decide "$id" polish ;;
+    shift 2>/dev/null
+    decide "$id" polish "$*" ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
     latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"
