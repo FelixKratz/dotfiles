@@ -672,6 +672,13 @@ Agenda includes only files with :active: filetag from ~/org-roam.
 (advice-add 'org-todo-list :before #'sf/org-update-agenda-files)
 #+end_src
 
+** Refiling
+Meetings in people nodes run newest first, so a refiled entry goes to the top
+of its target heading.
+#+begin_src emacs-lisp
+(setq org-reverse-note-order t)
+#+end_src
+
 ** Restore gt/gT in Org Agenda
 evil-org-agenda binds =gt= to =org-agenda-show-tags=, shadowing workspace switching.
 #+begin_src emacs-lisp
