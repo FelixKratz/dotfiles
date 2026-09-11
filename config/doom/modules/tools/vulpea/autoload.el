@@ -21,22 +21,27 @@ Usage example:
   (setq org-agenda-prefix-format
         '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
 
-Refer to `org-agenda-prefix-format' for more information."
-  (let* ((file-name (when buffer-file-name
-                      (file-name-sans-extension
-                       (file-name-nondirectory buffer-file-name))))
-         (title (vulpea-buffer-prop-get "title"))
-         (category (org-get-category))
-         (result
-          (or (if (and
-                   title
-                   (string-equal category file-name))
-                  title
-                category)
-              "")))
-    (if (numberp len)
-        (s-truncate len (s-pad-right len " " result))
-      result)))
+Refer to `org-agenda-prefix-format' for more information.
+
+Time-grid lines are rendered in the agenda buffer itself, where there
+is no Org entry to ask, so they get a blank category."
+  (if (not (derived-mode-p 'org-mode))
+      (if (numberp len) (make-string len ?\s) "")
+    (let* ((file-name (when buffer-file-name
+                        (file-name-sans-extension
+                         (file-name-nondirectory buffer-file-name))))
+           (title (vulpea-buffer-prop-get "title"))
+           (category (org-get-category))
+           (result
+            (or (if (and
+                     title
+                     (string-equal category file-name))
+                    title
+                  category)
+                "")))
+      (if (numberp len)
+          (s-truncate len (s-pad-right len " " result))
+        result))))
 
 ;;; --- Tag handling ---
 
