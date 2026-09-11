@@ -483,6 +483,33 @@ strip_bylines() {
   log "  removed Claude bylines from the commit messages"
 }
 
+# Why a run gave nothing back, where sbfnk can read it: whether it hit the
+# time limit, the end of Claude's error output, and its last few actions.
+failure_note() {
+  local id="$1" run="$2" out="$3" secs="$4" note transcript
+  note="$SPOOL/log/failures/$id.txt"
+  mkdir -p "$(dirname "$note")"
+  transcript="$(ls -t "$run"/claude/projects/*/*.jsonl 2>/dev/null | head -1)"
+  {
+    printf 'ran %d min' "$(( secs / 60 ))"
+    [ "$secs" -ge $(( TIMEOUT - 5 )) ] && printf ', stopped at the %d min limit' \
+      "$(( TIMEOUT / 60 ))"
+    printf '\n\n== end of the error output ==\n'
+    tail -20 "$out.stderr" 2>/dev/null
+    printf '\n== last actions ==\n'
+    [ -n "$transcript" ] && jq -r 'select(.type == "assistant")
+      | .message.content[]? | select(.type == "tool_use")
+      | "\(.name): \(.input.command // .input.file_path // .input.pattern
+          // "" | tostring | gsub("\n"; " ") | .[0:200])"' "$transcript" \
+      2>/dev/null | tail -15
+    printf '\n== last words ==\n'
+    [ -n "$transcript" ] && jq -r 'select(.type == "assistant")
+      | .message.content[]? | select(.type == "text") | .text' \
+      "$transcript" 2>/dev/null | tail -8
+  } > "$note"
+  chmod 644 "$note"
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
@@ -615,7 +642,7 @@ act_on_decisions() {
 work_on() {
   local repo="$1" n="$2" event="$3" reason="$4"
   local title base branch work id run out result outcome body pr_title
-  local cost commits
+  local cost commits started
 
   title="$(bot_gh api "repos/$repo/issues/$n" --jq .title)" \
     || { log "  could not read $repo#$n"; return 1; }
@@ -639,12 +666,14 @@ work_on() {
   fi
 
   issue_text "$repo" "$n" "$event" > "$run/issue.txt"
+  started=$(date +%s)
   run_claude "$work" "$(build_prompt "$repo" "$n" "$title" "$branch" \
     "$base" "$(cat "$run/issue.txt")")" "$out" "$run/claude"
   cost="$(jq -r '.total_cost_usd // empty' "$out" 2>/dev/null)"
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   if [ -z "$result" ]; then
-    log "  no usable result for $repo#$n, see $out"
+    failure_note "$id" "$run" "$out" "$(( $(date +%s) - started ))"
+    log "  no usable result for $repo#$n, see $SPOOL/log/failures/$id.txt"
     record "$repo#$n" "$event" failed "no result" "$cost"
     return 1
   fi

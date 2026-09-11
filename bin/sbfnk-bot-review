@@ -18,7 +18,8 @@
 #                                        answer its question, or say what to
 #                                        change in a PR; the bot runs again
 #   sbfnk-bot-review discard [ID]        drop the work
-#   sbfnk-bot-review log                 the bot's recent activity
+#   sbfnk-bot-review log                 the bot's recent activity, and why
+#                                        its latest failed run failed
 #   sbfnk-bot-review count               how many wait (used by nudge)
 #
 # ID is the number list shows, or any unique prefix of the long id, and may
@@ -160,7 +161,12 @@ case "$cmd" in
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
   log)
-    tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean ;;
+    tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
+    latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"
+    if [ -n "$latest" ]; then
+      printf '\n== latest failure: %s ==\n' "$(basename "$latest" .txt)"
+      clean < "$latest"
+    fi ;;
   -h|--help|help)
     sed -n '2,24p' "$0" ;;
   *)

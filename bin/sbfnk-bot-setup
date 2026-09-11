@@ -49,7 +49,9 @@ DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0"
 # The desk: `claude remote-control` as you, in a folder whose CLAUDE.md and
 # settings keep it to sbfnk-bot-review, and which asks before every decision.
 # Spawned sessions run in default permission mode whatever your own default
-# is, so text the bot wrote cannot get a decision recorded unseen.
+# is, so text the bot wrote cannot get a decision recorded unseen. Its
+# standard output is a terminal display redrawn continually, so it goes
+# nowhere; errors still reach the log.
 DESK_LABEL=none.bots.desk
 desk() {
   local dir="$HOME/.local/share/sbfnk-bot-desk"
@@ -87,7 +89,7 @@ desk() {
 	<key>ThrottleInterval</key>
 	<integer>60</integer>
 	<key>StandardOutPath</key>
-	<string>$HOME/.log/sbfnk-bot-desk.out</string>
+	<string>/dev/null</string>
 	<key>StandardErrorPath</key>
 	<string>$HOME/.log/sbfnk-bot-desk.err</string>
 	<key>LimitLoadToSessionType</key>
@@ -96,6 +98,13 @@ desk() {
 </plist>
 PLISTEOF
   launchctl bootout "gui/$(id -u)/$DESK_LABEL" 2>/dev/null || true
+  # bootout returns before the old session has exited, and bootstrap fails
+  # while it is still there.
+  local tries=0
+  while launchctl print "gui/$(id -u)/$DESK_LABEL" >/dev/null 2>&1 \
+    && [ "$tries" -lt 20 ]; do
+    sleep 1; tries=$((tries + 1))
+  done
   launchctl bootstrap "gui/$(id -u)" "$plist"
   say "desk running: open claude.ai/code or the Claude app and pick 'sbfnk-bot desk'"
 }
