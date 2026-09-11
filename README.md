@@ -8,7 +8,7 @@ Configuration files for macOS and Linux.
 root/          → symlinked to ~/.<filename> (zshrc, tmux.conf, etc.)
 config/        → symlinked to ~/.config/<dirname> (doom, kitty, alfred, etc.)
 bin/           → symlinked to ~/.local/bin/
-launchagents/  → symlinked to ~/Library/LaunchAgents/ (macOS only)
+launchagents/  → written to ~/Library/LaunchAgents/ and loaded (macOS only)
 docs/          → reference material (org-roam workflow, slide style, etc.)
 .githooks/     → gitleaks pre-commit hook (activated by install.sh)
 ```
@@ -91,8 +91,13 @@ overlay first:
 - `config/doom-private/signatures.el` — `(setq sf/email-signatures '(("name"
   . "body") ...))`. Loaded with no-error by `email.el`.
 - launchagents: keep the `__HOME__` placeholder in the plist source. `link.sh`
-  substitutes `$HOME` at install time and writes real files to
-  `~/Library/LaunchAgents/`.
+  substitutes `$HOME` at install time, writes real files to
+  `~/Library/LaunchAgents/`, and loads any agent that changed or is not
+  running. It records what it installed in
+  `~/.local/state/dotfiles/launchagents`, so an agent deleted from the repo, or
+  whose group the machine dropped, is unloaded and removed on the next run.
+  The same run installs or updates the Claude Code plugins in
+  `config/claude/plugins`; a plugin edit reaches sessions after a version bump.
 
 ### Keyboard remapping
 

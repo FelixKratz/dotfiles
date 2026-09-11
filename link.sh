@@ -296,8 +296,16 @@ AGENT_GROUP=(
   none.claude    desktop
 )
 
+# The agents link.sh installed last time, so an agent removed from the repo, or
+# whose group the machine dropped, is unloaded here too. Agents written by
+# anything else (the per-account mail agents from config/email/generate.py)
+# never enter this list and are never touched.
+AGENT_MANIFEST="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/launchagents"
+
 if [[ "$OS" == "Darwin" ]]; then
-  mkdir -p $HOME/Library/LaunchAgents
+  mkdir -p $HOME/Library/LaunchAgents ${AGENT_MANIFEST:h}
+  domain="gui/$(id -u)"
+  typeset -a installed_agents
   for file in $CODE_DIR/dotfiles/launchagents/*; do
     base=$(basename $file)
     owner="${AGENT_GROUP[${(j:.:)${(s:.:)base}[1,2]}]:-}"
@@ -306,13 +314,37 @@ if [[ "$OS" == "Darwin" ]]; then
       continue
     fi
     dest=$HOME/Library/LaunchAgents/$base
+    label=${base%.plist}
+    installed_agents+=($label)
     # Plists can't expand $HOME at runtime, so we substitute it at install
     # time. Remove any legacy symlink first to avoid writing through it
     # back into the repo.
     [ -L "$dest" ] && rm "$dest"
-    sed "s|__HOME__|$HOME|g" "$file" > "$dest"
-    echo "Generated $dest"
+    rendered="$(sed "s|__HOME__|$HOME|g" "$file")"
+    if [[ -f "$dest" && "$(<$dest)" == "$rendered" ]] \
+      && launchctl print "$domain/$label" >/dev/null 2>&1; then
+      continue
+    fi
+    print -r -- "$rendered" > "$dest"
+    # Reload only what changed or is not running, so a long-lived agent
+    # such as the IMAP watcher is left alone when nothing about it moved.
+    launchctl bootout "$domain/$label" 2>/dev/null
+    if launchctl bootstrap "$domain" "$dest" 2>/dev/null; then
+      echo "Loaded $label"
+    else
+      echo "Generated $dest (could not load it: no GUI session?)"
+    fi
   done
+
+  if [[ -r "$AGENT_MANIFEST" ]]; then
+    for label in ${(f)"$(<$AGENT_MANIFEST)"}; do
+      (( ${installed_agents[(Ie)$label]} )) && continue
+      launchctl bootout "$domain/$label" 2>/dev/null
+      rm -f "$HOME/Library/LaunchAgents/$label.plist"
+      echo "Removed $label (no longer installed by link.sh)"
+    done
+  fi
+  print -l -- $installed_agents > "$AGENT_MANIFEST"
 fi
 
 # systemd user timers (the Linux analogue of the launchd agents above). Units
@@ -348,6 +380,35 @@ for dir in $CODE_DIR/dotfiles*/bin; do
     echo "Linked $file → ~/.local/bin/$(basename $file)"
   done
 done
+
+# Claude Code plugins from the local marketplaces: install what is missing and
+# update what the marketplace has bumped. Plugins are copied into Claude's cache
+# on install, so an edit only reaches sessions after a version bump and this.
+if command -v claude >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  installed_json=$HOME/.claude/plugins/installed_plugins.json
+  for mp in $CODE_DIR/dotfiles*/config/claude/plugins/.claude-plugin/marketplace.json(N); do
+    mp_dir=${mp:h:h}
+    mp_name=$(jq -r .name $mp)
+    if ! claude plugin marketplace list 2>/dev/null | grep -qw -- "$mp_name"; then
+      claude plugin marketplace add "$mp_dir" >/dev/null 2>&1 \
+        && echo "Added marketplace $mp_name"
+    fi
+    for entry in ${(f)"$(jq -r '.plugins[] | "\(.name) \(.version)"' $mp)"}; do
+      name=${entry% *} want=${entry#* }
+      have=$(jq -r --arg k "$name@$mp_name" '.plugins[$k][0].version // empty' \
+        $installed_json 2>/dev/null)
+      if [[ -z "$have" ]]; then
+        claude plugin install "$name@$mp_name" >/dev/null 2>&1 \
+          && echo "Installed plugin $name@$mp_name" \
+          || echo "Could not install plugin $name@$mp_name"
+      elif [[ "$have" != "$want" ]]; then
+        claude plugin update "$name@$mp_name" >/dev/null 2>&1 \
+          && echo "Updated plugin $name@$mp_name to $want (restart sessions)" \
+          || echo "Could not update plugin $name@$mp_name"
+      fi
+    done
+  done
+fi
 
 echo "\nDone."
 echo "Run 'doom sync' if Emacs config changed."
