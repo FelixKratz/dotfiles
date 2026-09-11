@@ -1,0 +1,25 @@
+#!/bin/bash
+# PostToolUse hook: once a Bash call has opened a pull request, tell Claude
+# to start /wait-for-review on it. CLAUDE.md asks for that too, but an
+# instruction read at the start of a long session is easy to lose by the
+# time the pull request goes up.
+#
+# Silent for every other command, and when gh pr create printed no URL,
+# which is what a failed call looks like.
+
+command -v jq >/dev/null 2>&1 || exit 0
+event="$(cat)"
+
+cmd="$(jq -r '.tool_input.command // empty' <<< "$event" 2>/dev/null)"
+grep -Eq '(^|[;&|(][[:space:]]*)gh pr create([[:space:]]|$)' <<< "$cmd" \
+  || exit 0
+
+url="$(jq -r '.tool_response | if type == "object"
+    then (.stdout // "") else tostring end' <<< "$event" 2>/dev/null \
+  | grep -Eo 'https://github\.com/[^[:space:]]+/pull/[0-9]+' | tail -1)"
+[ -n "$url" ] || exit 0
+
+jq -cn --arg url "$url" '{hookSpecificOutput: {
+  hookEventName: "PostToolUse",
+  additionalContext: ("You just opened " + $url + ". Invoke /wait-for-review "
+    + ($url | sub(".*/pull/"; "")) + " now so its reviews are picked up.")}}'

@@ -77,6 +77,30 @@
           }
         }
       }
+    },
+    {
+      "name": "pr-followup",
+      "description": "After gh pr create, start /wait-for-review on the new pull request",
+      "version": "1.0.0",
+      "author": {
+        "name": "Sebastian Funk"
+      },
+      "source": "./pr-followup",
+      "category": "development",
+      "strict": false,
+      "hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Bash",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "${CLAUDE_PLUGIN_ROOT}/bin/after-pr-create"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
