@@ -18,6 +18,7 @@
 #                                        answer its question, or say what to
 #                                        change in a PR; the bot runs again
 #   sbfnk-bot-review discard [ID]        drop the work
+#   sbfnk-bot-review polish [ID]         edit, screen and fix its text again
 #   sbfnk-bot-review log                 the bot's recent activity, and why
 #                                        its latest failed run failed
 #   sbfnk-bot-review count               how many wait (used by nudge)
@@ -57,12 +58,20 @@ for f in "$DECISIONS"/*; do
   [ -d "$PENDING/$(basename "$f")" ] || rm -f "$f"
 done
 
+# A decision the bot has not yet carried out. One it has, on work that stays
+# parked (polish), is listed by mtime in the item's done file.
+undecided() {
+  local f="$DECISIONS/$1"
+  [ -f "$f" ] || return 0
+  grep -qx "$(stat -f %m "$f")" "$PENDING/$1/done" 2>/dev/null
+}
+
 waiting() {
   local d id
   for d in "$PENDING"/*/; do
     [ -f "$d/meta.json" ] || continue
     id="$(basename "$d")"
-    [ -f "$DECISIONS/$id" ] && [ "${1:-}" != all ] && continue
+    [ "${1:-}" = all ] || undecided "$id" || continue
     echo "$id"
   done
 }
@@ -123,12 +132,22 @@ case "$cmd" in
         "$(meta "$id" .number)"
       printf 'parked %s, cost $%s\n\n' "$(meta "$id" .created)" \
         "$(meta "$id" '.cost_usd // "?"')"
+      if [ "$(meta "$id" '.fixed // [] | length')" -gt 0 ]; then
+        echo "== flagged, then fixed by the bot =="
+        jq -r '.fixed[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
+        echo
+      fi
       if [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
         echo "== FLAGGED by the screen: read these before approving =="
         jq -r '.flags[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
         echo
       else
         echo "== the screen found nothing to flag =="
+        echo
+      fi
+      if [ "$(meta "$id" .outcome)" = pr ] \
+        && [ "$(meta "$id" '.edited // false')" != true ]; then
+        echo "== not edited: the humanizer step did not run =="
         echo
       fi
       echo "== text to publish =="
@@ -160,6 +179,9 @@ case "$cmd" in
   discard)
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
+  polish)
+    id="$(resolve "${1:-}")" || exit 1
+    decide "$id" polish ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
     latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"

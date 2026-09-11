@@ -19,6 +19,7 @@
 #   approve   push the branch and open the draft PR, or post the question
 #   answer    run again with a private reply: an answer, or what to change
 #   discard   drop the work; reassign the issue to have it tried again
+#   polish    edit, screen and fix the parked text again
 #
 # A poll with nothing to do costs one search request and no model tokens.
 #
@@ -49,6 +50,8 @@ BOT_EMAIL="242615673+sbfnk-bot@users.noreply.github.com"
 CONFIG_DIR="${SBFNK_BOT_CONFIG:-$(cd "$(dirname "$0")" && pwd)}"
 ALLOW_FILE="$CONFIG_DIR/repos"
 SETTINGS_FILE="$CONFIG_DIR/claude-settings.json"
+# sbfnk's humanizer skill, copied here by sbfnk-bot-setup install.
+HUMANIZER="$CONFIG_DIR/humanizer.md"
 SECRETS_DIR="$HOME/.config/sbfnk-bot"
 # Shared with sbfnk: the bot writes pending/ and log/, sbfnk writes
 # decisions/, and neither can write the other's.
@@ -65,6 +68,7 @@ LOCK_FILE="$STATE_DIR/lock"
 
 MODEL="${SBFNK_BOT_MODEL:-}"
 SCREEN_MODEL="${SBFNK_BOT_SCREEN_MODEL:-sonnet}"
+EDIT_MODEL="${SBFNK_BOT_EDIT_MODEL:-}"
 TIMEOUT="${SBFNK_BOT_TIMEOUT:-3600}"
 # A ceiling for a run that goes wrong, well above what an issue should take.
 MAX_BUDGET="${SBFNK_BOT_MAX_BUDGET_USD:-50}"
@@ -356,7 +360,9 @@ prepare_clone() {
   git -C "$work" checkout --quiet -b "$branch" >/dev/null 2>&1
 }
 
-# claude with the bot's own subscription token and a configuration
+# claude with the bot's own subscription token, in English whatever the
+# machine's locale (R's messages and the tests that match them follow it),
+# and a configuration
 # directory made for this call alone, so no memory, instructions or history
 # from any other session can reach it. Project settings in the checkout are
 # ignored too: a repository cannot give the model hooks or permissions.
@@ -365,6 +371,7 @@ run_model() {
   mkdir -p "$config"
   env -u SSH_AUTH_SOCK \
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
+    LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
     GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
     perl -e 'alarm shift; exec @ARGV' "$TIMEOUT" \
@@ -457,6 +464,50 @@ pattern_screen() {
       | {quote: ., reason: "pattern check"})'
 }
 
+EDIT_SCHEMA='{"type":"object","properties":{"title":{"type":"string"},
+  "body":{"type":"string"}},"required":["title","body"]}'
+
+# The pull request text, rewritten with sbfnk's humanizer by a model with no
+# tools and no other context. Echoes {title, body}, or nothing if it failed.
+humanize() {
+  local title="$1" body="$2" stat="$3" config="$4" out prompt
+  [ -r "$HUMANIZER" ] || return 0
+  prompt="$(cat <<PROMPT
+Edit the title and description of a pull request before it is published.
+
+Use the humanizer skill below, in embedded mode: return only the final text.
+On top of it, make both as short as they can be while keeping every piece of
+relevant information: what changed and why, how it was tested, and anything
+left open. Cut restatements of the issue beyond what a reviewer needs, and
+anything the diff shows plainly. Keep code blocks, identifiers and links
+exactly as they are. Add nothing that is not in the text. British English.
+
+<humanizer-skill>
+$(cat "$HUMANIZER")
+</humanizer-skill>
+
+<files-changed>
+$stat
+</files-changed>
+
+<title>
+$title
+</title>
+
+<description>
+$body
+</description>
+PROMPT
+)"
+  mkdir -p "$config"
+  out="$(cd "$config" && run_model "$config" -p "$prompt" --tools "" \
+    ${EDIT_MODEL:+--model "$EDIT_MODEL"} --json-schema "$EDIT_SCHEMA" \
+    2>/dev/null)"
+  jq -c '.structured_output // empty
+         | select((.title | length) > 0 and (.body | length) > 0)' \
+    <<< "$out" 2>/dev/null
+}
+
 # Claude Code's bylines. Commits here carry sbfnk as co-author and nobody else.
 BYLINE_RE='^Co-Authored-By: Claude|noreply@anthropic\.com'
 BYLINE_RE="$BYLINE_RE"'|Generated with \[Claude Code\]|^Claude-Session:'
@@ -510,47 +561,138 @@ failure_note() {
   chmod 644 "$note"
 }
 
+# What would be published, and what the screens read: the text, and every
+# commit's own patch, so a passage added in one commit and removed in the next
+# still counts. The review shows the commit messages and the net diff.
+write_review_files() {
+  local dir="$1" run="$2" outcome="$3" title="$4" body="$5" work="$6"
+  local base="$7"
+  {
+    [ "$outcome" = pr ] && printf '# %s\n\n' "$title"
+    printf '%s\n' "$body"
+  } > "$dir/text.md"
+  if [ "$outcome" = pr ]; then
+    { git -C "$work" log --format='commit %h%n%B' "origin/$base..HEAD"
+      git -C "$work" diff "origin/$base..HEAD"; } > "$dir/diff.patch"
+    git -C "$work" log -p --format='commit %h%n%B' "origin/$base..HEAD" \
+      > "$run/history.patch"
+  else
+    : > "$dir/diff.patch"
+    : > "$run/history.patch"
+  fi
+}
+
+# Both screens together, as one JSON array of {quote, reason}.
+screen_all() {
+  local dir="$1" run="$2" work="$3" base="$4" flags model_flags
+  flags="$(pattern_screen "$run/issue.txt" "$dir/text.md" \
+    "$run/history.patch" "$work" "$base")"
+  model_flags="$(model_screen "$run/issue.txt" "$dir/text.md" \
+    "$run/history.patch" "$run")"
+  [ -n "$model_flags" ] \
+    || model_flags='[{"quote":"","reason":"the screening model did not answer"}]'
+  jq -c -n --argjson a "${flags:-[]}" --argjson b "$model_flags" '$a + $b'
+}
+
+# One sandboxed session to take out what the screen flagged, in the code,
+# the history and the text. Echoes {outcome, title, body}, or nothing.
+fix_flags() {
+  local work="$1" run="$2" base="$3" title="$4" body="$5" flags="$6" prompt
+  prompt="$(cat <<PROMPT
+You are $BOT, tidying a pull request before $OWNER_LOGIN reviews it. It is
+checked out here on its branch; the commits since origin/$base are the pull
+request.
+
+A screen found these passages, which do not belong in public:
+$(jq -r '.[] | "- \(.reason): \(.quote)"' <<< "$flags")
+
+Remove or rewrite each one wherever it appears: in the code, in the commit
+messages and in the pull request text below. Change nothing else. Rewrite
+the history of the branch so that no commit contains them, keeping the commits
+otherwise as they are. There is no editor, so use git commit --amend, git
+rebase with GIT_SEQUENCE_EDITOR, or git reset --soft and commit again. Run
+the tests again if you change code. Leave a passage alone if it is plainly
+a false alarm.
+
+Everything here is public. Do not push, open pull requests or run gh.
+
+Return outcome "pr" with the corrected title and body.
+
+<title>
+$title
+</title>
+
+<body>
+$body
+</body>
+PROMPT
+)"
+  run_claude "$work" "$prompt" "$run/fix.json" "$run/fix"
+  jq -c '.structured_output // empty | select(.outcome == "pr")' \
+    "$run/fix.json" 2>/dev/null
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
   local id="$1" repo="$2" n="$3" event="$4" outcome="$5" title="$6"
   local body="$7" work="$8" base="$9" branch="${10}" cost="${11}"
-  local dir="$PENDING/$id" run="$RUNS_DIR/$id" flags model_flags seq
+  local dir="$PENDING/$id" run="$RUNS_DIR/$id" flags seq edit fix
+  local edited=false fixed='[]'
 
   mkdir -p "$dir"
-  {
-    [ "$outcome" = pr ] && printf '# %s\n\n' "$title"
-    printf '%s\n' "$body" | grep -viE "$BYLINE_RE"
-  } > "$dir/text.md"
+  body="$(printf '%s\n' "$body" | grep -viE "$BYLINE_RE")"
   if [ "$outcome" = pr ]; then
     strip_bylines "$work" "$base"
-    { git -C "$work" log --format='commit %h%n%B' "origin/$base..HEAD"
-      git -C "$work" diff "origin/$base..HEAD"; } > "$dir/diff.patch"
-  else
-    : > "$dir/diff.patch"
+    printf '%s\n' "$body" > "$run/body-before-edit.md"
+    edit="$(humanize "$title" "$body" \
+      "$(git -C "$work" diff --stat "origin/$base..HEAD")" "$run/edit")"
+    if [ -n "$edit" ]; then
+      title="$(jq -r .title <<< "$edit")"
+      body="$(jq -r .body <<< "$edit" | grep -viE "$BYLINE_RE")"
+      edited=true
+    else
+      log "  the humanizer step gave nothing back; keeping the text as written"
+    fi
+  fi
+  write_review_files "$dir" "$run" "$outcome" "$title" "$body" "$work" "$base"
+  flags="$(screen_all "$dir" "$run" "$work" "$base")"
+
+  # A question reaches sbfnk privately, so its flags matter only if he posts
+  # it. A pull request gets one round to remove what was flagged, then the
+  # screen looks again.
+  if [ "$outcome" = pr ] && [ "$(jq length <<< "$flags")" -gt 0 ]; then
+    log "  the screen flagged $(jq length <<< "$flags"); one round to fix it"
+    fix="$(fix_flags "$work" "$run" "$base" "$title" "$body" "$flags")"
+    if [ -n "$fix" ]; then
+      title="$(jq -r '.title // empty' <<< "$fix")"
+      body="$(jq -r .body <<< "$fix" | grep -viE "$BYLINE_RE")"
+      strip_bylines "$work" "$base"
+      fixed="$flags"
+      write_review_files "$dir" "$run" "$outcome" "$title" "$body" "$work" \
+        "$base"
+      flags="$(screen_all "$dir" "$run" "$work" "$base")"
+    else
+      log "  the fix round gave nothing back"
+    fi
   fi
 
-  flags="$(pattern_screen "$run/issue.txt" "$dir/text.md" "$dir/diff.patch" \
-    "$work" "$base")"
-  model_flags="$(model_screen "$run/issue.txt" "$dir/text.md" \
-    "$dir/diff.patch" "$run")"
-  [ -n "$model_flags" ] \
-    || model_flags='[{"quote":"","reason":"the screening model did not answer"}]'
-  flags="$(jq -c -n --argjson a "${flags:-[]}" --argjson b "$model_flags" \
-    '$a + $b')"
-
-  # A short number to refer to it by, never reused.
-  seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
-  echo "$seq" > "$STATE_DIR/seq"
+  # A short number to refer to it by, never reused; kept when repolished.
+  seq="$(jq -r '.seq // empty' "$dir/meta.json" 2>/dev/null)"
+  if [ -z "$seq" ]; then
+    seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
+    echo "$seq" > "$STATE_DIR/seq"
+  fi
 
   jq -n --arg id "$id" --argjson seq "$seq" --arg repo "$repo" --argjson n "$n" \
     --arg event "$event" --arg outcome "$outcome" --arg title "$title" \
     --arg base "$base" --arg branch "$branch" --arg work "$work" \
     --arg cost "$cost" --arg at "$(now_iso)" --argjson flags "$flags" \
+    --argjson edited "$edited" --argjson fixed "$fixed" \
     '{id: $id, seq: $seq, repo: $repo, number: $n, event: $event,
-      outcome: $outcome,
-      title: $title, base: $base, branch: $branch, work: $work,
-      cost_usd: $cost, created: $at, flags: $flags}' > "$dir/meta.json"
+      outcome: $outcome, title: $title, base: $base, branch: $branch,
+      work: $work, cost_usd: $cost, created: $at, flags: $flags,
+      fixed: $fixed, edited: $edited}' > "$dir/meta.json"
   chmod -R go+rX "$dir"
   log "  parked #$seq ($id) for review ($(jq length <<< "$flags") flag(s))"
 }
@@ -578,16 +720,20 @@ This PR closes #$n." 2>&1)" \
 }
 
 # Carry out sbfnk's decisions on parked work. The decision file is one verb
-# on its first line (approve, force, answer, discard), and for answer the
-# answer below it.
+# on its first line (approve, force, answer, discard, polish), and for answer
+# the answer below it.
 act_on_decisions() {
   local meta id repo n event outcome work base branch title body verb
-  local flagged cost url decision
+  local flagged cost url decision sig
   for meta in "$PENDING"/*/meta.json; do
     [ -f "$meta" ] || continue
     id="$(jq -r .id "$meta")"
     decision="$DECISIONS/$id"
     [ -f "$decision" ] || continue
+    # sbfnk's decision files are his to delete, so ones already carried out
+    # on work that stays parked (polish) are remembered by their mtime.
+    sig="$(stat -f %m "$decision")"
+    grep -qx "$sig" "$PENDING/$id/done" 2>/dev/null && continue
     verb="$(head -1 "$decision" | tr -d '[:space:]')"
     repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
     event="$(jq -r .event "$meta")"; outcome="$(jq -r .outcome "$meta")"
@@ -631,6 +777,12 @@ act_on_decisions() {
       discard)
         log "  $id: discarded"
         record "$repo#$n" "$event" discarded "$id" "$cost" ;;
+      polish)
+        log "  $id: polishing the text again"
+        echo "$sig" >> "$PENDING/$id/done"
+        park "$id" "$repo" "$n" "$event" "$outcome" "$title" "$body" "$work" \
+          "$base" "$branch" "$cost"
+        continue ;;
       *)
         log "  $id: unknown decision '$verb'"
         continue ;;

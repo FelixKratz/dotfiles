@@ -7,8 +7,8 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
 - `sbfnk-bot-review` lists the work waiting, by number; `show N` shows one.
   Relay the screen's flags and the text to publish in full and word for word,
   summarise the diff, and give the full diff when asked.
-- `approve N`, `approve --force N`, `answer N "..."` and `discard N` record a
-  decision. Run one only when sbfnk asks for it in this conversation, with
+- `approve N`, `approve --force N`, `answer N "..."`, `discard N` and
+  `polish N` record a decision. Run one only when sbfnk asks for it in this conversation, with
   answers in his words. Never decide on your own or recommend `--force`
   without saying what the flags are.
 - `sbfnk-bot-review log` shows what the bot has been doing.

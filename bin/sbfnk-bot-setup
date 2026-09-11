@@ -7,8 +7,8 @@
 #   - creates that account (sbfnkbot) and installs Claude Code for it
 #   - closes your home folder to other accounts (chmod 700); macOS leaves it
 #     readable by every local account otherwise
-#   - installs the bot's script, allow-list and sandbox rules in
-#     /opt/sbfnk-bot, where only root can change them
+#   - installs the bot's script, allow-list, sandbox rules and a copy of your
+#     humanizer skill in /opt/sbfnk-bot, where only root can change them
 #   - creates the review spool in /Users/Shared/sbfnk-bot, where the bot
 #     writes pending work and only you write decisions
 #   - writes the LaunchDaemon that runs the bot every ten minutes
@@ -159,7 +159,13 @@ install_all() {
   install -o root -g wheel -m 755 "$DOTFILES/bin/sbfnk-bot-issues" "$OPT/"
   install -o root -g wheel -m 644 "$DOTFILES/config/sbfnk-bot/repos" \
     "$DOTFILES/config/sbfnk-bot/claude-settings.json" "$OPT/"
-  say "installed the script and its rules in $OPT"
+  if [ -r "$OWNER_HOME/.claude/skills/humanizer/SKILL.md" ]; then
+    install -o root -g wheel -m 644 \
+      "$OWNER_HOME/.claude/skills/humanizer/SKILL.md" "$OPT/humanizer.md"
+  else
+    say "no humanizer skill in $OWNER_HOME/.claude/skills; PR text goes unedited"
+  fi
+  say "installed the script, its rules and the humanizer in $OPT"
 
   install -d -o root -g wheel -m 755 "$SPOOL"
   install -d -o "$BOT_USER" -g staff -m 755 "$SPOOL/pending" "$SPOOL/log"

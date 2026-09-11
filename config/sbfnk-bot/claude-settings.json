@@ -17,7 +17,9 @@
         "julialang.org",
         "*.julialang.org",
         "pypi.org",
-        "files.pythonhosted.org"
+        "files.pythonhosted.org",
+        "zenodo.org",
+        "*.zenodo.org"
       ]
     },
     "filesystem": {
@@ -45,9 +47,28 @@
     }
   },
   "permissions": {
-    "deny": [
-      "WebFetch",
+    "allow": [
       "WebSearch",
+      "WebFetch(domain:cran.r-project.org)",
+      "WebFetch(domain:search.r-project.org)",
+      "WebFetch(domain:r-universe.dev)",
+      "WebFetch(domain:*.r-universe.dev)",
+      "WebFetch(domain:rdrr.io)",
+      "WebFetch(domain:docs.julialang.org)",
+      "WebFetch(domain:pkgdocs.julialang.org)",
+      "WebFetch(domain:juliahub.com)",
+      "WebFetch(domain:mc-stan.org)",
+      "WebFetch(domain:docs.python.org)",
+      "WebFetch(domain:zenodo.org)",
+      "WebFetch(domain:doi.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:*.github.io)",
+      "WebFetch(domain:*.epinowcast.org)",
+      "WebFetch(domain:*.epiforecasts.io)",
+      "WebFetch(domain:en.wikipedia.org)"
+    ],
+    "deny": [
       "Read(~/.config/sbfnk-bot/**)",
       "Read(~/.local/share/sbfnk-bot-issues/**)",
       "Read(~/.ssh/**)",

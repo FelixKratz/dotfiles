@@ -12,7 +12,8 @@
     "ask": [
       "Bash(sbfnk-bot-review approve:*)",
       "Bash(sbfnk-bot-review answer:*)",
-      "Bash(sbfnk-bot-review discard:*)"
+      "Bash(sbfnk-bot-review discard:*)",
+      "Bash(sbfnk-bot-review polish:*)"
     ]
   }
 }

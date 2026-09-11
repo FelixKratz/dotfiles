@@ -162,12 +162,14 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   works on it, publishing nothing until you approve. It runs every 10 min as
   its own macOS account, which cannot read your home folder, and Claude works
   in a sandboxed clone with a fresh configuration, no GitHub access and
-  nothing but the issue and the repository. A second model with no tools
-  screens the result for anything the issue and the repository do not
-  account for. The work then waits for `bin/sbfnk-bot-review`: `approve`
+  nothing but the issue and the repository. The PR text goes through your
+  humanizer, cut to what a reviewer needs, and a second model with no tools
+  screens text and every commit for anything the issue and the repository do
+  not account for; anything flagged gets one round of fixing and a second
+  screen. The work then waits for `bin/sbfnk-bot-review`: `approve`
   opens the draft PR (or posts the question), `answer` replies
   privately (an answer to its question, or what to change), `discard` drops
-  it; items are numbered, so `sbfnk-bot-review show 3`. A nudge says when
+  it, `polish` reruns the editing and screening; items are numbered, so `sbfnk-bot-review show 3`. A nudge says when
   something waits. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
   runs a Remote Control session as you for doing the same from claude.ai or
   the Claude app; it asks before recording any decision. Only
