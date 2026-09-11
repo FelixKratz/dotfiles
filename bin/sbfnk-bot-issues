@@ -557,6 +557,9 @@ failure_note() {
     [ -n "$transcript" ] && jq -r 'select(.type == "assistant")
       | .message.content[]? | select(.type == "text") | .text' \
       "$transcript" 2>/dev/null | tail -8
+    printf '\n== final message and structured output ==\n'
+    jq -r '.result // empty' "$out" 2>/dev/null | tail -40
+    jq -c '.structured_output // empty' "$out" 2>/dev/null | head -c 2000
   } > "$note"
   chmod 644 "$note"
 }
@@ -833,6 +836,20 @@ work_on() {
   body="$(jq -r .body <<< "$result")"
   pr_title="$(jq -r '.title // empty' <<< "$result")"
   log "  claude returned $outcome (\$${cost:-?})"
+
+  # A run can fill the output with a stand-in and put its real answer
+  # elsewhere. Nothing that short is worth sbfnk's time; the note keeps the
+  # model's final message.
+  if [ "$(printf '%s' "$body" | tr -d '[:space:]' | wc -c)" -lt 40 ] \
+    || printf '%s' "$body" | grep -qiE '^[[:space:]]*(placeholder|todo|tbd|n/?a)[[:space:].]*$'; then
+    failure_note "$id" "$run" "$out" "$(( $(date +%s) - started ))"
+    log "  $repo#$n: the result was a stand-in ('$(printf '%s' "$body" \
+      | head -c 40)'), see $SPOOL/log/failures/$id.txt"
+    record "$repo#$n" "$event" failed "stand-in result" "$cost"
+    return 1
+  fi
+  # A question is filed under the issue's title.
+  [ "$outcome" = pr ] || pr_title=""
 
   if [ "$outcome" = pr ]; then
     commits="$(git -C "$work" rev-list --count "origin/$base..HEAD" \
