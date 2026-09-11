@@ -1,0 +1,294 @@
+#!/bin/bash
+# worktree-gc — remove git worktrees whose work is finished.
+#
+# A worktree is removed when it is clean and either its pull request has
+# merged or closed, or it has no pull request and has not been touched for
+# STALE_DAYS. Anything with uncommitted or untracked files, on an open pull
+# request, locked or on a detached HEAD is kept. Removing a worktree leaves
+# its branch in place, so unpushed commits survive; the branch goes only
+# once its pull request has merged.
+#
+# Looks at repositories in ~/code and one level further down (~/code/funding).
+# Defaults to a dry run; launchd runs it weekly with --apply. Run by hand it
+# prints everything; run by launchd it only logs, to ~/.log/worktree-gc.log.
+#
+# Based on worktree-gc.sh in seabbs/dotfiles. Written for the bash 3.2 that
+# macOS ships.
+
+# launchd hands over a minimal PATH; gh lives in brew.
+PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH
+
+CODE_DIR="$HOME/code"
+LOG_FILE="$HOME/.log/worktree-gc.log"
+LOCK_FILE="${TMPDIR:-/tmp}/worktree-gc.lock"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+APPLY=false
+STALE_DAYS=30
+ONLY_REPO=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apply) APPLY=true; shift ;;
+    --dry-run) APPLY=false; shift ;;
+    --stale-days) STALE_DAYS="$2"; shift 2 ;;
+    --repo) ONLY_REPO="$2"; shift 2 ;;
+    -h|--help)
+      echo "usage: worktree-gc [--apply] [--stale-days N] [--repo PATH]"
+      exit 0 ;;
+    *) echo "unknown option: $1" >&2; exit 64 ;;
+  esac
+done
+
+# One run at a time; shlock clears a lock left by a dead process.
+shlock -p $$ -f "$LOCK_FILE" || exit 0
+trap 'rm -f "$LOCK_FILE"' EXIT
+
+INTERACTIVE=false
+[ -t 1 ] && INTERACTIVE=true
+
+log() {
+  printf '%s\n' "$1" >> "$LOG_FILE"
+  $INTERACTIVE && printf '%s\n' "$1"
+  return 0
+}
+
+logf() {
+  printf '%-58s %s\n' "$1" "$2" >> "$LOG_FILE"
+  $INTERACTIVE && printf '%-58s %s\n' "$1" "$2"
+  return 0
+}
+
+: > "$LOG_FILE"
+log "worktree-gc $(date '+%Y-%m-%d %H:%M:%S')"
+$APPLY || log "DRY RUN - pass --apply to remove"
+log ""
+
+removed=0
+kept_dirty=0
+kept_open=0
+kept_recent=0
+kept_detached=0
+kept_locked=0
+pruned=0
+reclaimed_kb=0
+
+stale_secs=$((STALE_DAYS * 86400))
+now=$(date +%s)
+
+if [ -n "$ONLY_REPO" ]; then
+  repos=("$ONLY_REPO")
+else
+  repos=()
+  # A directory .git only: a worktree's .git is a file, and listing from a
+  # worktree would count its main repository twice.
+  for gitdir in "$CODE_DIR"/*/.git "$CODE_DIR"/*/*/.git; do
+    [ -d "$gitdir" ] || continue
+    repos+=("$(dirname "$gitdir")")
+  done
+fi
+
+# The state of the pull request for a branch: OPEN if any is open, else the
+# last one listed, else NONE.
+pr_state_of() {
+  printf '%s\n' "$pr_raw" | awk -F'\t' -v b="$1" '
+    $1 == b { if ($2 == "OPEN") open = 1; else last = $2 }
+    END { print open ? "OPEN" : (last != "" ? last : "NONE") }'
+}
+
+# The head commit of the branch's merged pull request, if it has one.
+merged_head_of() {
+  printf '%s\n' "$pr_raw" | awk -F'\t' -v b="$1" \
+    '$1 == b && $2 == "MERGED" { print $3; exit }'
+}
+
+for repo in "${repos[@]}"; do
+  git -C "$repo" rev-parse --git-dir >/dev/null 2>&1 || continue
+
+  # Cheap check: skip repositories with a single worktree.
+  wt_count=$(git -C "$repo" worktree list --porcelain 2>/dev/null |
+    grep -c '^worktree ')
+  [ "${wt_count:-0}" -gt 1 ] || continue
+
+  name=${repo#"$CODE_DIR"/}
+  log "=== $name ($((wt_count - 1)) worktrees) ==="
+
+  # owner/repo from the origin URL, so gh works without changing directory.
+  origin=$(git -C "$repo" remote get-url origin 2>/dev/null)
+  slug=$(printf '%s' "$origin" |
+    sed -e 's|^git@github.com:||' \
+        -e 's|^https://github.com/||' \
+        -e 's|\.git$||')
+
+  if [ -z "$slug" ] || [ "$slug" = "$origin" ]; then
+    log "  skipped (no GitHub origin)"
+    log ""
+    continue
+  fi
+
+  # Branch to pull request state, fetched once per repository. If this
+  # fails every branch would look like "no PR", so skip the repository.
+  if ! pr_raw=$(gh pr list -R "$slug" --state all --limit 1000 \
+      --json headRefName,state,headRefOid \
+      --jq '.[] | "\(.headRefName)\t\(.state)\t\(.headRefOid)"' \
+      2>/dev/null < /dev/null)
+  then
+    log "  skipped (could not read pull requests for $slug)"
+    log ""
+    continue
+  fi
+
+  # A worktree on the default branch is somebody's second checkout of it.
+  default_branch=$(git -C "$repo" symbolic-ref --short \
+    refs/remotes/origin/HEAD 2>/dev/null)
+  default_branch=${default_branch#origin/}
+
+  wt_path=""
+  # git lists the main working tree first. It is skipped by position: its
+  # path is the symlink-resolved one, so comparing paths with $repo fails
+  # when ~/code is a symlink.
+  first=true
+  while IFS= read -r line; do
+    case "$line" in
+      worktree\ *)
+        wt_path=${line#worktree }
+        wt_branch=""
+        wt_locked=false
+        if $first; then
+          first=false
+          main_path=$wt_path
+        fi
+        ;;
+      branch\ refs/heads/*)
+        wt_branch=${line#branch refs/heads/}
+        ;;
+      locked*)
+        # Held by a live agent session; leave it alone.
+        wt_locked=true
+        ;;
+      "")
+        [ -n "$wt_path" ] || continue
+        [ "$wt_path" = "$main_path" ] && { wt_path=""; continue; }
+
+        if [ ! -d "$wt_path" ]; then
+          logf "  ${wt_path##*/}" "gone (prune)"
+          pruned=$((pruned + 1))
+          wt_path=""
+          continue
+        fi
+
+        if $wt_locked; then
+          logf "  ${wt_path##*/}" "keep (locked)"
+          kept_locked=$((kept_locked + 1))
+          wt_path=""
+          continue
+        fi
+
+        if [ -z "$wt_branch" ]; then
+          logf "  ${wt_path##*/}" "keep (detached HEAD)"
+          kept_detached=$((kept_detached + 1))
+          wt_path=""
+          continue
+        fi
+
+        if [ -n "$default_branch" ] && [ "$wt_branch" = "$default_branch" ]
+        then
+          logf "  ${wt_path##*/} [$wt_branch]" "keep (default branch)"
+          kept_recent=$((kept_recent + 1))
+          wt_path=""
+          continue
+        fi
+
+        state=$(pr_state_of "$wt_branch")
+        dirty=$(git -C "$wt_path" status --porcelain 2>/dev/null | wc -l)
+        dirty=$((dirty + 0))
+        # Last touched: the later of the directory's mtime and the latest
+        # commit, since editing files deep inside leaves the top-level
+        # mtime alone. Unreadable counts as just touched, so a failure
+        # keeps the worktree.
+        mtime=$(stat -f %m "$wt_path" 2>/dev/null)
+        mtime=${mtime:-$now}
+        ctime=$(git -C "$wt_path" log -1 --format=%ct 2>/dev/null)
+        [ "${ctime:-0}" -gt "$mtime" ] && mtime=$ctime
+        age=$(( (now - mtime) / 86400 ))
+
+        reason=""
+        case "$state" in
+          OPEN)
+            logf "  ${wt_path##*/} [$wt_branch]" "keep (open PR)"
+            kept_open=$((kept_open + 1))
+            ;;
+          MERGED|CLOSED)
+            if [ "$dirty" -gt 0 ]; then
+              logf "  ${wt_path##*/} [$wt_branch]" \
+                "keep ($state, $dirty uncommitted)"
+              kept_dirty=$((kept_dirty + 1))
+            else
+              reason="$state"
+            fi
+            ;;
+          NONE)
+            if [ "$dirty" -gt 0 ]; then
+              logf "  ${wt_path##*/} [$wt_branch]" \
+                "keep (no PR, $dirty uncommitted)"
+              kept_dirty=$((kept_dirty + 1))
+            elif [ $(( now - mtime )) -gt "$stale_secs" ]; then
+              reason="no PR, ${age}d old"
+            else
+              logf "  ${wt_path##*/} [$wt_branch]" \
+                "keep (no PR, ${age}d old)"
+              kept_recent=$((kept_recent + 1))
+            fi
+            ;;
+        esac
+
+        if [ -n "$reason" ]; then
+          size_kb=$(du -sk "$wt_path" 2>/dev/null | cut -f1)
+          if $APPLY; then
+            if git -C "$repo" worktree remove "$wt_path" 2>/dev/null; then
+              logf "  ${wt_path##*/} [$wt_branch]" \
+                "removed ($reason, $((size_kb / 1024))M)"
+              removed=$((removed + 1))
+              reclaimed_kb=$((reclaimed_kb + size_kb))
+              # The branch goes too once merged, but only if nothing was
+              # committed on it after the merged head.
+              if [ "$state" = "MERGED" ] && [ "$(git -C "$repo" rev-parse \
+                "refs/heads/$wt_branch" 2>/dev/null)" = \
+                "$(merged_head_of "$wt_branch")" ]; then
+                git -C "$repo" branch -D "$wt_branch" >/dev/null 2>&1
+              fi
+            else
+              logf "  ${wt_path##*/} [$wt_branch]" "FAILED to remove"
+            fi
+          else
+            logf "  ${wt_path##*/} [$wt_branch]" \
+              "would remove ($reason, $((size_kb / 1024))M)"
+            removed=$((removed + 1))
+            reclaimed_kb=$((reclaimed_kb + size_kb))
+          fi
+        fi
+
+        wt_path=""
+        ;;
+    esac
+  done < <(git -C "$repo" worktree list --porcelain 2>/dev/null; echo)
+
+  $APPLY && git -C "$repo" worktree prune 2>/dev/null
+  log ""
+done
+
+log "---"
+if $APPLY; then
+  logf "removed" "$removed"
+else
+  logf "would remove" "$removed"
+fi
+logf "pruned (path gone)" "$pruned"
+logf "kept (uncommitted changes)" "$kept_dirty"
+logf "kept (open PR)" "$kept_open"
+logf "kept (no PR, recent)" "$kept_recent"
+logf "kept (detached HEAD)" "$kept_detached"
+logf "kept (locked)" "$kept_locked"
+logf "disk reclaimed" "$((reclaimed_kb / 1024)) MB"
+logf "finished" "$(date '+%Y-%m-%d %H:%M:%S')"
