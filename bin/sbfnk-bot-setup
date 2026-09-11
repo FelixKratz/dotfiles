@@ -18,6 +18,9 @@
 #   sudo $S install [--julia]    the above; --julia adds juliaup for the bot
 #   gh auth token -u sbfnk-bot | sudo $S gh-token
 #   claude setup-token, then:  sudo $S claude-token   (paste the token)
+#   sudo $S review-key           give the bot sbfnk-review-bot's private key,
+#                                from ~/.config/sbfnk-review-bot/key.pem or stdin,
+#                                so it can review PRs marked ready for review
 #   sudo $S check                show the bot cannot read your files
 #   sudo $S enable               start the daemon
 #   sudo $S disable              stop it; everything else stays
@@ -42,7 +45,7 @@ SECRETS=$BOT_HOME/.config/sbfnk-bot
 die() { echo "sbfnk-bot-setup: $*" >&2; exit 1; }
 say() { echo "- $*"; }
 
-case "${1:-}" in -h|--help|"") sed -n '2,30p' "$0"; exit 0 ;; esac
+case "${1:-}" in -h|--help|"") sed -n '2,33p' "$0"; exit 0 ;; esac
 # The checkout this script lives in, through the ~/.local/bin symlink.
 DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0")")")"
 
@@ -259,6 +262,19 @@ check() {
 case "${1:-}" in
   install) install_all "${2:-}" ;;
   gh-token) store_secret gh-token ;;
+  review-key)
+    key="$OWNER_HOME/.config/sbfnk-review-bot/key.pem"
+    install -d -o "$BOT_USER" -g staff -m 700 "$BOT_HOME/.config" "$SECRETS"
+    if [ -t 0 ] && [ -r "$key" ]; then
+      install -o "$BOT_USER" -g staff -m 600 "$key" "$SECRETS/review-key.pem"
+    elif [ ! -t 0 ]; then
+      ( umask 077; cat > "$SECRETS/review-key.pem" )
+      chown "$BOT_USER:staff" "$SECRETS/review-key.pem"
+    else
+      die "no key at $key; pipe it in instead"
+    fi
+    grep -q 'PRIVATE KEY' "$SECRETS/review-key.pem" || die "that is not a private key"
+    say "stored sbfnk-review-bot's key for $BOT_USER" ;;
   claude-token) store_secret claude-token ;;
   check) check ;;
   enable)

@@ -145,8 +145,9 @@ case "$cmd" in
       printf '#%s %s %s#%s: %s\n' "$(meta "$id" '.seq // "-"')" \
         "$(meta "$id" .outcome)" "$(meta "$id" .repo)" \
         "$(meta "$id" .number)" "$(meta "$id" .title)"
-      printf 'https://github.com/%s/issues/%s\n' "$(meta "$id" .repo)" \
-        "$(meta "$id" .number)"
+      printf 'https://github.com/%s/%s/%s\n' "$(meta "$id" .repo)" \
+        "$(if [ "$(meta "$id" .outcome)" = update ]; then echo pull; \
+           else echo issues; fi)" "$(meta "$id" .number)"
       printf 'parked %s, cost $%s\n\n' "$(meta "$id" .created)" \
         "$(meta "$id" '.cost_usd // "?"')"
       if [ "$(meta "$id" '.fixed // [] | length')" -gt 0 ]; then
@@ -185,6 +186,8 @@ case "$cmd" in
     if $force; then decide "$id" force; else decide "$id" approve; fi ;;
   answer)
     id="$(resolve "${1:-}")" || exit 1
+    [ "$(meta "$id" .outcome)" != update ] \
+      || die "#$(meta "$id" .seq) is an update to an open PR: comment on the PR instead, then approve or discard this"
     shift 2>/dev/null
     text="$*"
     if [ -z "$text" ]; then

@@ -22,7 +22,9 @@
 #   polish    edit, screen and fix the parked text again, optionally with
 #             sbfnk's instructions for the text
 #
-# A poll with nothing to do costs one search request and no model tokens.
+# It also looks after the PRs it opened: see "pull requests it opened" below.
+#
+# A poll with nothing to do costs a few API requests and no model tokens.
 #
 # Usage:
 #   sbfnk-bot-issues                   act on decisions, then work on at
@@ -361,6 +363,8 @@ prepare_clone() {
   git clone --quiet --branch "$base" "$mirror" "$work" >/dev/null 2>&1 \
     || return 1
   git -C "$work" remote set-url origin "https://github.com/$repo.git"
+  # Working on an open PR, the branch is the one just checked out.
+  [ "$branch" = "$base" ] && return 0
   git -C "$work" checkout --quiet -b "$branch" >/dev/null 2>&1
 }
 
@@ -768,6 +772,27 @@ act_on_decisions() {
     # Claude Code's own byline, should the attribution setting ever miss.
     body="$(printf '%s\n' "$body" | grep -viE "$BYLINE_RE")"
 
+    # An update to an open PR: new commits and replies, nothing else.
+    if [ "$outcome" = update ]; then
+      case "$verb" in
+        approve|force)
+          if [ "$flagged" -gt 0 ] && [ "$verb" != force ]; then
+            log "  $id: approval needs --force, the screen flagged it"
+            continue
+          fi
+          publish_update "$id" || continue ;;
+        discard)
+          set_pr_state "$repo" "$n" \
+            ".handled_until = \"$(jq -r .handled_until "$meta")\""
+          log "  $id: discarded"
+          rm -rf "${PENDING:?}/$id" "$work" ;;
+        *)
+          log "  $id: '$verb' does not apply to a PR update (approve or discard)"
+          echo "$sig" >> "$PENDING/$id/done" ;;
+      esac
+      continue
+    fi
+
     case "$verb" in
       approve|force)
         if [ "$flagged" -gt 0 ] && [ "$verb" != force ]; then
@@ -888,6 +913,404 @@ work_on() {
   record "$repo#$n" "$event" pending "$id" "$cost"
 }
 
+# ------------------------------------------------------ pull requests it opened
+#
+# While a PR the bot opened is a draft, sbfnk iterates on it in public: his
+# reviews and comments are instructions, and the bot answers them with new
+# commits and replies. An update goes out on its own when the screen is clean
+# after the fix round, and is parked for approval otherwise.
+#
+# Once sbfnk marks the PR ready for review, and nothing of his is left
+# unanswered, a fresh reviewer goes over it against the org's REVIEW.md and
+# posts as sbfnk-review-bot. The bot answers those findings like any other
+# feedback, and the reviewer looks again at each new head, up to
+# MAX_REVIEW_ROUNDS times.
+
+REVIEW_BOT_LOGIN="sbfnk-review-bot[bot]"
+REVIEW_APP_ID=4359973
+REVIEW_KEY="$SECRETS_DIR/review-key.pem"
+MAX_REVIEW_ROUNDS=3
+PR_STATE_DIR="$STATE_DIR/prs"
+mkdir -p "$PR_STATE_DIR"
+
+pr_state_file() { echo "$PR_STATE_DIR/${1//\//_}-$2.json"; }
+
+pr_state() {
+  local f
+  f="$(pr_state_file "$1" "$2")"
+  if [ -f "$f" ]; then cat "$f"; else echo '{}'; fi
+}
+
+set_pr_state() {
+  local f tmp
+  f="$(pr_state_file "$1" "$2")"
+  tmp="$f.tmp"
+  pr_state "$1" "$2" | jq "$3" > "$tmp" && mv "$tmp" "$f"
+}
+
+# The PRs this watcher opened, from its own ledger, as "repo number".
+bot_prs() {
+  awk -F'\t' '$4 == "pr" {print $5}' "$LEDGER" 2>/dev/null | sort -u \
+    | sed -nE 's#^https://github.com/([^/]+/[^/]+)/pull/([0-9]+)$#\1 \2#p'
+}
+
+# An installation token for sbfnk-review-bot on one repository.
+b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+review_token() {
+  local repo="$1" now header payload sig jwt inst
+  [ -r "$REVIEW_KEY" ] || return 1
+  now=$(date +%s)
+  header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+  payload=$(printf '{"iat":%d,"exp":%d,"iss":%d}' "$((now - 60))" \
+    "$((now + 540))" "$REVIEW_APP_ID" | b64url)
+  sig=$(printf '%s.%s' "$header" "$payload" \
+    | openssl dgst -sha256 -sign "$REVIEW_KEY" -binary | b64url) || return 1
+  jwt="$header.$payload.$sig"
+  inst=$(curl -sf -H "Authorization: Bearer $jwt" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/$repo/installation" | jq -r .id) || return 2
+  curl -sf -X POST -H "Authorization: Bearer $jwt" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/app/installations/$inst/access_tokens" \
+    | jq -r '.token // empty'
+}
+
+# Feedback newer than $3 from sbfnk and from the review app, as a JSON array
+# of {kind, id, author, created, body, path, line}.
+pr_feedback() {
+  local repo="$1" n="$2" since="$3"
+  local sel="select(.user.login == \"$OWNER_LOGIN\" or .user.login == \"$REVIEW_BOT_LOGIN\")"
+  {
+    bot_gh api "repos/$repo/pulls/$n/reviews" --paginate \
+      | jq -s --arg s "$since" "add // [] | map($sel
+          | select(.submitted_at > \$s and (.body // \"\" | length) > 0)
+          | {kind: \"review\", id, author: .user.login,
+             created: .submitted_at, body})"
+    bot_gh api "repos/$repo/pulls/$n/comments" --paginate \
+      | jq -s --arg s "$since" "add // [] | map($sel
+          | select(.created_at > \$s)
+          | {kind: \"inline\", id, author: .user.login, created: .created_at,
+             body, path, line: (.line // .original_line)})"
+    bot_gh api "repos/$repo/issues/$n/comments" --paginate \
+      | jq -s --arg s "$since" "add // [] | map($sel
+          | select(.created_at > \$s)
+          | {kind: \"comment\", id, author: .user.login,
+             created: .created_at, body})"
+  } | jq -s 'add | sort_by(.created)'
+}
+
+# A failed attempt at the current feedback. After MAX_ATTEMPTS the PR is
+# left alone until new feedback arrives.
+pr_failed() {
+  set_pr_state "$1" "$2" \
+    ".failures = ((.failures // 0) + 1) | .failed_since = (.handled_until // \"\")"
+}
+
+pending_for_pr() {
+  local meta
+  for meta in "$PENDING"/*/meta.json; do
+    [ -f "$meta" ] || continue
+    [ "$(jq -r '.repo + "#" + (.pr // 0 | tostring)' "$meta")" = "$1#$2" ] \
+      && return 0
+  done
+  return 1
+}
+
+UPDATE_SCHEMA='{"type":"object","properties":{
+  "summary":{"type":"string"},
+  "replies":{"type":"array","items":{"type":"object","properties":{
+    "id":{"type":"integer"},"kind":{"type":"string"},"body":{"type":"string"}},
+    "required":["id","kind","body"]}},
+  "description":{"type":"string"}},
+  "required":["summary","replies"]}'
+
+update_prompt() {
+  local repo="$1" n="$2" head="$3" base="$4" feedback="$5" prbody="$6"
+  cat <<PROMPT
+You are $BOT, the author of $repo pull request #$n. It is checked out here
+on its branch $head; the commits since origin/$base are the pull request and
+are already public.
+
+Feedback has arrived. Comments by $OWNER_LOGIN are instructions: do what they
+ask. Comments by $REVIEW_BOT_LOGIN are an automated review: fix what is right,
+and explain briefly why not where it is wrong.
+
+$(jq -r '.[] | "<feedback id=\"\(.id)\" kind=\"\(.kind)\" author=\"\(.author)\"\(if .path then " file=\"\(.path):\(.line)\"" else "" end)>\n\(.body)\n</feedback>\n"' <<< "$feedback")
+
+The current pull request description:
+<description>
+$prbody
+</description>
+
+Everything you write will be public. Use only what the repository, the
+pull request and the feedback tell you, and mention nothing from elsewhere.
+
+How to work:
+- Follow CLAUDE.md, AGENTS.md and CONTRIBUTING.md in the repository.
+- Add new commits on top of the branch, one per point where that is natural.
+  Do not rewrite the commits that are already there: they are public.
+- Run the relevant tests and the linter, in the foreground, before each
+  commit. This is a single run and nothing will wake you later.
+- Commit messages are one short line in British English, then a blank line
+  and "Co-authored-by: $CO_AUTHOR".
+- Do not push, comment on GitHub or run gh; your reply is published for you.
+
+Return a short summary, and one reply per feedback item (its id and kind):
+what you changed, or why you did not. Replies are short and plain, in British
+English. If the change alters what the description says, return the whole
+new description too; otherwise leave it out.
+PROMPT
+}
+
+# Work on feedback to a PR: returns 0 when it did something heavy.
+update_pr() {
+  local repo="$1" n="$2" feedback="$3" started_at="$4"
+  local pr head base title prbody id work run out result summary flags fix
+  local commits dir
+
+  pr="$(bot_gh api "repos/$repo/pulls/$n")" || return 1
+  head="$(jq -r .head.ref <<< "$pr")"
+  base="$(jq -r .base.ref <<< "$pr")"
+  title="$(jq -r .title <<< "$pr")"
+  prbody="$(jq -r '.body // ""' <<< "$pr")"
+  id="${repo//\//_}-pr$n-$(date +%Y%m%d-%H%M%S)"
+  work="$CACHE_DIR/work/$id"
+  run="$RUNS_DIR/$id"
+  dir="$PENDING/$id"
+  mkdir -p "$run"
+  log "  answering $(jq length <<< "$feedback") item(s) of feedback on $repo#$n"
+
+  if ! prepare_clone "$repo" "$head" "$work" "$head"; then
+    log "  could not prepare a clone of $repo"
+    pr_failed "$repo" "$n"
+    return 0
+  fi
+  # A branch made from the PR head: origin/$head marks what is already public.
+  { printf '%s\n\n' "$prbody"; jq -r '.[].body' <<< "$feedback"; } \
+    > "$run/issue.txt"
+  out="$run/result.json"
+  (cd "$work" && run_model "$run/claude" -p "$(update_prompt "$repo" "$n" \
+    "$head" "$head" "$feedback" "$prbody")" \
+    ${MODEL:+--model "$MODEL"} --permission-mode acceptEdits \
+    --max-budget-usd "$MAX_BUDGET" --json-schema "$UPDATE_SCHEMA" \
+    > "$out" 2> "$out.stderr")
+  result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
+  summary="$(jq -r '.summary // ""' <<< "$result" 2>/dev/null)"
+  if [ -z "$result" ] \
+    || [ "$(printf '%s' "$summary" | tr -d '[:space:]' | wc -c)" -lt 20 ]; then
+    failure_note "$id" "$run" "$out" 0
+    log "  no usable answer to the feedback on $repo#$n, see $SPOOL/log/failures/$id.txt"
+    pr_failed "$repo" "$n"
+    return 0
+  fi
+
+  strip_bylines "$work" "$head"
+  # The text that would go out, and the new commits, for the screens.
+  mkdir -p "$dir"
+  jq -r '.replies[] | "## Reply to \(.kind) \(.id)\n\n\(.body)\n"' \
+    <<< "$result" > "$dir/text.md"
+  jq -r '.description // empty' <<< "$result" \
+    | sed '1s/^/## New description\n\n/' >> "$dir/text.md"
+  git -C "$work" log -p --format='commit %h%n%B' "origin/$head..HEAD" \
+    > "$run/history.patch"
+  { git -C "$work" log --format='commit %h%n%B' "origin/$head..HEAD"
+    git -C "$work" diff "origin/$head..HEAD"; } > "$dir/diff.patch"
+  flags="$(screen_all "$dir" "$run" "$work" "$head")"
+  commits="$(git -C "$work" rev-list --count "origin/$head..HEAD")"
+  jq -c . <<< "$result" > "$dir/update.json"
+
+  jq -n --arg id "$id" --arg repo "$repo" --argjson pr "$n" \
+    --arg title "$title" --arg head "$head" --arg base "$base" \
+    --arg work "$work" --arg at "$(now_iso)" --argjson flags "$flags" \
+    --arg upto "$started_at" --argjson commits "${commits:-0}" \
+    '{id: $id, repo: $repo, number: $pr, pr: $pr, outcome: "update",
+      title: ("update to #" + ($pr | tostring) + ": " + $title),
+      head: $head, base: $base, work: $work, created: $at, flags: $flags,
+      fixed: [], edited: true, handled_until: $upto, commits: $commits}' \
+    > "$dir/meta.json"
+  chmod -R go+rX "$dir"
+
+  if [ "$(jq length <<< "$flags")" -eq 0 ]; then
+    publish_update "$id" && return 0
+  fi
+  # Flagged, or the push failed: sbfnk decides.
+  seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
+  echo "$seq" > "$STATE_DIR/seq"
+  jq --argjson s "$seq" '.seq = $s' "$dir/meta.json" > "$dir/meta.tmp" \
+    && mv "$dir/meta.tmp" "$dir/meta.json"
+  chmod -R go+rX "$dir"
+  set_pr_state "$repo" "$n" ".handled_until = \"$started_at\""
+  log "  parked #$seq ($id): an update to $repo#$n ($(jq length <<< "$flags") flag(s))"
+  return 0
+}
+
+# Push the new commits and post the replies of a prepared update.
+publish_update() {
+  local id="$1" dir="$PENDING/$1" meta repo n head work upd body f
+  meta="$dir/meta.json"
+  repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
+  head="$(jq -r .head "$meta")"; work="$(jq -r .work "$meta")"
+  upd="$dir/update.json"
+
+  if grep -qE "$SECRET_RE" "$dir/text.md" "$dir/diff.patch"; then
+    log "  $id: refused, the text matched a credential shape"
+    return 1
+  fi
+  if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
+    # Fast-forward only: if the branch moved meanwhile, sbfnk decides.
+    bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" \
+      >/dev/null 2>&1 || { log "  $id: push to $head failed"; return 1; }
+  fi
+  f="$(mktemp)"
+  jq -c '.replies[] | select(.kind == "inline")' "$upd" | while read -r r; do
+    jq -r .body <<< "$r" | grep -viE "$BYLINE_RE" > "$f"
+    bot_gh api -X POST "repos/$repo/pulls/$n/comments" \
+      -F in_reply_to="$(jq -r .id <<< "$r")" -F body=@"$f" >/dev/null 2>&1 \
+      || log "  $id: could not reply to inline comment $(jq -r .id <<< "$r")"
+  done
+  body="$(jq -r '[.replies[] | select(.kind != "inline") | .body]
+    | join("\n\n")' "$upd" | grep -viE "$BYLINE_RE")"
+  if [ -n "$body" ]; then
+    printf '%s\n' "$body" > "$f"
+    bot_gh api -X POST "repos/$repo/issues/$n/comments" -F body=@"$f" \
+      >/dev/null 2>&1 || log "  $id: could not post the reply"
+  fi
+  if [ -n "$(jq -r '.description // empty' "$upd")" ]; then
+    jq -r .description "$upd" | grep -viE "$BYLINE_RE" > "$f"
+    bot_gh pr edit "$n" -R "$repo" --body-file "$f" >/dev/null 2>&1 \
+      || log "  $id: could not update the description"
+  fi
+  rm -f "$f"
+  set_pr_state "$repo" "$n" \
+    ".handled_until = \"$(jq -r .handled_until "$meta")\" | .failures = 0"
+  log "  $id: pushed $(jq -r .commits "$meta") commit(s) and replied on $repo#$n"
+  rm -rf "${PENDING:?}/$id" "$work"
+  return 0
+}
+
+REVIEW_SCHEMA='{"type":"object","properties":{
+  "body":{"type":"string"},
+  "comments":{"type":"array","items":{"type":"object","properties":{
+    "path":{"type":"string"},"line":{"type":"integer"},"body":{"type":"string"}},
+    "required":["path","line","body"]}}},
+  "required":["body","comments"]}'
+
+review_prompt() {
+  local repo="$1" n="$2" base="$3" spec="$4"
+  cat <<PROMPT
+You are reviewing $repo pull request #$n, checked out here at its head. The
+change is git diff origin/$base...HEAD. Nobody here wrote it: judge it only
+from the code, the repository and the specification below. Do not change
+anything.
+
+Follow this review specification for method and for what is worth reporting:
+<review-spec>
+${spec:-No org specification was found. Report only real defects: bugs, missing
+tests for changed behaviour, and departures from the conventions of the
+repository.}
+</review-spec>
+Also read .github/REVIEW.md, and CLAUDE.md or AGENTS.md, if the repository
+has them.
+
+Report each finding on a line the diff adds, with what to change. Put
+anything that does not attach to such a line in the body. Keep the body to
+two or three sentences. If there is nothing worth reporting, say so in the
+body and return no comments. British English. Everything you write is public:
+mention nothing from outside this repository.
+PROMPT
+}
+
+# A fresh reviewer, with nothing but the repository, the diff and the
+# review specification, posting as sbfnk-review-bot.
+review_pr() {
+  local repo="$1" n="$2" sha="$3" base="$4" head="$5" id work run out
+  local spec result token payload round
+  id="${repo//\//_}-review$n-$(date +%Y%m%d-%H%M%S)"
+  work="$CACHE_DIR/work/$id"
+  run="$RUNS_DIR/$id"
+  mkdir -p "$run"
+  round=$(( $(pr_state "$repo" "$n" | jq '.rounds // 0') + 1 ))
+  log "  reviewing $repo#$n at ${sha:0:7}, round $round"
+
+  prepare_clone "$repo" "$head" "$work" "$head" || return 0
+  git -C "$work" fetch --quiet origin "$base" >/dev/null 2>&1
+  spec="$(bot_gh api "repos/${repo%%/*}/.github/contents/REVIEW.md" \
+    -H "Accept: application/vnd.github.raw" 2>/dev/null)"
+  out="$run/review.json"
+  (cd "$work" && run_model "$run/claude" -p \
+    "$(review_prompt "$repo" "$n" "$base" "$spec")" \
+    ${MODEL:+--model "$MODEL"} --max-budget-usd "$MAX_BUDGET" \
+    --json-schema "$REVIEW_SCHEMA" > "$out" 2> "$out.stderr")
+  result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
+  if [ -z "$result" ]; then
+    failure_note "$id" "$run" "$out" 0
+    log "  the review of $repo#$n gave nothing back"
+    set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"] | .rounds = $round"
+    return 0
+  fi
+
+  token="$(review_token "$repo")" || {
+    log "  no sbfnk-review-bot token for $repo; review kept in $out"
+    set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"] | .rounds = $round"
+    return 0
+  }
+  payload="$(jq -c --arg sha "$sha" --arg round "$round" '{
+    commit_id: $sha, event: "COMMENT",
+    body: (.body + "\n\n<sub>Automated review, round " + $round + ".</sub>"),
+    comments: [.comments[] | {path, line, side: "RIGHT", body}]}' \
+    <<< "$result")"
+  if ! GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/reviews" \
+    --input - <<< "$payload" >/dev/null 2>&1; then
+    # A line outside the diff rejects the whole review; fold the comments in.
+    payload="$(jq -c '{commit_id, event, body: (.body + "\n\n"
+      + ([.comments[] | "- `\(.path):\(.line)`: \(.body)"] | join("\n")))}' \
+      <<< "$payload")"
+    GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/reviews" \
+      --input - <<< "$payload" >/dev/null 2>&1 \
+      || log "  could not post the review of $repo#$n"
+  fi
+  log "  posted review round $round on $repo#$n ($(jq '.comments | length' \
+    <<< "$result") comment(s))"
+  set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"] | .rounds = $round"
+  rm -rf "$work"
+  return 0
+}
+
+# Look after one PR the bot opened. Returns 0 when it did something heavy.
+tend_pr() {
+  local repo="$1" n="$2" pr state since started_at feedback sha draft
+  pr="$(bot_gh api "repos/$repo/pulls/$n" 2>/dev/null)" || return 1
+  [ "$(jq -r .state <<< "$pr")" = open ] || return 1
+  pending_for_pr "$repo" "$n" && return 1
+  state="$(pr_state "$repo" "$n")"
+  since="$(jq -r '.handled_until // empty' <<< "$state")"
+  [ -n "$since" ] || since="$(jq -r .created_at <<< "$pr")"
+  started_at="$(now_iso)"
+
+  feedback="$(pr_feedback "$repo" "$n" "$since")"
+  if [ "$(jq length <<< "$feedback")" -gt 0 ]; then
+    if [ "$(jq '.failures // 0' <<< "$state")" -ge "$MAX_ATTEMPTS" ] \
+      && [ "$(jq -r '.failed_since // ""' <<< "$state")" \
+        = "$(jq -r '.handled_until // ""' <<< "$state")" ]; then
+      log "  skip $repo#$n: answering its feedback failed $MAX_ATTEMPTS times"
+      return 1
+    fi
+    $LIST_ONLY && { log "  would answer feedback on $repo#$n"; return 0; }
+    update_pr "$repo" "$n" "$feedback" "$started_at"
+    return 0
+  fi
+
+  draft="$(jq -r .draft <<< "$pr")"
+  sha="$(jq -r .head.sha <<< "$pr")"
+  [ "$draft" = false ] || return 1
+  jq -e --arg s "$sha" '(.reviewed // []) | index($s)' <<< "$state" \
+    >/dev/null && return 1
+  [ "$(jq '.rounds // 0' <<< "$state")" -lt "$MAX_REVIEW_ROUNDS" ] || return 1
+  $LIST_ONLY && { log "  would review $repo#$n"; return 0; }
+  review_pr "$repo" "$n" "$sha" "$(jq -r .base.ref <<< "$pr")" \
+    "$(jq -r .head.ref <<< "$pr")"
+}
+
 candidates() {
   if [ -n "$ONE_ISSUE" ]; then
     echo "${ONE_ISSUE/\#/ }"
@@ -900,7 +1323,19 @@ candidates() {
 
 log "poll"
 $LIST_ONLY || act_on_decisions
-list="$(candidates)" || { log "search failed, exiting"; exit 1; }
+
+# Feedback on work that is already public comes before anything new. One
+# heavy job per poll, whichever it is.
+busy=false
+if [ -z "$ONE_ISSUE" ]; then
+  while read -r -u 4 prepo pn; do
+    [ -n "${prepo:-}" ] || continue
+    if tend_pr "$prepo" "$pn"; then busy=true; break; fi
+  done 4<<< "$(bot_prs)"
+fi
+
+list=""
+$busy || list="$(candidates)" || { log "search failed, exiting"; exit 1; }
 
 # The list comes in on fd 3, so nothing in the loop can swallow it.
 while read -r -u 3 repo n; do
