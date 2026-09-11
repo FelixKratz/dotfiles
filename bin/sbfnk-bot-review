@@ -1,0 +1,159 @@
+#!/bin/bash
+# sbfnk-bot-review — look over what sbfnk-bot has done, and decide.
+#
+# sbfnk-bot-issues publishes nothing on its own. Each result waits in the
+# review spool until you approve it here, and the bot acts on your decision
+# at its next poll, within ten minutes.
+#
+# Works on the machine the bot runs on, or anywhere else once that
+# machine's ssh alias is the one line of ~/.config/dotfiles/bot-host.
+#
+# Usage:
+#   sbfnk-bot-review                     list work waiting for a decision
+#   sbfnk-bot-review show [ID]           the text, the screen's flags, the diff
+#   sbfnk-bot-review approve [ID]        publish: the draft PR, or the question
+#   sbfnk-bot-review approve --force [ID]
+#                                        publish despite the screen's flags
+#   sbfnk-bot-review answer [ID] [TEXT]  answer its question privately (TEXT,
+#                                        or stdin); the bot runs again
+#   sbfnk-bot-review discard [ID]        drop the work
+#   sbfnk-bot-review log                 the bot's recent activity
+#   sbfnk-bot-review count               how many wait (used by nudge)
+#
+# ID may be any unique prefix, and may be left out when only one item waits.
+
+set -uo pipefail
+
+SPOOL="${SBFNK_BOT_SPOOL:-/Users/Shared/sbfnk-bot}"
+HOST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bot-host"
+
+die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
+
+# Not the bot's machine: run the same command there.
+if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
+  host="$(sed -e 's/#.*//' "$HOST_FILE" 2>/dev/null | tr -d '[:space:]')"
+  [ -n "$host" ] || die "no review spool here and no host in $HOST_FILE"
+  args=""
+  for a in "$@"; do args="$args $(printf '%q' "$a")"; done
+  tty=()
+  [ -t 0 ] && [ -t 1 ] && tty=(-t)
+  exec ssh -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
+    "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
+fi
+
+PENDING="$SPOOL/pending"
+DECISIONS="$SPOOL/decisions"
+
+# Everything shown here was written by the bot. Control characters are
+# dropped so its text cannot drive the terminal.
+clean() { LC_ALL=C tr -d '\000-\010\013-\037\177'; }
+
+# Decisions for work that is no longer waiting have been carried out.
+for f in "$DECISIONS"/*; do
+  [ -f "$f" ] || continue
+  [ -d "$PENDING/$(basename "$f")" ] || rm -f "$f"
+done
+
+waiting() {
+  local d id
+  for d in "$PENDING"/*/; do
+    [ -f "$d/meta.json" ] || continue
+    id="$(basename "$d")"
+    [ -f "$DECISIONS/$id" ] && [ "${1:-}" != all ] && continue
+    echo "$id"
+  done
+}
+
+# The one waiting item whose id starts with $1; any item will do for an
+# empty $1, as long as there is only one.
+resolve() {
+  local matches
+  matches="$(waiting all | awk -v p="${1:-}" 'index($0, p) == 1')"
+  case "$(printf '%s' "$matches" | grep -c .)" in
+    0) die "nothing waiting matches '${1:-}'" ;;
+    1) echo "$matches" ;;
+    *) die "'${1:-}' matches more than one: $(printf '%s' "$matches" \
+         | tr '\n' ' ')" ;;
+  esac
+}
+
+decide() {
+  local id="$1" verb="$2" text="${3:-}" tmp
+  tmp="$(mktemp "$DECISIONS/.decision.XXXXXX")" || die "cannot write to $DECISIONS"
+  printf '%s\n%s' "$verb" "$text" > "$tmp"
+  chmod 644 "$tmp"
+  mv "$tmp" "$DECISIONS/$id"
+  echo "$verb recorded for $id; the bot acts on it at its next poll"
+}
+
+meta() { jq -r "$2" "$PENDING/$1/meta.json"; }
+
+cmd="${1:-list}"
+[ $# -gt 0 ] && shift
+
+case "$cmd" in
+  list)
+    ids="$(waiting)"
+    [ -n "$ids" ] || { echo "nothing waiting for review"; exit 0; }
+    for id in $ids; do
+      printf '%s\n  %s %s#%s: %s (%s flag(s))\n' "$id" "$(meta "$id" .outcome)" \
+        "$(meta "$id" .repo)" "$(meta "$id" .number)" \
+        "$(meta "$id" .title | clean)" "$(meta "$id" '.flags | length')"
+    done ;;
+  count)
+    # grep -c exits 1 on a count of 0, which is an answer, not a failure.
+    waiting | grep -c . || true ;;
+  show)
+    id="$(resolve "${1:-}")"
+    {
+      printf '%s %s#%s: %s\n' "$(meta "$id" .outcome)" "$(meta "$id" .repo)" \
+        "$(meta "$id" .number)" "$(meta "$id" .title)"
+      printf 'https://github.com/%s/issues/%s\n' "$(meta "$id" .repo)" \
+        "$(meta "$id" .number)"
+      printf 'parked %s, cost $%s\n\n' "$(meta "$id" .created)" \
+        "$(meta "$id" '.cost_usd // "?"')"
+      if [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
+        echo "== FLAGGED by the screen: read these before approving =="
+        jq -r '.flags[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
+        echo
+      else
+        echo "== the screen found nothing to flag =="
+        echo
+      fi
+      echo "== text to publish =="
+      cat "$PENDING/$id/text.md"
+      if [ -s "$PENDING/$id/diff.patch" ]; then
+        echo
+        echo "== commits and diff =="
+        cat "$PENDING/$id/diff.patch"
+      fi
+    } | clean | if [ -t 1 ]; then ${PAGER:-less}; else cat; fi ;;
+  approve)
+    force=false
+    [ "${1:-}" = --force ] && { force=true; shift; }
+    id="$(resolve "${1:-}")"
+    if [ "$(meta "$id" '.flags | length')" -gt 0 ] && ! $force; then
+      die "the screen flagged $id; read 'show' and use approve --force if it is fine"
+    fi
+    if $force; then decide "$id" force; else decide "$id" approve; fi ;;
+  answer)
+    id="$(resolve "${1:-}")"
+    [ "$(meta "$id" .outcome)" = comment ] || die "$id is a pull request, not a question"
+    shift 2>/dev/null
+    text="$*"
+    if [ -z "$text" ]; then
+      [ -t 0 ] && echo "Type the answer, then Ctrl-D:" >&2
+      text="$(cat)"
+    fi
+    [ -n "$text" ] || die "empty answer"
+    decide "$id" answer "$text" ;;
+  discard)
+    id="$(resolve "${1:-}")"
+    decide "$id" discard ;;
+  log)
+    tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean ;;
+  -h|--help|help)
+    sed -n '2,24p' "$0" ;;
+  *)
+    die "unknown command '$cmd' (try --help)" ;;
+esac

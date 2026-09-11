@@ -1,0 +1,198 @@
+#!/bin/bash
+# sbfnk-bot-setup — make this Mac the one that runs sbfnk-bot-issues.
+#
+# The bot runs as its own hidden, standard macOS account, so the operating
+# system keeps it out of your home folder: notes, other repositories, Claude
+# history and memory, mail. install:
+#   - creates that account (sbfnkbot) and installs Claude Code for it
+#   - closes your home folder to other accounts (chmod 700); macOS leaves it
+#     readable by every local account otherwise
+#   - installs the bot's script, allow-list and sandbox rules in
+#     /opt/sbfnk-bot, where only root can change them
+#   - creates the review spool in /Users/Shared/sbfnk-bot, where the bot
+#     writes pending work and only you write decisions
+#   - writes the LaunchDaemon that runs the bot every ten minutes
+#
+# Usage, from your own account (sudo drops ~/.local/bin from PATH, so give
+# the full path; S=~/.local/bin/sbfnk-bot-setup below):
+#   sudo $S install [--julia]    the above; --julia adds juliaup for the bot
+#   gh auth token -u sbfnk-bot | sudo $S gh-token
+#   claude setup-token, then:  sudo $S claude-token   (paste the token)
+#   sudo $S check                show the bot cannot read your files
+#   sudo $S enable               start the daemon
+#   sudo $S disable              stop it; everything else stays
+#
+# Run install again after pulling dotfiles, to update the installed copies.
+# To move the bot to another machine: disable here, set it up there, and put
+# that machine's ssh alias in ~/.config/dotfiles/bot-host where you review.
+
+set -euo pipefail
+
+BOT_USER=sbfnkbot
+BOT_HOME=/Users/$BOT_USER
+OPT=/opt/sbfnk-bot
+SPOOL=/Users/Shared/sbfnk-bot
+LABEL=none.bots.issues
+PLIST=/Library/LaunchDaemons/$LABEL.plist
+SECRETS=$BOT_HOME/.config/sbfnk-bot
+
+die() { echo "sbfnk-bot-setup: $*" >&2; exit 1; }
+say() { echo "- $*"; }
+
+case "${1:-}" in -h|--help|"") sed -n '2,27p' "$0"; exit 0 ;; esac
+[ "$(id -u)" -eq 0 ] || die "run with sudo"
+OWNER="${SUDO_USER:-}"
+[ -n "$OWNER" ] && [ "$OWNER" != root ] || die "run with sudo from your own account"
+OWNER_HOME="$(dscl . -read "/Users/$OWNER" NFSHomeDirectory | awk '{print $2}')"
+# The checkout this script lives in, through the ~/.local/bin symlink.
+DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0")")")"
+
+# From the bot's home: the caller's working directory is usually inside a
+# home folder the bot cannot enter, and the installers need a readable one.
+as_bot() { (cd "$BOT_HOME" && sudo -u "$BOT_USER" -H /bin/bash -c "$1"); }
+
+store_secret() {
+  local name="$1" value
+  [ -t 0 ] && echo "Paste the $name, then Enter:" >&2
+  IFS= read -r value || true
+  value="$(printf '%s' "$value" | tr -d '[:space:]')"
+  [ -n "$value" ] || die "no $name on stdin"
+  install -d -o "$BOT_USER" -g staff -m 700 "$BOT_HOME/.config" "$SECRETS"
+  ( umask 077; printf '%s\n' "$value" > "$SECRETS/$name" )
+  chown "$BOT_USER:staff" "$SECRETS/$name"
+  say "stored the $name for $BOT_USER"
+}
+
+install_all() {
+  local julia=false
+  [ "${1:-}" = --julia ] && julia=true
+
+  if ! dscl . -read "/Users/$BOT_USER" >/dev/null 2>&1; then
+    sysadminctl -addUser "$BOT_USER" -fullName "sbfnk-bot" \
+      -password "$(openssl rand -base64 30)" -home "$BOT_HOME" >/dev/null 2>&1
+    createhomedir -c -u "$BOT_USER" >/dev/null
+    dscl . -create "/Users/$BOT_USER" IsHidden 1
+    say "created the hidden account $BOT_USER (it never needs to log in)"
+  fi
+  chmod 700 "$BOT_HOME"
+  if [ "$(stat -f %Lp "$OWNER_HOME")" != 700 ]; then
+    chmod 700 "$OWNER_HOME"
+    say "closed $OWNER_HOME to other accounts (chmod 700)"
+  fi
+
+  install -d -o root -g wheel -m 755 "$OPT"
+  install -o root -g wheel -m 755 "$DOTFILES/bin/sbfnk-bot-issues" "$OPT/"
+  install -o root -g wheel -m 644 "$DOTFILES/config/sbfnk-bot/repos" \
+    "$DOTFILES/config/sbfnk-bot/claude-settings.json" "$OPT/"
+  say "installed the script and its rules in $OPT"
+
+  install -d -o root -g wheel -m 755 "$SPOOL"
+  install -d -o "$BOT_USER" -g staff -m 755 "$SPOOL/pending" "$SPOOL/log"
+  install -d -o "$OWNER" -g staff -m 755 "$SPOOL/decisions"
+  say "review spool in $SPOOL"
+
+  if [ ! -x "$BOT_HOME/.local/bin/claude" ]; then
+    say "installing Claude Code for $BOT_USER (a minute or two)"
+    as_bot 'curl -fsSL https://claude.ai/install.sh | bash' >/dev/null
+    say "installed Claude Code for $BOT_USER"
+  fi
+  if command -v Rscript >/dev/null; then
+    as_bot 'Rscript -e "dir.create(Sys.getenv(\"R_LIBS_USER\"), recursive = TRUE, showWarnings = FALSE)"' \
+      >/dev/null 2>&1 || true
+  fi
+  if $julia && [ ! -x "$BOT_HOME/.juliaup/bin/julia" ]; then
+    as_bot 'curl -fsSL https://install.julialang.org | sh -s -- --yes' >/dev/null
+    say "installed juliaup for $BOT_USER"
+  fi
+
+  cat > "$PLIST" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$LABEL</string>
+	<key>UserName</key>
+	<string>$BOT_USER</string>
+	<key>GroupName</key>
+	<string>staff</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>$OPT/sbfnk-bot-issues</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>$BOT_HOME</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>$BOT_HOME</string>
+	<key>StandardOutPath</key>
+	<string>$SPOOL/log/launchd.out</string>
+	<key>StandardErrorPath</key>
+	<string>$SPOOL/log/launchd.err</string>
+	<key>StartInterval</key>
+	<integer>600</integer>
+</dict>
+</plist>
+PLISTEOF
+  chown root:wheel "$PLIST"
+  chmod 644 "$PLIST"
+  say "wrote $PLIST (not started)"
+
+  for s in gh-token claude-token; do
+    [ -s "$SECRETS/$s" ] || say "still needed: the $s (see --help)"
+  done
+  say "then: sudo $0 check, and sudo $0 enable"
+}
+
+# Each line should say "no": the bot account reading or writing where it
+# must not.
+check() {
+  local path
+  for path in "$OWNER_HOME" "$OWNER_HOME/org-roam" "$OWNER_HOME/code" \
+    "$OWNER_HOME/.claude"; do
+    if as_bot "ls '$path'" >/dev/null 2>&1; then
+      echo "READABLE by $BOT_USER: $path"
+    else
+      echo "no: $BOT_USER cannot read $path"
+    fi
+  done
+  for path in "$OPT/sbfnk-bot-issues" "$OPT/repos" "$SPOOL/decisions/probe"; do
+    if as_bot "touch '$path'" >/dev/null 2>&1; then
+      echo "WRITABLE by $BOT_USER: $path"
+    else
+      echo "no: $BOT_USER cannot write $path"
+    fi
+  done
+  # The startup disk appears here as a symlink to /; only real mounts count.
+  for path in /Volumes/*; do
+    [ -e "$path" ] && [ ! -L "$path" ] || continue
+    as_bot "ls '$path'" >/dev/null 2>&1 \
+      && echo "note: $path is readable by $BOT_USER; the sandbox rules deny it"
+  done
+  return 0
+}
+
+case "${1:-}" in
+  install) install_all "${2:-}" ;;
+  gh-token) store_secret gh-token ;;
+  claude-token) store_secret claude-token ;;
+  check) check ;;
+  enable)
+    for s in gh-token claude-token; do
+      [ -s "$SECRETS/$s" ] || die "no $s yet (see --help)"
+    done
+    [ -f "$PLIST" ] || die "run install first"
+    launchctl bootout "system/$LABEL" 2>/dev/null || true
+    launchctl bootstrap system "$PLIST"
+    say "started $LABEL; it polls every ten minutes" ;;
+  disable)
+    if launchctl bootout "system/$LABEL" 2>/dev/null; then
+      say "stopped $LABEL"
+    else
+      say "$LABEL was not running"
+    fi ;;
+  *) die "unknown command '$1' (try --help)" ;;
+esac

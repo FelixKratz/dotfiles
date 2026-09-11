@@ -277,9 +277,27 @@ check_claude_backup() {
   fi
 }
 
+# Work sbfnk-bot has parked for review, here or on the machine named in
+# ~/.config/dotfiles/bot-host. Nothing is raised or cleared when the bot's
+# machine cannot be reached, so an unanswered nudge survives a flaky link.
+check_sbfnk_bot() {
+  local review="$HOME/.local/bin/sbfnk-bot-review" n
+  [ -x "$review" ] || return 0
+  [ -d /Users/Shared/sbfnk-bot/pending ] ||
+    [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bot-host" ] || return 0
+  n=$("$review" count 2>/dev/null) || return 0
+  if [ "${n:-0}" -gt 0 ]; then
+    cmd_raise sbfnk-bot -p 30 -k "sbfnk-bot:$n" \
+      "sbfnk-bot: $n to review — sbfnk-bot-review"
+  else
+    cmd_clear sbfnk-bot
+  fi
+}
+
 cmd_check() {
   check_reboot
   check_claude_backup
+  check_sbfnk_bot
 }
 
 case "${1:-shell}" in

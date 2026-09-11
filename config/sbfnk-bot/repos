@@ -1,0 +1,8 @@
+# Where sbfnk-bot-issues may open draft pull requests.
+#
+# One entry per line: an owner (every repository it has) or owner/repo.
+# Issues assigned to sbfnk-bot anywhere else are logged and left alone.
+epiforecasts
+mfiidd
+nfidd
+sbfnk

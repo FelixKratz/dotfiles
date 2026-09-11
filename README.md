@@ -153,6 +153,19 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   that expires early if the condition changes, and anything standing for a week
   drops out of the bar into `nudge list`. Polled checks run hourly from
   `launchagents/none.nudge.check.plist` or `systemd/nudge-check.timer`.
+- **sbfnk-bot issues** - assign an issue to `sbfnk-bot` and `bin/sbfnk-bot-issues`
+  works on it, publishing nothing until you approve. It runs every 10 min as
+  its own macOS account, which cannot read your home folder, and Claude works
+  in a sandboxed clone with a fresh configuration, no GitHub access and
+  nothing but the issue and the repository. A second model with no tools
+  screens the result for anything the issue and the repository do not
+  account for. The work then waits for `bin/sbfnk-bot-review`: `approve`
+  opens the draft PR (or posts the question), `answer` replies to a question
+  privately, `discard` drops it. A nudge says when something waits. Only
+  assignments made by sbfnk count, only sbfnk's comments are instructions,
+  and only repositories in `config/sbfnk-bot/repos` are worked on. Set up a
+  machine with `sudo ~/.local/bin/sbfnk-bot-setup install` (see its `--help`); elsewhere,
+  put that machine's ssh alias in `~/.config/dotfiles/bot-host`.
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in

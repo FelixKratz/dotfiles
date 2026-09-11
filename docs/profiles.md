@@ -18,6 +18,11 @@ notes
 | `mail` | email, doom-private, goimapnotify, oauth2ms | notmuch, the `mail-config.el` chapter, org-msg, telega, mastodon |
 | `notes` | — | org, vulpea, org-ref, the `notes.el` chapter |
 
+Which machine runs sbfnk-bot is not a group: `sbfnk-bot-setup` installs it as
+a system daemon under its own account. Elsewhere, `~/.config/dotfiles/bot-host`
+holds that machine's ssh alias, one line, so `sbfnk-bot-review` and the nudge
+check know where to look.
+
 Anything not owned by a group is linked everywhere: shell, tmux, nvim, doom,
 starship, yazi, claude, codex. A machine that declares no groups still gets
 Emacs for magit and file editing.

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "network": {
+      "allowedDomains": [
+        "cloud.r-project.org",
+        "cran.r-project.org",
+        "*.r-universe.dev",
+        "r-universe.dev",
+        "p3m.dev",
+        "packagemanager.posit.co",
+        "julialang.org",
+        "*.julialang.org",
+        "pypi.org",
+        "files.pythonhosted.org"
+      ]
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/Library/R",
+        "~/.julia",
+        "~/.cache/R",
+        "~/Library/Caches"
+      ],
+      "denyRead": [
+        "~/.config/sbfnk-bot",
+        "~/.local/share/sbfnk-bot-issues",
+        "~/.ssh",
+        "~/.config/gh",
+        "/Users/Shared",
+        "/Volumes"
+      ]
+    },
+    "credentials": {
+      "envVars": [
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "CLAUDE_CODE_OAUTH_TOKEN", "mode": "deny" }
+      ]
+    }
+  },
+  "permissions": {
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "Read(~/.config/sbfnk-bot/**)",
+      "Read(~/.local/share/sbfnk-bot-issues/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/gh/**)",
+      "Read(//Users/Shared/**)",
+      "Read(//Volumes/**)"
+    ]
+  }
+}
