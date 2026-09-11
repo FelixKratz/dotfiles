@@ -11,6 +11,8 @@ bot=(
   updates=on
 )
 
-sketchybar --add item bot right       \
+# bot_update comes from sbfnk-bot-review whenever a decision is recorded.
+sketchybar --add event bot_update     \
+           --add item bot right       \
            --set bot "${bot[@]}"      \
-           --subscribe bot system_woke
+           --subscribe bot system_woke bot_update

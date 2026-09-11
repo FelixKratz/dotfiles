@@ -33,6 +33,17 @@ HOST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bot-host"
 
 die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
 
+# A decision changes what waits, so the menu-bar item should not wait for
+# its next timed check to show it.
+refresh_bar() {
+  case "$1" in
+    approve|force|answer|discard|polish)
+      command -v sketchybar >/dev/null 2>&1 \
+        && sketchybar --trigger bot_update >/dev/null 2>&1 ;;
+  esac
+  return 0
+}
+
 # Not the bot's machine: run the same command there.
 if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   host="$(sed -e 's/#.*//' "$HOST_FILE" 2>/dev/null | tr -d '[:space:]')"
@@ -41,8 +52,11 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   for a in "$@"; do args="$args $(printf '%q' "$a")"; done
   tty=()
   [ -t 0 ] && [ -t 1 ] && tty=(-t)
-  exec ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
+  ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
     "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
+  rc=$?
+  refresh_bar "${1:-}"
+  exit $rc
 fi
 
 PENDING="$SPOOL/pending"
@@ -102,6 +116,7 @@ decide() {
   chmod 644 "$tmp"
   mv "$tmp" "$DECISIONS/$id"
   echo "$verb recorded for $id; the bot acts on it at its next poll"
+  refresh_bar "$verb"
 }
 
 meta() { jq -r "$2" "$PENDING/$1/meta.json"; }
