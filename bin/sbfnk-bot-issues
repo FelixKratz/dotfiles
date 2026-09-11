@@ -17,7 +17,7 @@
 # account for, and the work waits in the review spool. Nothing is published
 # until sbfnk decides with sbfnk-bot-review:
 #   approve   push the branch and open the draft PR, or post the question
-#   answer    run again with a private answer to the question
+#   answer    run again with a private reply: an answer, or what to change
 #   discard   drop the work; reassign the issue to have it tried again
 #
 # A poll with nothing to do costs one search request and no model tokens.
@@ -256,8 +256,10 @@ issue_text() {
   answers="$(answers_file "$repo" "$n" "$event")"
   [ -s "$answers" ] || return 0
   printf '\n<private-answers author="%s" role="instruction">\n' "$OWNER_LOGIN"
-  printf 'Answers to your earlier questions, sent privately. Act on them, but '
-  printf 'do not quote them or refer to them in anything you write.\n\n'
+  printf 'Private replies to your earlier questions or attempts: answers, or '
+  printf 'what to change. Your earlier work was discarded, so start afresh. Act '
+  printf 'on them, but do not quote them or refer to them in anything you '
+  printf 'write.\n\n'
   cat "$answers"
   printf '</private-answers>\n'
 }
@@ -536,6 +538,8 @@ act_on_decisions() {
     title="$(head -1 "$PENDING/$id/text.md" | sed 's/^# //')"
     body="$(sed '1,2d' "$PENDING/$id/text.md")"
     [ "$outcome" = pr ] || body="$(cat "$PENDING/$id/text.md")"
+    # Claude Code's own byline, should the attribution setting ever miss.
+    body="$(printf '%s\n' "$body" | grep -v 'Generated with \[Claude Code\]')"
 
     case "$verb" in
       approve|force)

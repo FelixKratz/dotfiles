@@ -14,8 +14,9 @@
 #   sbfnk-bot-review approve [ID]        publish: the draft PR, or the question
 #   sbfnk-bot-review approve --force [ID]
 #                                        publish despite the screen's flags
-#   sbfnk-bot-review answer [ID] [TEXT]  answer its question privately (TEXT,
-#                                        or stdin); the bot runs again
+#   sbfnk-bot-review answer [ID] [TEXT]  reply privately (TEXT, or stdin):
+#                                        answer its question, or say what to
+#                                        change in a PR; the bot runs again
 #   sbfnk-bot-review discard [ID]        drop the work
 #   sbfnk-bot-review log                 the bot's recent activity
 #   sbfnk-bot-review count               how many wait (used by nudge)
@@ -138,7 +139,6 @@ case "$cmd" in
     if $force; then decide "$id" force; else decide "$id" approve; fi ;;
   answer)
     id="$(resolve "${1:-}")"
-    [ "$(meta "$id" .outcome)" = comment ] || die "$id is a pull request, not a question"
     shift 2>/dev/null
     text="$*"
     if [ -z "$text" ]; then
