@@ -308,6 +308,9 @@ How to work:
 - British English in comments, documentation and the pull request text.
   Comments explain why the code does something, not how the change came
   about.
+- This is a single run with no one to reply and nothing to wake you later.
+  Run every command in the foreground and wait for it to finish, however
+  long the tests take. When you end your turn, the run is over.
 - Do not push, open pull requests, comment on GitHub or run gh. You have
   no GitHub credentials, and network access is limited to package
   repositories. $OWNER_LOGIN reviews what you return before anything is
@@ -366,17 +369,23 @@ prepare_clone() {
 # directory made for this call alone, so no memory, instructions or history
 # from any other session can reach it. Project settings in the checkout are
 # ignored too: a repository cannot give the model hooks or permissions.
+# There is one turn and nobody to wake the model later, so background tasks
+# and the tools that wait for them are off: a run that ended its turn to wait
+# once returned a stand-in and lost its work.
 run_model() {
   local config="$1"; shift
   mkdir -p "$config"
   env -u SSH_AUTH_SOCK \
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
+    CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
     GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
     perl -e 'alarm shift; exec @ARGV' "$TIMEOUT" \
     claude --setting-sources local --settings "$SETTINGS_FILE" \
-      --strict-mcp-config --output-format json "$@" < /dev/null
+      --strict-mcp-config --output-format json \
+      --disallowedTools ScheduleWakeup Monitor CronCreate RemoteTrigger \
+      PushNotification "$@" < /dev/null
 }
 
 run_claude() {
