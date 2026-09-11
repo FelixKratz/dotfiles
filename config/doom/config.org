@@ -672,6 +672,23 @@ Agenda includes only files with :active: filetag from ~/org-roam.
 (advice-add 'org-todo-list :before #'sf/org-update-agenda-files)
 #+end_src
 
+** Keep Note Buffers Current
+The agenda and vulpea leave notes open in the background, and the agenda reads
+and edits through whatever buffer is already open. Doom reverts a buffer only
+when it is displayed, so a note changed on disk (sync, another machine, an AI
+session) stays stale until an edit made through the agenda leaves it unsaveable.
+Polling just the note buffers keeps them current; buffers with unsaved edits are
+left alone.
+#+begin_src emacs-lisp
+(defun sf/org-auto-revert-notes-h ()
+  "Keep buffers visiting notes in step with their files."
+  (when (and buffer-file-name
+             (file-in-directory-p buffer-file-name sf/notes-directory))
+    (auto-revert-mode 1)))
+
+(add-hook 'org-mode-hook #'sf/org-auto-revert-notes-h)
+#+end_src
+
 ** Refiling
 Meetings in people nodes run newest first, so a refiled entry goes to the top
 of its target heading.
