@@ -169,8 +169,9 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   screen. The work then waits for `bin/sbfnk-bot-review`: `approve`
   opens the draft PR (or posts the question), `answer` replies
   privately (an answer to its question, or what to change), `discard` drops
-  it, `polish` reruns the editing and screening; items are numbered, so `sbfnk-bot-review show 3`. A nudge says when
-  something waits. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
+  it, `polish` reruns the editing and screening; items are numbered, so
+  `sbfnk-bot-review show 3`. A menu-bar item (click to review), a banner and a
+  nudge say when something waits. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
   runs a Remote Control session as you for doing the same from claude.ai or
   the Claude app; it asks before recording any decision. Only
   assignments made by sbfnk count, only sbfnk's comments are instructions,
