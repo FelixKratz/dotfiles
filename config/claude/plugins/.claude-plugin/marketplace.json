@@ -57,6 +57,26 @@
           }
         }
       }
+    },
+    {
+      "name": "julia-repl",
+      "description": "Warm Julia session (AgentREPL) over MCP, started only inside Julia projects",
+      "version": "1.0.0",
+      "author": {
+        "name": "Sebastian Funk"
+      },
+      "source": "./julia-repl",
+      "category": "development",
+      "strict": false,
+      "mcpServers": {
+        "julia-repl": {
+          "command": "${CLAUDE_PLUGIN_ROOT}/bin/julia-repl-server",
+          "env": {
+            "JULIA_REPL_HIGHLIGHT": "false",
+            "JULIA_REPL_OUTPUT_FORMAT": "plain"
+          }
+        }
+      }
     }
   ]
 }

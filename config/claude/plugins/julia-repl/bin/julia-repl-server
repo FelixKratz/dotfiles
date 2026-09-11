@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Start the AgentREPL MCP server, but only inside a Julia project.
+#
+# Claude Code starts every MCP server when a session opens. An AgentREPL
+# server holds about 600 MB before its first worker spawns, which adds up
+# over a handful of sessions that never touch Julia. Outside a Julia
+# project this hands over to a stub that completes the MCP handshake with
+# no tools, so the server shows as connected and no Julia process starts.
+#
+# A Julia project is the nearest directory holding Project.toml or
+# JuliaProject.toml, searching from the session directory up to the root
+# of its git repository.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+start="${CLAUDE_PROJECT_DIR:-$PWD}"
+top="$(git -C "$start" rev-parse --show-toplevel 2>/dev/null || echo "$start")"
+
+project=""
+dir="$start"
+while :; do
+  if [[ -f $dir/Project.toml || -f $dir/JuliaProject.toml ]]; then
+    project="$dir"
+    break
+  fi
+  [[ $dir == "$top" || $dir == / ]] && break
+  dir="$(dirname "$dir")"
+done
+
+if [[ -z $project ]]; then
+  exec python3 "$here/mcp-stub.py"
+fi
+
+export JULIA_REPL_PROJECT="$project"
+exec julia --startup-file=no --project=@AgentREPL -e \
+  'using AgentREPL; AgentREPL.start_server(project_dir = ENV["JULIA_REPL_PROJECT"])'
