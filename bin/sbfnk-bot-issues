@@ -663,6 +663,41 @@ PROMPT
     "$run/fix.json" 2>/dev/null
 }
 
+# The number sbfnk refers to an item by: the lowest one nothing waiting is
+# using. A number freed in the last half hour is skipped, so a decision typed
+# from memory cannot land on the item that took its place.
+FREED="$STATE_DIR/freed.tsv"
+SEQ_COOLDOWN="${SBFNK_BOT_SEQ_COOLDOWN:-1800}"
+
+next_seq() {
+  local used now n
+  used="$(for m in "$PENDING"/*/meta.json; do
+    [ -f "$m" ] && jq -r '.seq // empty' "$m"
+  done)"
+  now=$(date +%s)
+  n=1
+  while [ "$n" -lt 1000 ]; do
+    if ! grep -qx "$n" <<< "$used" \
+      && [ -z "$(awk -F'\t' -v n="$n" -v c="$((now - SEQ_COOLDOWN))" \
+        '$1 == n && $3 > c {print 1}' "$FREED" 2>/dev/null)" ]; then
+      echo "$n"
+      return 0
+    fi
+    n=$((n + 1))
+  done
+  echo "$n"
+}
+
+release_seq() {
+  [ -n "${1:-}" ] && printf '%s\t%s\t%s\n' "$1" "$(now_iso)" "$(date +%s)" \
+    >> "$FREED"
+  # Keep a day of history; nothing older can still be inside the cooldown.
+  if [ -f "$FREED" ] && [ "$(wc -l < "$FREED")" -gt 500 ]; then
+    tail -200 "$FREED" > "$FREED.tmp" && mv "$FREED.tmp" "$FREED"
+  fi
+  return 0
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
@@ -708,12 +743,9 @@ park() {
     fi
   fi
 
-  # A short number to refer to it by, never reused; kept when repolished.
+  # Its number, kept when the same item is polished again.
   seq="$(jq -r '.seq // empty' "$dir/meta.json" 2>/dev/null)"
-  if [ -z "$seq" ]; then
-    seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
-    echo "$seq" > "$STATE_DIR/seq"
-  fi
+  [ -n "$seq" ] || seq="$(next_seq)"
 
   jq -n --arg id "$id" --argjson seq "$seq" --arg repo "$repo" --argjson n "$n" \
     --arg event "$event" --arg outcome "$outcome" --arg title "$title" \
@@ -790,6 +822,7 @@ act_on_decisions() {
           set_pr_state "$repo" "$n" \
             ".handled_until = \"$(jq -r .handled_until "$meta")\""
           log "  $id: discarded"
+          release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
           rm -rf "${PENDING:?}/$id" "$work" ;;
         *)
           log "  $id: '$verb' does not apply to a PR update (approve or discard)"
@@ -842,6 +875,7 @@ act_on_decisions() {
         log "  $id: unknown decision '$verb'"
         continue ;;
     esac
+    release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
     rm -rf "${PENDING:?}/$id" "$work"
   done
 }
@@ -1141,8 +1175,7 @@ update_pr() {
     publish_update "$id" && return 0
   fi
   # Flagged, or the push failed: sbfnk decides.
-  seq=$(( $(cat "$STATE_DIR/seq" 2>/dev/null || echo 0) + 1 ))
-  echo "$seq" > "$STATE_DIR/seq"
+  seq="$(next_seq)"
   jq --argjson s "$seq" '.seq = $s' "$dir/meta.json" > "$dir/meta.tmp" \
     && mv "$dir/meta.tmp" "$dir/meta.json"
   chmod -R go+rX "$dir"
@@ -1191,6 +1224,7 @@ publish_update() {
   set_pr_state "$repo" "$n" \
     ".handled_until = \"$(jq -r .handled_until "$meta")\" | .failures = 0"
   log "  $id: pushed $(jq -r .commits "$meta") commit(s) and replied on $repo#$n"
+  release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
   rm -rf "${PENDING:?}/$id" "$work"
   return 0
 }

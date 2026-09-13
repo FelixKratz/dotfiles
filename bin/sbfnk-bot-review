@@ -130,6 +130,11 @@ case "$cmd" in
   list)
     ids="$(waiting)"
     [ -n "$ids" ] || { echo "nothing waiting for review"; exit 0; }
+    # By number, since numbers are reused and no longer follow the order
+    # things were parked in.
+    ids="$(for id in $ids; do
+      printf '%s\t%s\n' "$(meta "$id" '.seq // 999')" "$id"
+    done | sort -n | cut -f2)"
     for id in $ids; do
       printf '#%-3s %s %s#%s: %s (%s flag(s))\n' \
         "$(meta "$id" '.seq // "-"')" "$(meta "$id" .outcome)" \
