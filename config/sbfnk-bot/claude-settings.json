@@ -19,14 +19,23 @@
         "pypi.org",
         "files.pythonhosted.org",
         "zenodo.org",
-        "*.zenodo.org"
+        "*.zenodo.org",
+        "mc-stan.org",
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "*.githubusercontent.com"
       ]
     },
     "filesystem": {
       "allowWrite": [
         "~/Library/R",
         "~/.julia",
-        "~/.cache/R",
+        "~/.juliaup",
+        "~/.cmdstan",
+        "~/.local",
+        "~/Library/Python",
+        "~/.cache",
         "~/Library/Caches"
       ],
       "denyRead": [

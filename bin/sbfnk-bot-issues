@@ -302,6 +302,11 @@ How to work:
 - Write a test that fails because of the problem, then fix it. Run the
   relevant tests, and the project's linter if it has one, before each
   commit.
+- Install whatever the repository needs that is missing. The R, Julia and
+  Python libraries are yours and persist between runs, so a package installs
+  once and is there next time. R installs binaries from CRAN; Julia is
+  juliaup. Say so in the text only if something cannot be installed and
+  leaves part of the work unverified.
 - Keep the change to what the issue asks for. Note other problems you
   find in the pull request description and leave them unfixed.
 - If the project keeps a NEWS.md or changelog, add an entry.
@@ -1051,6 +1056,8 @@ How to work:
   Do not rewrite the commits that are already there: they are public.
 - Run the relevant tests and the linter, in the foreground, before each
   commit. This is a single run and nothing will wake you later.
+- Install whatever is missing; the R, Julia and Python libraries are yours
+  and persist between runs.
 - Commit messages are one short line in British English, then a blank line
   and "Co-authored-by: $CO_AUTHOR".
 - Do not push, comment on GitHub or run gh; your reply is published for you.

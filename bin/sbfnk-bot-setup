@@ -15,7 +15,11 @@
 #
 # Usage, from your own account (sudo drops ~/.local/bin from PATH, so give
 # the full path; S=~/.local/bin/sbfnk-bot-setup below):
-#   sudo $S install [--julia]    the above; --julia adds juliaup for the bot
+#   sudo $S install [--no-julia] the above, with juliaup unless --no-julia
+#   sudo $S deps                 install the heavy shared dependencies once
+#                                (rstan, cmdstan, testing and linting tools,
+#                                JuliaFormatter, pre-commit), so runs do not
+#                                spend their time on them
 #   gh auth token -u sbfnk-bot | sudo $S gh-token
 #   claude setup-token, then:  sudo $S claude-token   (paste the token)
 #   sudo $S review-key           give the bot sbfnk-review-bot's private key,
@@ -142,8 +146,10 @@ store_secret() {
 }
 
 install_all() {
-  local julia=false
-  [ "${1:-}" = --julia ] && julia=true
+  # Julia comes as standard: the bot works on Julia repositories too. It is
+  # a large download, so --no-julia skips it.
+  local julia=true
+  [ "${1:-}" = --no-julia ] && julia=false
 
   if ! dscl . -read "/Users/$BOT_USER" >/dev/null 2>&1; then
     sysadminctl -addUser "$BOT_USER" -fullName "sbfnk-bot" \
@@ -183,6 +189,20 @@ install_all() {
   if command -v Rscript >/dev/null; then
     as_bot 'Rscript -e "dir.create(Sys.getenv(\"R_LIBS_USER\"), recursive = TRUE, showWarnings = FALSE)"' \
       >/dev/null 2>&1 || true
+    # Without a mirror, R cannot install anything and falls back to building
+    # from source; macOS binaries make a dependency a download rather than a
+    # compile.
+    cat > "$BOT_HOME/.Rprofile" <<'RPROFILE'
+options(
+  repos = c(CRAN = "https://cloud.r-project.org"),
+  pkgType = "both",
+  install.packages.check.source = "no",
+  install.packages.compile.from.source = "never",
+  Ncpus = max(1L, parallel::detectCores() - 1L)
+)
+RPROFILE
+    chown "$BOT_USER:staff" "$BOT_HOME/.Rprofile"
+    say "wrote $BOT_HOME/.Rprofile (CRAN mirror, binary packages)"
   fi
   if $julia && [ ! -x "$BOT_HOME/.juliaup/bin/julia" ]; then
     as_bot 'curl -fsSL https://install.julialang.org | sh -s -- --yes' >/dev/null
@@ -277,6 +297,20 @@ case "${1:-}" in
     say "stored sbfnk-review-bot's key for $BOT_USER" ;;
   claude-token) store_secret claude-token ;;
   check) check ;;
+  deps)
+    say "installing shared dependencies as $BOT_USER; this takes a while"
+    as_bot 'Rscript -e "install.packages(c(\"devtools\", \"testthat\", \"lintr\", \"roxygen2\", \"rstan\", \"rstantools\", \"cmdstanr\", \"data.table\", \"posterior\"), repos = c(CRAN = \"https://cloud.r-project.org\", \"https://stan-dev.r-universe.dev\"))"' \
+      2>&1 | tail -3
+    as_bot 'Rscript -e "v <- tryCatch(cmdstanr::cmdstan_version(error_on_NA = FALSE), error = function(e) NULL); if (is.null(v)) cmdstanr::install_cmdstan(cores = 4) else cat(\"cmdstan\", v, \"already installed\n\")"' \
+      2>&1 | tail -3
+    if [ -x "$BOT_HOME/.juliaup/bin/julia" ]; then
+      as_bot "$BOT_HOME/.juliaup/bin/julia --startup-file=no -e 'using Pkg; Pkg.activate(\"tools\"; shared = true); Pkg.add(\"JuliaFormatter\"); Pkg.precompile()'" \
+        2>&1 | tail -2
+    fi
+    if command -v pipx >/dev/null; then
+      as_bot 'pipx install pre-commit' 2>&1 | tail -2
+    fi
+    say "done; a run installs anything else it needs by itself" ;;
   enable)
     for s in gh-token claude-token; do
       [ -s "$SECRETS/$s" ] || die "no $s yet (see --help)"
