@@ -320,6 +320,13 @@ case "${1:-}" in
     done
     [ -f "$PLIST" ] || die "run install first"
     launchctl bootout "system/$LABEL" 2>/dev/null || true
+    # bootout returns before a running job has exited, and bootstrap fails
+    # while it is still there. Stopping it also ends a run in progress.
+    tries=0
+    while launchctl print "system/$LABEL" >/dev/null 2>&1 \
+      && [ "$tries" -lt 30 ]; do
+      sleep 1; tries=$((tries + 1))
+    done
     launchctl bootstrap system "$PLIST"
     say "started $LABEL; it polls every ten minutes" ;;
   disable)
