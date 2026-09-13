@@ -11,7 +11,8 @@
 #     humanizer skill in /opt/sbfnk-bot, where only root can change them
 #   - creates the review spool in /Users/Shared/sbfnk-bot, where the bot
 #     writes pending work and only you write decisions
-#   - writes the LaunchDaemon that runs the bot every ten minutes
+#   - writes the LaunchDaemon that runs the bot every ten minutes, at low
+#     priority so the machine's own work comes first
 #
 # Usage, from your own account (sudo drops ~/.local/bin from PATH, so give
 # the full path; S=~/.local/bin/sbfnk-bot-setup below):
@@ -198,7 +199,7 @@ options(
   pkgType = "both",
   install.packages.check.source = "no",
   install.packages.compile.from.source = "never",
-  Ncpus = max(1L, parallel::detectCores() - 1L)
+  Ncpus = 4L
 )
 RPROFILE
     chown "$BOT_USER:staff" "$BOT_HOME/.Rprofile"
@@ -238,6 +239,8 @@ RPROFILE
 	<string>$SPOOL/log/launchd.err</string>
 	<key>StartInterval</key>
 	<integer>600</integer>
+	<key>Nice</key>
+	<integer>10</integer>
 </dict>
 </plist>
 PLISTEOF
