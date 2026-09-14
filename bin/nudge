@@ -287,8 +287,8 @@ check_sbfnk_bot() {
     [ -s "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bot-host" ] || return 0
   n=$("$review" count 2>/dev/null) || return 0
   if [ "${n:-0}" -gt 0 ]; then
-    cmd_raise sbfnk-bot -p 30 -k "sbfnk-bot:$n" \
-      "sbfnk-bot: $n to review — sbfnk-bot-review"
+    cmd_raise sbfnk-bot -p 30 -k sbfnk-bot-waiting \
+      "sbfnk-bot: $n to review — sbr"
   else
     cmd_clear sbfnk-bot
   fi

@@ -24,8 +24,13 @@ if [ "$N" -gt "$PREV" ]; then
     >/dev/null 2>&1
 fi
 
+# The shell greeting's nudge says the same, so it cannot lag an hour behind.
+NUDGE="$HOME/.local/bin/nudge"
 if [ "$N" -gt 0 ]; then
   sketchybar --set "$NAME" drawing=on label="$N" icon.color="$YELLOW"
+  [ -x "$NUDGE" ] && "$NUDGE" raise sbfnk-bot -p 30 -k sbfnk-bot-waiting \
+    "sbfnk-bot: $N to review — sbr" >/dev/null 2>&1
 else
   sketchybar --set "$NAME" drawing=off
+  [ -x "$NUDGE" ] && "$NUDGE" clear sbfnk-bot >/dev/null 2>&1
 fi

@@ -72,7 +72,7 @@ LOCK_FILE="$STATE_DIR/lock"
 MODEL="${SBFNK_BOT_MODEL:-}"
 SCREEN_MODEL="${SBFNK_BOT_SCREEN_MODEL:-sonnet}"
 EDIT_MODEL="${SBFNK_BOT_EDIT_MODEL:-}"
-TIMEOUT="${SBFNK_BOT_TIMEOUT:-3600}"
+TIMEOUT="${SBFNK_BOT_TIMEOUT:-5400}"
 # A ceiling for a run that goes wrong, well above what an issue should take.
 MAX_BUDGET="${SBFNK_BOT_MAX_BUDGET_USD:-50}"
 # Failed runs per assignment before the issue is left for a human.
@@ -317,8 +317,13 @@ How to work:
   Comments explain why the code does something, not how the change came
   about.
 - This is a single run with no one to reply and nothing to wake you later.
-  Run every command in the foreground and wait for it to finish, however
-  long the tests take. When you end your turn, the run is over.
+  Run every command in the foreground and wait for it to finish. When you
+  end your turn, the run is over.
+- The run is stopped after $((TIMEOUT / 60)) minutes and anything not yet
+  returned is lost. Keep checks proportionate: a few seeds and short chains
+  for model fits, and the relevant test files before the whole suite. Commit
+  as you go, stop starting new checks with 15 minutes left, and say in the
+  text what a fuller check should cover.
 - Do not push, open pull requests, comment on GitHub or run gh. You have
   no GitHub credentials, and network access is limited to package
   repositories. $OWNER_LOGIN reviews what you return before anything is
