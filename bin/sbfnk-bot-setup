@@ -187,6 +187,9 @@ install_all() {
     as_bot 'curl -fsSL https://claude.ai/install.sh | bash' >/dev/null
     say "installed Claude Code for $BOT_USER"
   fi
+  # Build the toolchain's cache once outside the sandbox; runs also get
+  # write access to it, so this only saves the first compile its lookup.
+  as_bot 'xcrun --find clang' >/dev/null 2>&1 || true
   if command -v Rscript >/dev/null; then
     as_bot 'Rscript -e "dir.create(Sys.getenv(\"R_LIBS_USER\"), recursive = TRUE, showWarnings = FALSE)"' \
       >/dev/null 2>&1 || true

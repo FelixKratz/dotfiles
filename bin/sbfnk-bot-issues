@@ -390,8 +390,16 @@ prepare_clone() {
 # builds use at most four cores, so a run stays one process that leaves room
 # for the rest of the machine.
 run_model() {
-  local config="$1"; shift
+  local config="$1" cache temp; shift
   mkdir -p "$config"
+  # Apple's toolchain keeps its cache in the account's own cache and temp
+  # folders under /var/folders, whatever TMPDIR says, so without them every
+  # compile (C++, and so every Stan model) fails inside the sandbox.
+  cache="$(getconf DARWIN_USER_CACHE_DIR 2>/dev/null)"
+  temp="$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null)"
+  jq --arg c "$cache" --arg t "$temp" '
+    .sandbox.filesystem.allowWrite += ([$c, $t] | map(select(length > 0))
+      | map("/" + ., "//private" + .))' "$SETTINGS_FILE" > "$config/settings.json"
   env -u SSH_AUTH_SOCK \
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
@@ -399,7 +407,7 @@ run_model() {
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
     GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
     perl -e 'alarm shift; exec @ARGV' "$TIMEOUT" \
-    claude --setting-sources local --settings "$SETTINGS_FILE" \
+    claude --setting-sources local --settings "$config/settings.json" \
       --strict-mcp-config --output-format json \
       --disallowedTools ScheduleWakeup Monitor CronCreate RemoteTrigger \
       PushNotification Agent Task "$@" < /dev/null
