@@ -2,7 +2,12 @@
 #
 # One entry per line: an owner (every repository it has) or owner/repo.
 # Issues assigned to sbfnk-bot anywhere else are logged and left alone.
+#
+# "timeout=MINUTES" after an entry gives its jobs longer than the default;
+# owner/repo wins over owner. A single job can ask for more with a line
+# "bot-time: 3h" in sbfnk's comment or private answer.
 epiforecasts
+epiforecasts/EpiNow2 timeout=180
 mfiidd
 nfidd
 sbfnk

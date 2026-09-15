@@ -31,7 +31,15 @@
 #                                      most one issue
 #   sbfnk-bot-issues --list            show what would be picked up
 #   sbfnk-bot-issues --issue o/r#N     work on one issue now (gates apply)
+#   sbfnk-bot-issues --decisions       only carry out sbfnk's decisions (a
+#                                      light pass launchd runs every two
+#                                      minutes, alongside any heavy job)
 #   sbfnk-bot-issues --status          recent activity
+#
+# A job normally gets TIMEOUT. A repository can have its own default in the
+# allow-list ("epiforecasts/EpiNow2 timeout=180", in minutes), and sbfnk can
+# ask for more for one job with a line "bot-time: 3h" in a comment on the
+# issue or PR, or in a private answer. Capped at MAX_TIMEOUT.
 #
 # Written for the bash 3.2 that macOS ships.
 
@@ -73,8 +81,12 @@ MODEL="${SBFNK_BOT_MODEL:-}"
 SCREEN_MODEL="${SBFNK_BOT_SCREEN_MODEL:-sonnet}"
 EDIT_MODEL="${SBFNK_BOT_EDIT_MODEL:-}"
 TIMEOUT="${SBFNK_BOT_TIMEOUT:-5400}"
+DEFAULT_TIMEOUT="$TIMEOUT"
+MAX_TIMEOUT="${SBFNK_BOT_MAX_TIMEOUT:-21600}"
 # A ceiling for a run that goes wrong, well above what an issue should take.
 MAX_BUDGET="${SBFNK_BOT_MAX_BUDGET_USD:-50}"
+# Scaled with the time a job is given, so a longer job is not cut off by cost.
+RUN_BUDGET="$MAX_BUDGET"
 # Failed runs per assignment before the issue is left for a human.
 MAX_ATTEMPTS=2
 
@@ -82,10 +94,12 @@ mkdir -p "$STATE_DIR" "$RUNS_DIR" "$ANSWERS_DIR" "$CACHE_DIR/repos" \
   "$CACHE_DIR/work" "$PENDING" "$(dirname "$LOG_FILE")"
 
 LIST_ONLY=false
+DECISIONS_ONLY=false
 ONE_ISSUE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --list) LIST_ONLY=true; shift ;;
+    --decisions) DECISIONS_ONLY=true; shift ;;
     --issue) ONE_ISSUE="${2:-}"; shift 2 ;;
     --status)
       echo "recent outcomes (newest last):"
@@ -114,13 +128,22 @@ log() {
 
 now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-# One run at a time: a run can take most of an hour, and launchd starts
-# the next one regardless. shlock clears a lock left by a dead process.
-if ! shlock -p $$ -f "$LOCK_FILE"; then
-  $INTERACTIVE && echo "another run holds $LOCK_FILE" >&2
-  exit 0
+# Heavy work runs one job at a time under LOCK_FILE: a run can take hours,
+# and launchd starts the next one regardless. Carrying out sbfnk's decisions
+# is light (a push, a PR, a comment), so it has its own lock and a pass of its
+# own, and an approval never waits behind a long job. shlock clears a lock
+# left by a dead process.
+DECISIONS_LOCK="$STATE_DIR/decisions.lock"
+if $DECISIONS_ONLY; then
+  shlock -p $$ -f "$DECISIONS_LOCK" || exit 0
+  trap 'rm -f "$DECISIONS_LOCK"' EXIT
+else
+  if ! shlock -p $$ -f "$LOCK_FILE"; then
+    $INTERACTIVE && echo "another run holds $LOCK_FILE" >&2
+    exit 0
+  fi
+  trap 'rm -f "$LOCK_FILE"' EXIT
 fi
-trap 'rm -f "$LOCK_FILE"' EXIT
 
 for cmd in gh jq git claude perl; do
   command -v "$cmd" >/dev/null || { log "missing $cmd, exiting"; exit 1; }
@@ -149,12 +172,48 @@ allowed_repo() {
   repo="$(lower "$1")"
   owner="${repo%%/*}"
   while read -r entry; do
-    entry="$(lower "${entry%%#*}")"
-    entry="$(printf '%s' "$entry" | tr -d '[:space:]')"
+    entry="$(lower "${entry%%#*}" | awk '{print $1}')"
     [ -n "$entry" ] || continue
     [ "$entry" = "$owner" ] || [ "$entry" = "$repo" ] && return 0
   done < "$ALLOW_FILE"
   return 1
+}
+
+# Seconds from "3h", "90m", "90 min", "2 hours"; plain numbers are minutes.
+to_seconds() {
+  local v="$1" n unit
+  n="$(printf '%s' "$v" | grep -oE '[0-9]+' | head -1)"
+  [ -n "$n" ] || return 1
+  unit="$(printf '%s' "$v" | tr '[:upper:]' '[:lower:]' | grep -oE '[a-z]+' | head -1)"
+  case "$unit" in
+    h|hr|hrs|hour|hours) echo $((n * 3600)) ;;
+    *) echo $((n * 60)) ;;
+  esac
+}
+
+# The time a job on this repository gets: its line in the allow-list if it
+# sets one (owner/repo before owner), then the latest "bot-time:" sbfnk
+# wrote in the text given on stdin, capped at MAX_TIMEOUT.
+set_job_timeout() {
+  local repo owner line first t asked secs=""
+  repo="$(lower "$1")"; owner="${repo%%/*}"
+  for want in "$repo" "$owner"; do
+    while read -r line; do
+      line="$(lower "${line%%#*}")"
+      first="$(awk '{print $1}' <<< "$line")"
+      [ "$first" = "$want" ] || continue
+      t="$(grep -oE 'timeout=[0-9]+[a-z]*' <<< "$line" | head -1)"
+      [ -n "$t" ] && secs="$(to_seconds "${t#timeout=}")"
+    done < "$ALLOW_FILE"
+    [ -n "$secs" ] && break
+  done
+  asked="$(grep -oiE 'bot-time:[[:space:]]*[0-9]+[[:space:]]*[a-z]*' | tail -1)"
+  [ -n "$asked" ] && secs="$(to_seconds "${asked#*:}")"
+  TIMEOUT="${secs:-$DEFAULT_TIMEOUT}"
+  [ "$TIMEOUT" -le "$MAX_TIMEOUT" ] || TIMEOUT="$MAX_TIMEOUT"
+  RUN_BUDGET=$(( (MAX_BUDGET * TIMEOUT + DEFAULT_TIMEOUT - 1) / DEFAULT_TIMEOUT ))
+  [ "$TIMEOUT" -eq "$DEFAULT_TIMEOUT" ] \
+    || log "  this job gets $((TIMEOUT / 60)) minutes"
 }
 
 # The assignment this run would act on: "event_id actor created_at" of the
@@ -422,7 +481,7 @@ run_claude() {
   (cd "$work" && run_model "$config" -p "$prompt" \
     "${model_args[@]+"${model_args[@]}"}" \
     --permission-mode acceptEdits \
-    --max-budget-usd "$MAX_BUDGET" \
+    --max-budget-usd "$RUN_BUDGET" \
     --json-schema "$SCHEMA" > "$out" 2> "$out.stderr")
 }
 
@@ -878,6 +937,8 @@ act_on_decisions() {
         log "  $id: discarded"
         record "$repo#$n" "$event" discarded "$id" "$cost" ;;
       polish)
+        # Editing, screening and fixing run models: heavy work waits its turn.
+        $DECISIONS_ONLY && continue
         log "  $id: polishing the text again"
         echo "$sig" >> "$PENDING/$id/done"
         # Whatever follows the verb is sbfnk's instruction for the text.
@@ -922,6 +983,9 @@ work_on() {
   fi
 
   issue_text "$repo" "$n" "$event" > "$run/issue.txt"
+  # Redirected, not piped: in a pipeline it would set TIMEOUT in a subshell.
+  set_job_timeout "$repo" < <(awk \
+    '/role="instruction"/,/<\/(issue|comment|private-answers)>/' "$run/issue.txt")
   started=$(date +%s)
   run_claude "$work" "$(build_prompt "$repo" "$n" "$title" "$branch" \
     "$base" "$(cat "$run/issue.txt")")" "$out" "$run/claude"
@@ -1194,6 +1258,8 @@ update_pr() {
     pr_failed "$repo" "$n"
     return 0
   fi
+  set_job_timeout "$repo" < <(jq -r --arg o "$OWNER_LOGIN" \
+    '.[] | select(.author == $o) | .body' <<< "$feedback")
   # A branch made from the PR head: origin/$head marks what is already public.
   { printf '%s\n\n' "$prbody"; jq -r '.[].body' <<< "$feedback"; } \
     > "$run/issue.txt"
@@ -1201,7 +1267,7 @@ update_pr() {
   (cd "$work" && run_model "$run/claude" -p "$(update_prompt "$repo" "$n" \
     "$head" "$head" "$feedback" "$prbody")" \
     ${MODEL:+--model "$MODEL"} --permission-mode acceptEdits \
-    --max-budget-usd "$MAX_BUDGET" --json-schema "$UPDATE_SCHEMA" \
+    --max-budget-usd "$RUN_BUDGET" --json-schema "$UPDATE_SCHEMA" \
     > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   summary="$(jq -r '.summary // ""' <<< "$result" 2>/dev/null)"
@@ -1385,7 +1451,7 @@ review_pr() {
   out="$run/review.json"
   (cd "$work" && run_model "$run/claude" -p \
     "$(review_prompt "$repo" "$n" "$base" "$spec")" \
-    ${MODEL:+--model "$MODEL"} --max-budget-usd "$MAX_BUDGET" \
+    ${MODEL:+--model "$MODEL"} --max-budget-usd "$RUN_BUDGET" \
     --json-schema "$REVIEW_SCHEMA" > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   if [ -z "$result" ]; then
@@ -1489,8 +1555,17 @@ candidates() {
     --jq '.items[] | "\(.repository_url | sub(".*/repos/"; "")) \(.number)"'
 }
 
+if $DECISIONS_ONLY; then
+  act_on_decisions
+  exit 0
+fi
+
 log "poll"
-$LIST_ONLY || act_on_decisions
+# The light pass may be mid-way through the same decisions; leave them to it.
+if ! $LIST_ONLY && shlock -p $$ -f "$DECISIONS_LOCK"; then
+  act_on_decisions
+  rm -f "$DECISIONS_LOCK"
+fi
 
 # One heavy job per poll. PR work (feedback, review rounds) and new issues
 # take turns: after a PR job the next poll looks at issues first, so a busy

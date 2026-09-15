@@ -27,7 +27,9 @@
 #                                from ~/.config/sbfnk-review-bot/key.pem or stdin,
 #                                so it can review PRs marked ready for review
 #   sudo $S check                show the bot cannot read your files
-#   sudo $S enable               start the daemon
+#   sudo $S enable [--keep-running]
+#                                start the daemons; --keep-running leaves a
+#                                job in progress alone
 #   sudo $S disable              stop it; everything else stays
 #   $S desk                      (no sudo) a Remote Control session as you, for
 #                                reviewing from claude.ai or the Claude app
@@ -45,6 +47,8 @@ OPT=/opt/sbfnk-bot
 SPOOL=/Users/Shared/sbfnk-bot
 LABEL=none.bots.issues
 PLIST=/Library/LaunchDaemons/$LABEL.plist
+DECISIONS_LABEL=none.bots.decisions
+DECISIONS_PLIST=/Library/LaunchDaemons/$DECISIONS_LABEL.plist
 SECRETS=$BOT_HOME/.config/sbfnk-bot
 
 die() { echo "sbfnk-bot-setup: $*" >&2; exit 1; }
@@ -146,6 +150,61 @@ store_secret() {
   say "stored the $name for $BOT_USER"
 }
 
+# A LaunchDaemon running the bot as its own account, at low priority:
+#   $1 plist path  $2 label  $3 interval in seconds  $4 extra argument
+write_daemon() {
+  local plist="$1" label="$2" interval="$3" arg="$4" argxml=""
+  [ -n "$arg" ] && argxml="
+		<string>$arg</string>"
+  cat > "$plist" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$label</string>
+	<key>UserName</key>
+	<string>$BOT_USER</string>
+	<key>GroupName</key>
+	<string>staff</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>$OPT/sbfnk-bot-issues</string>$argxml
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>$BOT_HOME</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>$BOT_HOME</string>
+	<key>StandardOutPath</key>
+	<string>$SPOOL/log/$label.out</string>
+	<key>StandardErrorPath</key>
+	<string>$SPOOL/log/$label.err</string>
+	<key>StartInterval</key>
+	<integer>$interval</integer>
+	<key>Nice</key>
+	<integer>10</integer>
+</dict>
+</plist>
+PLISTEOF
+  chown root:wheel "$plist"
+  chmod 644 "$plist"
+}
+
+# Load a daemon afresh. bootout returns before a running job has exited, and
+# bootstrap fails while it is still there; stopping it ends a run in progress.
+restart_daemon() {
+  local plist="$1" label="$2" tries=0
+  launchctl bootout "system/$label" 2>/dev/null || true
+  while launchctl print "system/$label" >/dev/null 2>&1 && [ "$tries" -lt 30 ]; do
+    sleep 1; tries=$((tries + 1))
+  done
+  launchctl bootstrap system "$plist"
+}
+
 install_all() {
   # Julia comes as standard: the bot works on Julia repositories too. It is
   # a large download, so --no-julia skips it.
@@ -213,43 +272,9 @@ RPROFILE
     say "installed juliaup for $BOT_USER"
   fi
 
-  cat > "$PLIST" <<PLISTEOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>$LABEL</string>
-	<key>UserName</key>
-	<string>$BOT_USER</string>
-	<key>GroupName</key>
-	<string>staff</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>/bin/bash</string>
-		<string>$OPT/sbfnk-bot-issues</string>
-	</array>
-	<key>EnvironmentVariables</key>
-	<dict>
-		<key>HOME</key>
-		<string>$BOT_HOME</string>
-	</dict>
-	<key>WorkingDirectory</key>
-	<string>$BOT_HOME</string>
-	<key>StandardOutPath</key>
-	<string>$SPOOL/log/launchd.out</string>
-	<key>StandardErrorPath</key>
-	<string>$SPOOL/log/launchd.err</string>
-	<key>StartInterval</key>
-	<integer>600</integer>
-	<key>Nice</key>
-	<integer>10</integer>
-</dict>
-</plist>
-PLISTEOF
-  chown root:wheel "$PLIST"
-  chmod 644 "$PLIST"
-  say "wrote $PLIST (not started)"
+  write_daemon "$PLIST" "$LABEL" 600 ""
+  write_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL" 120 --decisions
+  say "wrote $PLIST and $DECISIONS_PLIST (not started)"
 
   for s in gh-token claude-token; do
     [ -s "$SECRETS/$s" ] || say "still needed: the $s (see --help)"
@@ -321,22 +346,23 @@ case "${1:-}" in
     for s in gh-token claude-token; do
       [ -s "$SECRETS/$s" ] || die "no $s yet (see --help)"
     done
-    [ -f "$PLIST" ] || die "run install first"
-    launchctl bootout "system/$LABEL" 2>/dev/null || true
-    # bootout returns before a running job has exited, and bootstrap fails
-    # while it is still there. Stopping it also ends a run in progress.
-    tries=0
-    while launchctl print "system/$LABEL" >/dev/null 2>&1 \
-      && [ "$tries" -lt 30 ]; do
-      sleep 1; tries=$((tries + 1))
-    done
-    launchctl bootstrap system "$PLIST"
-    say "started $LABEL; it polls every ten minutes" ;;
-  disable)
-    if launchctl bootout "system/$LABEL" 2>/dev/null; then
-      say "stopped $LABEL"
+    [ -f "$PLIST" ] && [ -f "$DECISIONS_PLIST" ] || die "run install first"
+    # The light pass first: restarting it never interrupts real work.
+    restart_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL"
+    if [ "${2:-}" = --keep-running ] \
+      && launchctl print "system/$LABEL" 2>/dev/null | grep -q 'state = running'; then
+      say "left $LABEL running; it picks up the new copy at its next start"
     else
-      say "$LABEL was not running"
-    fi ;;
+      restart_daemon "$PLIST" "$LABEL"
+    fi
+    say "started; heavy work polls every ten minutes, decisions every two" ;;
+  disable)
+    for l in "$DECISIONS_LABEL" "$LABEL"; do
+      if launchctl bootout "system/$l" 2>/dev/null; then
+        say "stopped $l"
+      else
+        say "$l was not running"
+      fi
+    done ;;
   *) die "unknown command '$1' (try --help)" ;;
 esac

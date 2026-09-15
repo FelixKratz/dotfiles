@@ -2,8 +2,8 @@
 # sbfnk-bot-review — look over what sbfnk-bot has done, and decide.
 #
 # sbfnk-bot-issues publishes nothing on its own. Each result waits in the
-# review spool until you approve it here, and the bot acts on your decision
-# at its next poll, within ten minutes.
+# review spool until you approve it here. Approvals and discards are carried
+# out within two minutes; reruns and polish wait for any job in progress.
 #
 # Works on the machine the bot runs on, or anywhere else once that
 # machine's ssh alias is the one line of ~/.config/dotfiles/bot-host.
@@ -16,7 +16,9 @@
 #                                        publish despite the screen's flags
 #   sbfnk-bot-review answer [ID] [TEXT]  reply privately (TEXT, or stdin):
 #                                        answer its question, or say what to
-#                                        change in a PR; the bot runs again
+#                                        change in a PR; the bot runs again.
+#                                        A line "bot-time: 3h" gives that run
+#                                        more time
 #   sbfnk-bot-review discard [ID]        drop the work
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
@@ -123,7 +125,11 @@ decide() {
   printf '%s\n%s' "$verb" "$text" > "$tmp"
   chmod 644 "$tmp"
   mv "$tmp" "$DECISIONS/$id"
-  echo "$verb recorded for $id; the bot acts on it at its next poll"
+  case "$verb" in
+    polish) echo "polish recorded for $id; it runs when no other job is running" ;;
+    answer) echo "answer recorded for $id; the bot starts on it when no other job is running" ;;
+    *) echo "$verb recorded for $id; carried out within two minutes" ;;
+  esac
   refresh_bar "$verb"
 }
 
