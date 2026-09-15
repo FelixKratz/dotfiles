@@ -57,6 +57,12 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
     "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
   rc=$?
+  if [ "$rc" -eq 255 ]; then
+    # ssh's own failure, not the command's: say so rather than exit silently.
+    echo "sbfnk-bot-review: cannot reach $host over ssh (away from its network?)." >&2
+    echo "Review from anywhere with the desk: 'sbfnk-bot desk' in claude.ai/code or the Claude app." >&2
+    exit 1
+  fi
   refresh_bar "${1:-}"
   exit $rc
 fi
