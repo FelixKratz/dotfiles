@@ -205,7 +205,7 @@ case "$cmd" in
         echo "== commits and diff =="
         cat "$PENDING/$id/diff.patch"
       fi
-    } | clean | if [ -t 1 ]; then ${PAGER:-less}; else cat; fi ;;
+    } | clean ;;
   approve)
     force=false
     [ "${1:-}" = --force ] && { force=true; shift; }
