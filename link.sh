@@ -393,6 +393,19 @@ if command -v claude >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
       claude plugin marketplace add "$mp_dir" >/dev/null 2>&1 \
         && echo "Added marketplace $mp_name"
     fi
+    # Registering writes the marketplace's absolute path into settings.json,
+    # which is shared between machines through dotfiles_private while the
+    # path differs on each, and Claude Code does not expand ~ there. Claude's
+    # own per-machine records keep the marketplace, so the shared file drops it.
+    settings_json=$HOME/.claude/settings.json
+    if jq -e --arg m "$mp_name" '.extraKnownMarketplaces[$m]' "$settings_json" \
+      >/dev/null 2>&1; then
+      stripped="$(jq --arg m "$mp_name" 'del(.extraKnownMarketplaces[$m])
+        | if .extraKnownMarketplaces == {} then del(.extraKnownMarketplaces)
+          else . end' "$settings_json")" \
+        && print -r -- "$stripped" > "$settings_json" \
+        && echo "Kept the $mp_name path out of the shared settings.json"
+    fi
     for entry in ${(f)"$(jq -r '.plugins[] | "\(.name) \(.version)"' $mp)"}; do
       name=${entry% *} want=${entry#* }
       have=$(jq -r --arg k "$name@$mp_name" '.plugins[$k][0].version // empty' \
