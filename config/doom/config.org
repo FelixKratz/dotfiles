@@ -732,6 +732,12 @@ right tool for a monthly stocktake rather than for daily work.
       org-agenda-todo-ignore-timestamp 'future
       org-agenda-tags-todo-honor-ignore-options t)
 
+;; Drop finished tasks from the agenda. KILL is a done state too, so this
+;; hides killed tasks as well.
+(setq org-agenda-skip-scheduled-if-done t
+      org-agenda-skip-deadline-if-done t
+      org-agenda-skip-timestamp-if-done t)
+
 ;; Tasks with no date of any kind. This is the scan: give each one a date, or
 ;; kill it. Project containers are excluded — they are headings, not actions.
 (defconst sf/agenda-cmd-unscheduled
