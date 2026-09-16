@@ -46,7 +46,7 @@ request, or platform policy overrides them.
 - Prefer clear, idiomatic R, Julia, and Stan. Apply the `readable-code` skill to
   statistical or scientific code.
 - For `~/org-roam/*.org`, read
-  `~/code/dotfiles/docs/org-roam-llm-instructions.md` first. Preserve untagged
+  `~/code/dotfiles_private/docs/org-roam-llm-instructions.md` first. Preserve untagged
   material and top-level human-owned headings; place AI content one level lower
   and tag it `:ai:`.
 

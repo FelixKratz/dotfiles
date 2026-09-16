@@ -17,6 +17,7 @@ __pycache__/
 # Neovim plugin lockfile - not pinning versions
 config/nvim/lazy-lock.json
 
+# kitty writes the theme it switched to here
 config/kitty/current-theme.conf
 
 # Notmuch HTML export tempfiles
@@ -27,4 +28,3 @@ notmuch-*.html
 
 # Local-only Claude Code settings (machine-specific paths)
 .claude/settings.local.json
-
