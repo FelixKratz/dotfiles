@@ -361,6 +361,11 @@ How to work:
 - Write a test that fails because of the problem, then fix it. Run the
   relevant tests, and the project's linter if it has one, before each
   commit.
+- The run is sandboxed. If something you need is refused (Operation not
+  permitted, a refused host or port, a failed install), try one other way,
+  then list exactly what was refused in "blocked": the command, and the
+  path, host or port. Never mention the sandbox, this machine or what was
+  refused in anything public; say only what was and was not checked.
 - Install whatever the repository needs that is missing. The R, Julia and
   Python libraries are yours and persist between runs, so a package installs
   once and is there next time. R installs binaries from CRAN; Julia is
@@ -404,7 +409,8 @@ PROMPT
 SCHEMA='{"type":"object","properties":{
   "outcome":{"type":"string","enum":["pr","comment"]},
   "title":{"type":"string"},
-  "body":{"type":"string"}},
+  "body":{"type":"string"},
+  "blocked":{"type":"array","items":{"type":"string"}}},
   "required":["outcome","body"]}'
 
 # Shapes of credentials that must never be published.
@@ -772,6 +778,19 @@ release_seq() {
   return 0
 }
 
+# What the sandbox refused a run, for sbfnk to widen the rules from. Kept
+# out of anything published; shown by sbfnk-bot-review.
+note_blocked() {
+  local id="$1" target="$2" result="$3" items
+  items="$(jq -r '.blocked // [] | .[]' <<< "$result" 2>/dev/null)"
+  [ -n "$items" ] || return 0
+  while IFS= read -r b; do
+    printf '%s\t%s\t%s\n' "$(now_iso)" "$target" "$b" >> "$SPOOL/log/blocked.tsv"
+  done <<< "$items"
+  chmod 644 "$SPOOL/log/blocked.tsv" 2>/dev/null
+  log "  $target: the sandbox refused $(grep -c . <<< "$items") thing(s), see sbfnk-bot-review log"
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
@@ -1001,6 +1020,7 @@ work_on() {
   body="$(jq -r .body <<< "$result")"
   pr_title="$(jq -r '.title // empty' <<< "$result")"
   log "  claude returned $outcome (\$${cost:-?})"
+  note_blocked "$id" "$repo#$n" "$result"
 
   # A run can fill the output with a stand-in and put its real answer
   # elsewhere. Nothing that short is worth sbfnk's time; the note keeps the
@@ -1185,7 +1205,8 @@ UPDATE_SCHEMA='{"type":"object","properties":{
     "id":{"type":"integer"},"kind":{"type":"string"},"body":{"type":"string"},
     "fixed":{"type":"boolean"}},
     "required":["id","kind","body","fixed"]}},
-  "description":{"type":"string"}},
+  "description":{"type":"string"},
+  "blocked":{"type":"array","items":{"type":"string"}}},
   "required":["summary","replies"]}'
 
 update_prompt() {
@@ -1224,6 +1245,11 @@ How to work:
   commit. This is a single run and nothing will wake you later.
 - Install whatever is missing; the R, Julia and Python libraries are yours
   and persist between runs.
+- The run is sandboxed. If something you need is refused (Operation not
+  permitted, a refused host or port, a failed install), try one other way,
+  then list exactly what was refused in "blocked": the command, and the
+  path, host or port. Never mention the sandbox, this machine or what was
+  refused in anything public; say only what was and was not checked.
 - Commit messages are one short line in British English, then a blank line
   and "Co-authored-by: $CO_AUTHOR".
 - Do not push, comment on GitHub or run gh; your reply is published for you.
@@ -1279,6 +1305,7 @@ update_pr() {
     return 0
   fi
 
+  note_blocked "$id" "$repo#$n" "$result"
   strip_bylines "$work" "$head"
   # The text that would go out, and the new commits, for the screens.
   mkdir -p "$dir"

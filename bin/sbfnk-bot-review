@@ -23,8 +23,9 @@
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
 #                                        itself is not redone
-#   sbfnk-bot-review log                 the bot's recent activity, and why
-#                                        its latest failed run failed
+#   sbfnk-bot-review log                 the bot's recent activity, why its
+#                                        latest failed run failed, and what
+#                                        the sandbox refused
 #   sbfnk-bot-review count               how many wait (used by nudge)
 #
 # ID is the number list shows, or any unique prefix of the long id, and may
@@ -190,6 +191,12 @@ case "$cmd" in
         echo "== not edited: the humanizer step did not run =="
         echo
       fi
+      blocked="$(awk -F'\t' -v r="$(meta "$id" .repo)#$(meta "$id" .number)" \
+        '$2 == r {print "- " $3}' "$SPOOL/log/blocked.tsv" 2>/dev/null | tail -10)"
+      if [ -n "$blocked" ]; then
+        echo "== refused by the sandbox on this issue (not published) =="
+        printf '%s\n\n' "$blocked"
+      fi
       echo "== text to publish =="
       cat "$PENDING/$id/text.md"
       if [ -s "$PENDING/$id/diff.patch" ]; then
@@ -227,6 +234,10 @@ case "$cmd" in
     decide "$id" polish "$*" ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
+    if [ -s "$SPOOL/log/blocked.tsv" ]; then
+      printf '\n== refused by the sandbox (latest last) ==\n'
+      tail -15 "$SPOOL/log/blocked.tsv" | awk -F'\t' '{print $1, $2 ": " $3}' | clean
+    fi
     latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"
     if [ -n "$latest" ]; then
       printf '\n== latest failure: %s ==\n' "$(basename "$latest" .txt)"

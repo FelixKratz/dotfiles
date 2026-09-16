@@ -7,6 +7,7 @@
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": false,
     "network": {
+      "allowLocalBinding": true,
       "allowedDomains": [
         "cloud.r-project.org",
         "cran.r-project.org",
