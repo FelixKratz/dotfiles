@@ -33,3 +33,7 @@ else
 fi
 
 find "$DEST" -name 'claude-projects-*.tar.gz' -type f -mtime +"$KEEP_DAYS" -print -delete
+
+# The hourly check can run while tar is still writing and flag the previous
+# snapshot as overdue; clear that now the fresh one is in place.
+[ -x "$HOME/.local/bin/nudge" ] && "$HOME/.local/bin/nudge" clear claude-backup || true
