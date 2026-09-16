@@ -7,11 +7,12 @@ bot=(
   icon=󰚩
   icon.font="Hack Nerd Font:Bold:16.0"
   drawing=off
-  update_freq=600
+  update_freq=120
   updates=on
 )
 
-# bot_update comes from sbfnk-bot-review whenever a decision is recorded.
+# Checked every two minutes and on wake; sbfnk-bot-review also runs the check
+# itself after every decision.
 sketchybar --add event bot_update     \
            --add item bot right       \
            --set bot "${bot[@]}"      \

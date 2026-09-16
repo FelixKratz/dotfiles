@@ -13,8 +13,14 @@ LAST="$HOME/.cache/sketchybar-bot-count"
 [ -d /Users/Shared/sbfnk-bot/pending ] ||
   [ -s "$HOME/.config/dotfiles/bot-host" ] || exit 0
 
-# Unreachable is not the same as nothing waiting: leave the item as it was.
-N=$("$REVIEW" count 2>/dev/null) || exit 0
+# Out of reach (away from its network) there is no count to show: a grey
+# question mark, and no nudge repeating a number that may be long out of date.
+if ! N=$("$REVIEW" count 2>/dev/null); then
+  sketchybar --set "$NAME" drawing=on label="?" icon.color="$GREY"
+  [ -x "$HOME/.local/bin/nudge" ] && "$HOME/.local/bin/nudge" clear sbfnk-bot \
+    >/dev/null 2>&1
+  exit 0
+fi
 N=${N:-0}
 
 PREV=$(cat "$LAST" 2>/dev/null || echo 0)

@@ -37,13 +37,17 @@ HOST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/bot-host"
 
 die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
 
-# A decision changes what waits, so the menu-bar item should not wait for
-# its next timed check to show it.
+# A decision changes what waits, so the menu-bar item and the nudge should
+# not wait for their next timed check. The check runs here and now: an event
+# can be dropped while sketchybar is still running an earlier check, and that
+# earlier check started before this decision.
 refresh_bar() {
+  local plugin="${XDG_CONFIG_HOME:-$HOME/.config}/sketchybar/plugins/bot.sh"
   case "$1" in
     approve|force|answer|discard|polish)
-      command -v sketchybar >/dev/null 2>&1 \
-        && sketchybar --trigger bot_update >/dev/null 2>&1 ;;
+      [ -x "$plugin" ] && command -v sketchybar >/dev/null 2>&1 || return 0
+      NAME=bot CONFIG_DIR="${plugin%/plugins/bot.sh}" "$plugin" \
+        >/dev/null 2>&1 ;;
   esac
   return 0
 }
