@@ -11,7 +11,8 @@
 # Usage:
 #   sbfnk-bot-review                     list work waiting for a decision
 #   sbfnk-bot-review show [ID]           the text, the screen's flags, the diff
-#   sbfnk-bot-review approve [ID]        publish: the draft PR, or the question
+#   sbfnk-bot-review approve [ID]        publish: the draft PR, or the question;
+#                                        for a request, let the bot take it on
 #   sbfnk-bot-review approve --force [ID]
 #                                        publish despite the screen's flags
 #   sbfnk-bot-review answer [ID] [TEXT]  reply privately (TEXT, or stdin):
@@ -182,7 +183,7 @@ case "$cmd" in
         echo "== FLAGGED by the screen: read these before approving =="
         jq -r '.flags[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
         echo
-      else
+      elif [ "$(meta "$id" .outcome)" != request ]; then
         echo "== the screen found nothing to flag =="
         echo
       fi

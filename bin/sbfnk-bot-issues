@@ -294,13 +294,28 @@ answers_file() { echo "$ANSWERS_DIR/${1//\//_}-$2-$3.txt"; }
 # Decide whether an issue wants work now. Echoes the reason, or nothing.
 wants_work() {
   local repo="$1" n="$2" event="$3" actor="$4" rows last detail fails
-  if [ "$actor" != "$OWNER_LOGIN" ]; then
-    log "  skip $repo#$n: assigned by $actor"
-    return 1
-  fi
   if ! allowed_repo "$repo"; then
     log "  skip $repo#$n: not on the allow-list in $ALLOW_FILE"
     return 1
+  fi
+
+  # Someone else's assignment waits for sbfnk to approve it, and the bot does
+  # no work on it until then.
+  if [ "$actor" != "$OWNER_LOGIN" ]; then
+    case "$(ledger_rows "$repo#$n" "$event" | awk -F'\t' '
+      $4 == "requested" || $4 == "approved" || $4 == "declined" {s = $4}
+      END {print s}')" in
+      approved) ;;
+      declined)
+        log "  skip $repo#$n: $actor's assignment was declined"
+        return 1 ;;
+      requested)
+        log "  skip $repo#$n: $actor's assignment waits for approval"
+        return 1 ;;
+      *)
+        $LIST_ONLY || park_request "$repo" "$n" "$event" "$actor"
+        return 1 ;;
+    esac
   fi
 
   rows="$(ledger_rows "$repo#$n" "$event")"
@@ -318,6 +333,11 @@ wants_work() {
       return 1 ;;
     answered)
       echo "answered privately"
+      return 0 ;;
+    requested|declined)
+      return 1 ;;
+    approved)
+      echo "approved assignment"
       return 0 ;;
     comment)
       # detail holds when the question went up; a later reply reopens it.
@@ -840,6 +860,39 @@ note_blocked() {
   log "  $target: the sandbox refused $(grep -c . <<< "$items") thing(s), see sbfnk-bot-review log"
 }
 
+# An assignment by someone other than sbfnk, parked for his approval. Only
+# reads the issue: no clone, no model.
+park_request() {
+  local repo="$1" n="$2" event="$3" actor="$4" id dir issue seq
+  id="${repo//\//_}-$n-request-$(date +%Y%m%d-%H%M%S)"
+  dir="$PENDING/$id"
+  issue="$(bot_gh api "repos/$repo/issues/$n")" || return 1
+  mkdir -p "$dir"
+  {
+    printf '%s assigned this issue to %s.\n\n' "$actor" "$BOT"
+    printf 'Approve to let the bot work on it as if you had assigned it, or answer\n'
+    printf 'to approve with instructions. Its text stays background either way;\n'
+    printf 'only your comments are instructions. Discard to decline.\n\n'
+    printf -- '---\n\n# %s\n\n' "$(jq -r .title <<< "$issue")"
+    jq -r '.body // ""' <<< "$issue" | head -c 4000
+    printf '\n'
+  } > "$dir/text.md"
+  : > "$dir/diff.patch"
+  until shlock -p $$ -f "$STATE_DIR/seq.lock" 2>/dev/null; do sleep 1; done
+  seq="$(next_seq)"
+  jq -n --arg id "$id" --argjson seq "$seq" --arg repo "$repo" --argjson n "$n" \
+    --arg event "$event" --arg actor "$actor" --arg at "$(now_iso)" \
+    --arg title "request from $actor: $(jq -r .title <<< "$issue")" \
+    '{id: $id, seq: $seq, repo: $repo, number: $n, event: $event,
+      outcome: "request", title: $title, requested_by: $actor, created: $at,
+      flags: [], fixed: [], edited: true, work: "", base: "", branch: "",
+      cost_usd: ""}' > "$dir/meta.json"
+  rm -f "$STATE_DIR/seq.lock"
+  chmod -R go+rX "$dir"
+  record "$repo#$n" "$event" requested "$id"
+  log "  parked #$seq ($id): $actor assigned $repo#$n, waiting for approval"
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
@@ -953,6 +1006,31 @@ act_on_decisions() {
     [ "$outcome" = pr ] || body="$(cat "$PENDING/$id/text.md")"
     # Claude Code's own byline, should the attribution setting ever miss.
     body="$(printf '%s\n' "$body" | grep -viE "$BYLINE_RE")"
+
+    # A request to take on someone else's assignment: approving lets the
+    # bot start, an answer approves with instructions, discard declines.
+    if [ "$outcome" = request ]; then
+      case "$verb" in
+        approve|force)
+          log "  $id: approved, the bot takes on $repo#$n"
+          record "$repo#$n" "$event" approved "$id" ;;
+        answer)
+          { printf -- '--- %s\n' "$(now_iso)"; sed '1d' "$decision"; echo; } \
+            >> "$(answers_file "$repo" "$n" "$event")"
+          log "  $id: approved with instructions, the bot takes on $repo#$n"
+          record "$repo#$n" "$event" approved "$id" ;;
+        discard)
+          log "  $id: declined"
+          record "$repo#$n" "$event" declined "$id" ;;
+        *)
+          log "  $id: '$verb' does not apply to a request"
+          echo "$sig" >> "$PENDING/$id/done"
+          continue ;;
+      esac
+      release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
+      rm -rf "${PENDING:?}/$id"
+      continue
+    fi
 
     # An update to an open PR: new commits and replies, nothing else.
     if [ "$outcome" = update ]; then

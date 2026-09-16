@@ -183,8 +183,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   `sbfnk-review-bot`, the bot answers that too, and so on for up to three
   rounds. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
   runs a Remote Control session as you for doing the same from claude.ai or
-  the Claude app; it asks before recording any decision. Only
-  assignments made by sbfnk count, only sbfnk's comments are instructions,
+  the Claude app; it asks before recording any decision. When
+  someone else assigns an issue to the bot, it waits in `sbr` as a request
+  until you approve it, with no work done before then. Only sbfnk's comments
+  are instructions,
   and only repositories in `config/sbfnk-bot/repos` are worked on. Set up a
   machine with `sudo ~/.local/bin/sbfnk-bot-setup install` (see its `--help`); elsewhere,
   put that machine's ssh alias in `~/.config/dotfiles/bot-host`.
