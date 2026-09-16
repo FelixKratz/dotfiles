@@ -171,8 +171,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   privately (an answer to its question, or what to change), `discard` drops
   it, `polish` reruns the editing and screening; items are numbered, so
   `sbfnk-bot-review show 3`. A menu-bar item (click to review), a banner and a
-  nudge say when something waits. Approvals go out within two minutes, even
-  during a long job. A job gets 90 minutes, or `timeout=` minutes set per
+  nudge say when something waits. Up to three jobs run side by side: a second
+  or third starts only while the load average is under 60% of the cores, and
+  each issue or PR is worked on by one job at a time. Approvals go out within
+  two minutes, even during a long job. A job gets 90 minutes, or `timeout=` minutes set per
   repository in `config/sbfnk-bot/repos`, or what a "bot-time: 3h" line in
   your comment or answer asks for (up to six hours). On the draft PRs it opened, your reviews
   and comments are instructions: it answers with new commits and replies,

@@ -87,6 +87,13 @@ MAX_TIMEOUT="${SBFNK_BOT_MAX_TIMEOUT:-21600}"
 MAX_BUDGET="${SBFNK_BOT_MAX_BUDGET_USD:-50}"
 # Scaled with the time a job is given, so a longer job is not cut off by cost.
 RUN_BUDGET="$MAX_BUDGET"
+# Heavy jobs run side by side, up to MAX_JOBS, while the machine has room:
+# a job beyond the first starts only when the load average is under
+# LOAD_PCT per cent of the cores and the jobs before it have been running long
+# enough for the load to show them.
+MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-3}"
+LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-60}"
+SETTLE_SECS=300
 # Failed runs per assignment before the issue is left for a human.
 MAX_ATTEMPTS=2
 
@@ -134,16 +141,58 @@ now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 # own, and an approval never waits behind a long job. shlock clears a lock
 # left by a dead process.
 DECISIONS_LOCK="$STATE_DIR/decisions.lock"
+CLAIMS_DIR="$STATE_DIR/claims"
+mkdir -p "$CLAIMS_DIR"
+HELD=()
+release_all() { rm -f "${HELD[@]+"${HELD[@]}"}"; }
+trap release_all EXIT
+
+# The first slot is always there for a job; a later one only while the
+# machine has room for another.
+room_for_another() {
+  local slot="$1" i lock now load ncpu
+  now=$(date +%s)
+  for i in $(seq 1 $((slot - 1))); do
+    lock="$LOCK_FILE"; [ "$i" -gt 1 ] && lock="$STATE_DIR/lock.$i"
+    [ -f "$lock" ] || return 1
+    [ $((now - $(stat -f %m "$lock"))) -ge "$SETTLE_SECS" ] || return 1
+  done
+  load="$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')"
+  ncpu="$(sysctl -n hw.ncpu 2>/dev/null)"
+  [ -n "$load" ] && [ -n "$ncpu" ] || return 1
+  awk -v l="$load" -v n="$ncpu" -v p="$LOAD_PCT" 'BEGIN { exit !(l < n * p / 100) }'
+}
+
+SLOT=""
 if $DECISIONS_ONLY; then
   shlock -p $$ -f "$DECISIONS_LOCK" || exit 0
-  trap 'rm -f "$DECISIONS_LOCK"' EXIT
+  HELD+=("$DECISIONS_LOCK")
 else
-  if ! shlock -p $$ -f "$LOCK_FILE"; then
-    $INTERACTIVE && echo "another run holds $LOCK_FILE" >&2
+  for i in $(seq 1 "$MAX_JOBS"); do
+    lock="$LOCK_FILE"; [ "$i" -gt 1 ] && lock="$STATE_DIR/lock.$i"
+    shlock -p $$ -f "$lock" 2>/dev/null || continue
+    HELD+=("$lock")
+    if [ "$i" -gt 1 ] && ! room_for_another "$i"; then
+      rm -f "$lock"; HELD=()
+      $INTERACTIVE && echo "no room for job $i (load or settling)" >&2
+      exit 0
+    fi
+    SLOT="$i"
+    break
+  done
+  if [ -z "$SLOT" ]; then
+    $INTERACTIVE && echo "all $MAX_JOBS job slots are busy" >&2
     exit 0
   fi
-  trap 'rm -f "$LOCK_FILE"' EXIT
 fi
+
+# Each issue or PR is worked on by one job at a time.
+claim() {
+  local f="$CLAIMS_DIR/$1.lock"
+  shlock -p $$ -f "$f" 2>/dev/null || return 1
+  HELD+=("$f")
+}
+unclaim() { rm -f "$CLAIMS_DIR/$1.lock"; }
 
 for cmd in gh jq git claude perl; do
   command -v "$cmd" >/dev/null || { log "missing $cmd, exiting"; exit 1; }
@@ -836,7 +885,9 @@ park() {
     fi
   fi
 
-  # Its number, kept when the same item is polished again.
+  # Its number, kept when the same item is polished again. Chosen and
+  # written under a lock, so two jobs parking at once cannot share one.
+  until shlock -p $$ -f "$STATE_DIR/seq.lock" 2>/dev/null; do sleep 1; done
   seq="$(jq -r '.seq // empty' "$dir/meta.json" 2>/dev/null)"
   [ -n "$seq" ] || seq="$(next_seq)"
 
@@ -849,6 +900,7 @@ park() {
       outcome: $outcome, title: $title, base: $base, branch: $branch,
       work: $work, cost_usd: $cost, created: $at, flags: $flags,
       fixed: $fixed, edited: $edited}' > "$dir/meta.json"
+  rm -f "$STATE_DIR/seq.lock"
   chmod -R go+rX "$dir"
   log "  parked #$seq ($id) for review ($(jq length <<< "$flags") flag(s))"
 }
@@ -1341,9 +1393,11 @@ update_pr() {
     publish_update "$id" && return 0
   fi
   # Flagged, or the push failed: sbfnk decides.
+  until shlock -p $$ -f "$STATE_DIR/seq.lock" 2>/dev/null; do sleep 1; done
   seq="$(next_seq)"
   jq --argjson s "$seq" '.seq = $s' "$dir/meta.json" > "$dir/meta.tmp" \
     && mv "$dir/meta.tmp" "$dir/meta.json"
+  rm -f "$STATE_DIR/seq.lock"
   chmod -R go+rX "$dir"
   set_pr_state "$repo" "$n" ".handled_until = \"$started_at\""
   log "  parked #$seq ($id): an update to $repo#$n ($(jq length <<< "$flags") flag(s))"
@@ -1538,10 +1592,19 @@ review_pr() {
 
 # Look after one PR the bot opened. Returns 0 when it did something heavy.
 tend_pr() {
-  local repo="$1" n="$2" pr state since started_at feedback sha draft
+  local repo="$1" n="$2" pr
   pr="$(bot_gh api "repos/$repo/pulls/$n" 2>/dev/null)" || return 1
   [ "$(jq -r .state <<< "$pr")" = open ] || return 1
   pending_for_pr "$repo" "$n" && return 1
+  claim "pr-${repo//\//_}-$n" || return 1
+  tend_pr_inner "$repo" "$n" "$pr" && return 0
+  # Nothing to do here: free it for other jobs straight away.
+  unclaim "pr-${repo//\//_}-$n"
+  return 1
+}
+
+tend_pr_inner() {
+  local repo="$1" n="$2" pr="$3" state since started_at feedback sha draft
   state="$(pr_state "$repo" "$n")"
   since="$(jq -r '.handled_until // empty' <<< "$state")"
   [ -n "$since" ] || since="$(jq -r .created_at <<< "$pr")"
@@ -1587,7 +1650,7 @@ if $DECISIONS_ONLY; then
   exit 0
 fi
 
-log "poll"
+log "poll${SLOT:+ (job $SLOT)}"
 # The light pass may be mid-way through the same decisions; leave them to it.
 if ! $LIST_ONLY && shlock -p $$ -f "$DECISIONS_LOCK"; then
   act_on_decisions
@@ -1627,6 +1690,10 @@ while read -r -u 3 repo n; do
     continue
   fi
   reason="$(wants_work "$repo" "$n" "$event" "$actor")" || continue
+  if ! $LIST_ONLY && ! claim "issue-${repo//\//_}-$n"; then
+    log "  skip $repo#$n: another job is on it"
+    continue
+  fi
   if $LIST_ONLY; then
     log "  would work on $repo#$n ($reason)"
     continue

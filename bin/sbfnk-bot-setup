@@ -47,6 +47,8 @@ OPT=/opt/sbfnk-bot
 SPOOL=/Users/Shared/sbfnk-bot
 LABEL=none.bots.issues
 PLIST=/Library/LaunchDaemons/$LABEL.plist
+# Heavy jobs that may run side by side (see MAX_JOBS in sbfnk-bot-issues).
+JOBS=3
 DECISIONS_LABEL=none.bots.decisions
 DECISIONS_PLIST=/Library/LaunchDaemons/$DECISIONS_LABEL.plist
 SECRETS=$BOT_HOME/.config/sbfnk-bot
@@ -272,7 +274,19 @@ RPROFILE
     say "installed juliaup for $BOT_USER"
   fi
 
+  # launchd runs one copy of a job, so each concurrent job slot is a daemon of
+  # its own; the script decides whether there is room for it.
   write_daemon "$PLIST" "$LABEL" 600 ""
+  for i in $(seq 2 "$JOBS"); do
+    write_daemon "/Library/LaunchDaemons/$LABEL$i.plist" "$LABEL$i" 600 ""
+  done
+  for f in /Library/LaunchDaemons/"$LABEL"[0-9]*.plist; do
+    [ -f "$f" ] || continue
+    i="$(basename "$f" .plist)"; i="${i#"$LABEL"}"
+    [ "$i" -le "$JOBS" ] && continue
+    launchctl bootout "system/$LABEL$i" 2>/dev/null || true
+    rm -f "$f"
+  done
   write_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL" 120 --decisions
   say "wrote $PLIST and $DECISIONS_PLIST (not started)"
 
@@ -349,15 +363,19 @@ case "${1:-}" in
     [ -f "$PLIST" ] && [ -f "$DECISIONS_PLIST" ] || die "run install first"
     # The light pass first: restarting it never interrupts real work.
     restart_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL"
-    if [ "${2:-}" = --keep-running ] \
-      && launchctl print "system/$LABEL" 2>/dev/null | grep -q 'state = running'; then
-      say "left $LABEL running; it picks up the new copy at its next start"
-    else
-      restart_daemon "$PLIST" "$LABEL"
-    fi
+    for i in "" $(seq 2 "$JOBS"); do
+      p="/Library/LaunchDaemons/$LABEL$i.plist"
+      [ -f "$p" ] || continue
+      if [ "${2:-}" = --keep-running ] \
+        && launchctl print "system/$LABEL$i" 2>/dev/null | grep -q 'state = running'; then
+        say "left $LABEL$i running; it picks up the new copy at its next start"
+      else
+        restart_daemon "$p" "$LABEL$i"
+      fi
+    done
     say "started; heavy work polls every ten minutes, decisions every two" ;;
   disable)
-    for l in "$DECISIONS_LABEL" "$LABEL"; do
+    for l in "$DECISIONS_LABEL" "$LABEL" $(for i in $(seq 2 "$JOBS"); do echo "$LABEL$i"; done); do
       if launchctl bootout "system/$l" 2>/dev/null; then
         say "stopped $l"
       else
