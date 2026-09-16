@@ -1,0 +1,6 @@
+[Unit]
+Description=Reconcile per-project Claude memory across machine path variants
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-memory-union

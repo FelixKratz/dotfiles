@@ -366,6 +366,9 @@ if [[ "$OS" == "Linux" ]] && command -v systemctl >/dev/null 2>&1; then
   fi
   systemctl --user enable --now nudge-check.timer 2>/dev/null && \
     echo "Enabled nudge-check.timer"
+  # Keep per-project Claude memory unified across the macOS/Linux path variants.
+  systemctl --user enable --now claude-memory-union.timer 2>/dev/null && \
+    echo "Enabled claude-memory-union.timer"
 fi
 
 # Link scripts to ~/.local/bin, from the public repo and from dotfiles_private

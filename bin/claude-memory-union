@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# claude-memory-union — reconcile per-project Claude memory across machines.
+#
+# Claude Code names each project's history dir after its absolute path, so the
+# same repo gets a different dir on each machine (…-Volumes-code-EpiNow2 on
+# macOS, …-home-eidesfun-code-EpiNow2 on Linux). Syncthing copies the small
+# memory/*.md files across but keeps the dirs separate, so memory written on one
+# machine never reaches the project dir the other machine reads.
+#
+# This unions the memory/ files across every project dir that maps to the same
+# repo (grouped by the path tail after the first "-code-"): the newest copy of
+# each file is propagated into every sibling dir. It is additive — nothing is
+# ever deleted — so it is safe to run on a schedule. Running it on one machine
+# is enough: writes into the sibling dir sync back via Syncthing.
+set -uo pipefail
+
+# Schedulers start with a minimal PATH; keep coreutils reachable.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+PROJECTS="${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}"
+
+log() { echo "$(date '+%F %T') $*"; }
+
+[ -d "$PROJECTS" ] || { log "no projects dir: $PROJECTS"; exit 0; }
+
+copied=0
+
+# union_pair SRC DST — copy each SRC/memory file into DST/memory when DST lacks
+# it or holds an older, differing copy. Never deletes.
+union_pair() {
+  local src="$1/memory" dst="$2/memory" f name target
+  [ -d "$src" ] || return 0
+  for f in "$src"/*; do
+    [ -f "$f" ] || continue
+    name=$(basename "$f")
+    target="$dst/$name"
+    if [ ! -f "$target" ]; then
+      mkdir -p "$dst"; cp -p "$f" "$target"; copied=$((copied + 1))
+      log "copy $(basename "$1")/$name -> $(basename "$2")"
+    elif ! cmp -s "$f" "$target" && [ "$f" -nt "$target" ]; then
+      cp -p "$f" "$target"; copied=$((copied + 1))
+      log "update $(basename "$2")/$name (from $(basename "$1"))"
+    fi
+  done
+}
+
+# union every ordered pair within a group of sibling dirs.
+dirs=()
+flush() {
+  local a b
+  if [ "${#dirs[@]}" -ge 2 ]; then
+    for a in "${dirs[@]}"; do
+      for b in "${dirs[@]}"; do
+        [ "$a" = "$b" ] && continue
+        union_pair "$a" "$b"
+      done
+    done
+  fi
+  dirs=()
+}
+
+# Build "<repo-key>\t<dir>" lines, sort by key, then flush each key run. bash
+# 3.2 has no associative arrays, so group via a sorted stream instead.
+groupfile=$(mktemp)
+for d in "$PROJECTS"/*-code-*; do
+  [ -d "$d" ] || continue
+  base=$(basename "$d")
+  printf '%s\t%s\n' "${base#*-code-}" "$d" >> "$groupfile"
+done
+
+prev=""
+while IFS=$'\t' read -r key dir; do
+  [ -n "$prev" ] && [ "$key" != "$prev" ] && flush
+  dirs+=("$dir")
+  prev="$key"
+done < <(sort "$groupfile")
+flush
+rm -f "$groupfile"
+
+log "done: $copied file(s) reconciled"
