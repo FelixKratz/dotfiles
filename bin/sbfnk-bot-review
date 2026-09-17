@@ -10,7 +10,10 @@
 #
 # Usage:
 #   sbfnk-bot-review                     list work waiting for a decision
-#   sbfnk-bot-review show [ID]           the text, the screen's flags, the diff
+#   sbfnk-bot-review show [ID]           the text, the screen's flags, the
+#                                        commits and the files changed
+#   sbfnk-bot-review diff [ID]           the full diff, in a pager
+#                                        (also: show --diff [ID])
 #   sbfnk-bot-review approve [ID]        publish: the draft PR, or the question;
 #                                        for a request, let the bot take it on
 #   sbfnk-bot-review approve --force [ID]
@@ -141,6 +144,16 @@ decide() {
 
 meta() { jq -r "$2" "$PENDING/$1/meta.json"; }
 
+# The full commits and diff, paged when there is a terminal to page on.
+show_diff() {
+  [ -s "$PENDING/$1/diff.patch" ] || { echo "#$(meta "$1" '.seq // empty') has no diff"; return 0; }
+  if [ -t 1 ]; then
+    clean < "$PENDING/$1/diff.patch" | ${PAGER:-less}
+  else
+    clean < "$PENDING/$1/diff.patch"
+  fi
+}
+
 cmd="${1:-list}"
 [ $# -gt 0 ] && shift
 
@@ -162,7 +175,16 @@ case "$cmd" in
   count)
     # grep -c exits 1 on a count of 0, which is an answer, not a failure.
     waiting | grep -c . || true ;;
+  diff)
+    id="$(resolve "${1:-}")" || exit 1
+    show_diff "$id" ;;
   show)
+    if [ "${1:-}" = --diff ]; then
+      shift
+      id="$(resolve "${1:-}")" || exit 1
+      show_diff "$id"
+      exit 0
+    fi
     id="$(resolve "${1:-}")" || exit 1
     {
       printf '#%s %s %s#%s: %s\n' "$(meta "$id" '.seq // "-"')" \
@@ -202,8 +224,15 @@ case "$cmd" in
       cat "$PENDING/$id/text.md"
       if [ -s "$PENDING/$id/diff.patch" ]; then
         echo
-        echo "== commits and diff =="
-        cat "$PENDING/$id/diff.patch"
+        echo "== commits =="
+        # Everything before the first file diff: each commit's message.
+        awk '/^diff --git /{exit} {print}' "$PENDING/$id/diff.patch"
+        echo "== files changed (sbr diff $(meta "$id" '.seq // empty') for the diff) =="
+        awk '/^diff --git /{f=$3; sub(/^a\//, "", f); files[++n]=f}
+             /^\+[^+]/{add[n]++} /^-[^-]/{del[n]++}
+             END {for (i = 1; i <= n; i++)
+                    printf "  %s  +%d -%d\n", files[i], add[i], del[i]}' \
+          "$PENDING/$id/diff.patch"
       fi
     } | clean ;;
   approve)
