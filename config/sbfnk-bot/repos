@@ -1,13 +1,33 @@
-# Where sbfnk-bot-issues may open draft pull requests.
+# Where sbfnk-bot works: issues assigned to it here are taken on (or, when
+# someone else assigned them, wait for sbfnk's approval). Assignments anywhere
+# else are logged and left alone, except on issues sbfnk-bot opened itself,
+# which are allowed wherever they are.
 #
-# One entry per line: an owner (every repository it has) or owner/repo.
-# Issues assigned to sbfnk-bot anywhere else are logged and left alone.
+# One entry per line: an owner (every repository it has) or owner/repo. The
+# owners are sbfnk's own account and the organisations he is a member of.
 #
 # "timeout=MINUTES" after an entry gives its jobs longer than the default;
 # owner/repo wins over owner. A single job can ask for more with a line
 # "bot-time: 3h" in sbfnk's comment or private answer.
+sbfnk
+cirm-epidemic-surveillance-systems
+cmmid
+cmmidanalysis
+ecorecipes
+epicentre-msf
+EpiAware
 epiforecasts
 epiforecasts/EpiNow2 timeout=180
+epinowcast
+epiverse-tools
+epiverse-trace
+european-modelling-hubs
+Hackout2
+hubverse-org
+informatics-lab-covid-19-pangeo
+JuliaEpi
+JuliaForecasting
 mfiidd
 nfidd
-sbfnk
+socialcontactdata
+TuringLang

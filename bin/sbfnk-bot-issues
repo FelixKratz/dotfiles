@@ -294,7 +294,10 @@ answers_file() { echo "$ANSWERS_DIR/${1//\//_}-$2-$3.txt"; }
 # Decide whether an issue wants work now. Echoes the reason, or nothing.
 wants_work() {
   local repo="$1" n="$2" event="$3" actor="$4" rows last detail fails
-  if ! allowed_repo "$repo"; then
+  # An issue sbfnk-bot opened itself is allowed wherever it is: the bot only
+  # opens issues where it was already working for sbfnk.
+  if ! allowed_repo "$repo" \
+    && [ "$(bot_gh api "repos/$repo/issues/$n" --jq .user.login 2>/dev/null)" != "$BOT" ]; then
     log "  skip $repo#$n: not on the allow-list in $ALLOW_FILE"
     return 1
   fi
