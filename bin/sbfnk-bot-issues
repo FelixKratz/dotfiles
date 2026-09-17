@@ -512,6 +512,19 @@ prepare_clone() {
   git -C "$work" checkout --quiet -b "$branch" >/dev/null 2>&1
 }
 
+# pandoc, for rendering vignettes and documents. On a machine with Quarto
+# but no pandoc of its own, Quarto's bundled copy is put on the model's PATH,
+# and RSTUDIO_PANDOC points rmarkdown at it.
+PANDOC_DIR=""
+if ! command -v pandoc >/dev/null 2>&1 && command -v quarto >/dev/null 2>&1; then
+  quarto_bin="$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' \
+    "$(command -v quarto)")")"
+  arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
+  for d in "$quarto_bin/tools/$arch" "$quarto_bin/tools"; do
+    [ -x "$d/pandoc" ] && { PANDOC_DIR="$d"; break; }
+  done
+fi
+
 # claude with the bot's own subscription token, in English whatever the
 # machine's locale (R's messages and the tests that match them follow it),
 # and a configuration
@@ -538,6 +551,8 @@ run_model() {
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
     CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS=-j4 \
+    PATH="$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
+    ${PANDOC_DIR:+RSTUDIO_PANDOC="$PANDOC_DIR"} \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
     GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
     perl -e 'alarm shift; exec @ARGV' "$TIMEOUT" \
