@@ -96,6 +96,9 @@ LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-60}"
 SETTLE_SECS=300
 # Failed runs per assignment before the issue is left for a human.
 MAX_ATTEMPTS=2
+# When a run meets the plan's usage limit, all model work waits until this
+# time (epoch seconds), and the run does not count as a failed attempt.
+LIMIT_FILE="$STATE_DIR/limited-until"
 
 mkdir -p "$STATE_DIR" "$RUNS_DIR" "$ANSWERS_DIR" "$CACHE_DIR/repos" \
   "$CACHE_DIR/work" "$PENDING" "$(dirname "$LOG_FILE")"
@@ -587,8 +590,45 @@ fi
 # once returned a stand-in and lost its work. Subagents are off too, and
 # builds use at most four cores, so a run stays one process that leaves room
 # for the rest of the machine.
+# Usage-limit messages carry the reset either as an epoch ("…|1758157200") or
+# as a clock time ("resets 2am"). Anything else, or a time that cannot be
+# read, waits an hour: a run refused at the limit costs nothing, so trying
+# again early only means pausing again.
+note_limit() {
+  local msg until at h m ampm
+  msg="$(jq -r 'select(.is_error == true) | .result // empty' "$1" 2>/dev/null)"
+  grep -qiE 'usage limit|hit your limit|limit reached|out of extra usage' \
+    <<< "$msg" || return 1
+  until="$(grep -oE '\|[0-9]{10}' <<< "$msg" | tr -d '|' | head -1)"
+  if [ -z "$until" ]; then
+    at="$(grep -oiE 'resets( at)? [0-9]{1,2}(:[0-9]{2})? ?[ap]m' <<< "$msg" \
+      | head -1 | grep -oiE '[0-9]{1,2}(:[0-9]{2})? ?[ap]m' | tr -d ' ')"
+    if [ -n "$at" ]; then
+      h="${at%%[:apAP]*}"; m=0
+      case "$at" in *:*) m="${at#*:}"; m="${m%%[apAP]*}" ;; esac
+      ampm="$(tr '[:upper:]' '[:lower:]' <<< "${at: -2}")"
+      h=$((10#$h % 12)); [ "$ampm" = pm ] && h=$((h + 12))
+      until="$(date -j -v"${h}"H -v"$((10#$m))"M -v0S +%s 2>/dev/null)"
+      [ -n "$until" ] && [ "$until" -le "$(date +%s)" ] \
+        && until=$((until + 86400))
+    fi
+  fi
+  [ -n "$until" ] || until=$(( $(date +%s) + 3600 ))
+  # A few minutes' grace: the reset is not always to the second.
+  until=$((until + 300))
+  echo "$until" > "$LIMIT_FILE"
+  log "  usage limit reached; model work waits until $(date -r "$until" '+%a %H:%M')"
+}
+
+# True while the usage limit holds.
+limited() {
+  local until
+  until="$(cat "$LIMIT_FILE" 2>/dev/null)"
+  [ -n "$until" ] && [ "$until" -gt "$(date +%s)" ]
+}
+
 run_model() {
-  local config="$1" cache temp; shift
+  local config="$1" cache temp out rc; shift
   mkdir -p "$config"
   # Apple's toolchain keeps its cache in the account's own cache and temp
   # folders under /var/folders, whatever TMPDIR says, so without them every
@@ -610,7 +650,11 @@ run_model() {
     claude --setting-sources local --settings "$config/settings.json" \
       --strict-mcp-config --output-format json \
       --disallowedTools ScheduleWakeup Monitor CronCreate RemoteTrigger \
-      PushNotification Agent Task "$@" < /dev/null
+      PushNotification Agent Task "$@" < /dev/null > "$config/out.json"
+  rc=$?
+  note_limit "$config/out.json"
+  cat "$config/out.json"
+  return $rc
 }
 
 run_claude() {
@@ -1206,6 +1250,10 @@ work_on() {
     "$base" "$(cat "$run/issue.txt")")" "$out" "$run/claude"
   cost="$(jq -r '.total_cost_usd // empty' "$out" 2>/dev/null)"
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
+  if [ -z "$result" ] && limited; then
+    log "  $repo#$n: stopped by the usage limit, taken up again after the reset"
+    return 1
+  fi
   if [ -z "$result" ]; then
     failure_note "$id" "$run" "$out" "$(( $(date +%s) - started ))"
     log "  no usable result for $repo#$n, see $SPOOL/log/failures/$id.txt"
@@ -1507,6 +1555,10 @@ update_pr() {
     > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   summary="$(jq -r '.summary // ""' <<< "$result" 2>/dev/null)"
+  if [ -z "$result" ] && limited; then
+    log "  $repo#$n: stopped by the usage limit, taken up again after the reset"
+    return 0
+  fi
   if [ -z "$result" ] \
     || [ "$(printf '%s' "$summary" | tr -d '[:space:]' | wc -c)" -lt 20 ]; then
     failure_note "$id" "$run" "$out" 0
@@ -1693,6 +1745,10 @@ review_pr() {
     ${MODEL:+--model "$MODEL"} --max-budget-usd "$RUN_BUDGET" \
     --json-schema "$REVIEW_SCHEMA" > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
+  if [ -z "$result" ] && limited; then
+    log "  the review of $repo#$n was stopped by the usage limit"
+    return 0
+  fi
   if [ -z "$result" ]; then
     failure_note "$id" "$run" "$out" 0
     log "  the review of $repo#$n gave nothing back"
@@ -1809,6 +1865,11 @@ if $DECISIONS_ONLY; then
 fi
 
 log "poll${SLOT:+ (job $SLOT)}"
+# Decisions that need no model still go out from the light pass.
+if ! $LIST_ONLY && limited; then
+  log "  usage limit: waiting until $(date -r "$(cat "$LIMIT_FILE")" '+%a %H:%M')"
+  exit 0
+fi
 # The light pass may be mid-way through the same decisions; leave them to it.
 if ! $LIST_ONLY && shlock -p $$ -f "$DECISIONS_LOCK"; then
   act_on_decisions
