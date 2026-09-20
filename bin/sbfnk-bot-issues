@@ -1105,6 +1105,8 @@ act_on_decisions() {
     # on work that stays parked (polish) are remembered by their mtime.
     sig="$(stat -f %m "$decision")"
     grep -qx "$sig" "$PENDING/$id/done" 2>/dev/null && continue
+    # A decision of sbfnk's own gets a clean slate.
+    rm -f "$PENDING/$id/stuck"
     verb="$(head -1 "$decision" | tr -d '[:space:]')"
     repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
     event="$(jq -r .event "$meta")"; outcome="$(jq -r .outcome "$meta")"
@@ -1150,7 +1152,7 @@ act_on_decisions() {
             log "  $id: approval needs --force, the screen flagged it"
             continue
           fi
-          publish_update "$id" || continue ;;
+          publish_update "$id" "$sig" || continue ;;
         discard)
           set_pr_state "$repo" "$n" \
             ".handled_until = \"$(jq -r .handled_until "$meta")\""
@@ -1615,9 +1617,27 @@ update_pr() {
 }
 
 # Push the new commits and post the replies of a prepared update.
+# Publishing can fail for good (the PR was merged) or for now (GitHub was
+# down). The reason is kept beside the work so "sbr show" gives it, and after
+# PUBLISH_ATTEMPTS tries the decision is marked carried out so the bot stops
+# retrying it every pass; a fresh decision starts it again.
+PUBLISH_ATTEMPTS=3
+publish_failed() {
+  local id="$1" reason="$2" tries
+  printf '%s %s\n' "$(now_iso)" "$reason" >> "$PENDING/$id/publish-errors"
+  tries="$(grep -c . "$PENDING/$id/publish-errors" 2>/dev/null)"
+  log "  $id: $reason"
+  if [ "${tries:-1}" -ge "$PUBLISH_ATTEMPTS" ]; then
+    log "  $id: publishing failed $tries times, left for you (sbr show)"
+    echo "${3:-0}" >> "$PENDING/$id/done"
+    : > "$PENDING/$id/stuck"
+  fi
+  return 1
+}
+
 publish_update() {
   local id="$1" dir="$PENDING/$1" meta repo n head work upd body f sha
-  local threads cid tid
+  local threads cid tid state err
   meta="$dir/meta.json"
   repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
   head="$(jq -r .head "$meta")"; work="$(jq -r .work "$meta")"
@@ -1627,10 +1647,19 @@ publish_update() {
     log "  $id: refused, the text matched a credential shape"
     return 1
   fi
+  # A PR merged or closed since the work was parked takes no more commits.
+  state="$(bot_gh api "repos/$repo/pulls/$n" \
+    --jq 'if .merged then "merged" else .state end' 2>/dev/null)"
+  case "$state" in
+    merged|closed)
+      publish_failed "$id" "$repo#$n was $state before this went out" "$2"
+      return 1 ;;
+  esac
   if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
     # Fast-forward only: if the branch moved meanwhile, sbfnk decides.
-    bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" \
-      >/dev/null 2>&1 || { log "  $id: push to $head failed"; return 1; }
+    err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" 2>&1)" \
+      || { publish_failed "$id" "push to $head failed: $(printf '%s' "$err" \
+        | grep -v '^remote:' | grep . | tail -1)" "$2"; return 1; }
   fi
   f="$(mktemp)"
   sha="$(git -C "$work" rev-parse HEAD)"

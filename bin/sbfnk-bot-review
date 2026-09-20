@@ -104,7 +104,8 @@ waiting() {
   for d in "$PENDING"/*/; do
     [ -f "$d/meta.json" ] || continue
     id="$(basename "$d")"
-    [ "${1:-}" = all ] || undecided "$id" || continue
+    # Work whose publication was given up on comes back for a decision.
+    [ "${1:-}" = all ] || undecided "$id" || [ -f "$d/stuck" ] || continue
     echo "$id"
   done
 }
@@ -167,10 +168,12 @@ case "$cmd" in
       printf '%s\t%s\n' "$(meta "$id" '.seq // 999')" "$id"
     done | sort -n | cut -f2)"
     for id in $ids; do
-      printf '#%-3s %s %s#%s: %s (%s flag(s))\n' \
+      printf '#%-3s %s %s#%s: %s (%s)\n' \
         "$(meta "$id" '.seq // "-"')" "$(meta "$id" .outcome)" \
         "$(meta "$id" .repo)" "$(meta "$id" .number)" \
-        "$(meta "$id" .title | clean)" "$(meta "$id" '.flags | length')"
+        "$(meta "$id" .title | clean)" \
+        "$(if [ -f "$PENDING/$id/stuck" ]; then echo "could not be published"; \
+           else echo "$(meta "$id" '.flags | length') flag(s)"; fi)"
     done ;;
   count)
     # grep -c exits 1 on a count of 0, which is an answer, not a failure.
@@ -212,6 +215,11 @@ case "$cmd" in
       if [ "$(meta "$id" .outcome)" = pr ] \
         && [ "$(meta "$id" '.edited // false')" != true ]; then
         echo "== not edited: the humanizer step did not run =="
+        echo
+      fi
+      if [ -s "$PENDING/$id/publish-errors" ]; then
+        echo "== could not be published (latest last) =="
+        cat "$PENDING/$id/publish-errors"
         echo
       fi
       blocked="$(awk -F'\t' -v r="$(meta "$id" .repo)#$(meta "$id" .number)" \

@@ -178,7 +178,9 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   repository in `config/sbfnk-bot/repos`, or what a "bot-time: 3h" line in
   your comment or answer asks for (up to six hours). A run stopped by the
   plan's usage limit does not count as a failure: model work waits for the
-  reset and takes the job up again, while approvals keep going out. On the draft PRs it opened, your reviews
+  reset and takes the job up again, while approvals keep going out. Work
+  that cannot go out after all — the PR was merged while it waited — comes
+  back into `sbr` with the reason rather than being retried for ever. On the draft PRs it opened, your reviews
   and comments are instructions: it answers with new commits and replies,
   pushed straight away when the screen is clean. Mark a PR ready for review
   and, once your comments are answered, a fresh reviewer goes over it as
