@@ -497,7 +497,9 @@ How to work:
   refused in anything public; say only what was and was not checked.
 - Install whatever the repository needs that is missing. The R, Julia and
   Python libraries are yours and persist between runs, so a package installs
-  once and is there next time. R installs binaries from CRAN; Julia is
+  once and is there next time, and so does what Julia precompiles: a cold
+  instantiate is paid once and leaves the next run warm, so let it finish
+  rather than skipping the check it was for. R installs binaries from CRAN; Julia is
   juliaup. Say so in the text only if something cannot be installed and
   leaves part of the work unverified.
 - Keep the change to what the issue asks for. Note other problems you
@@ -648,6 +650,7 @@ run_model() {
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
     CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS=-j4 \
+    JULIA_NUM_PRECOMPILE_TASKS=4 \
     PATH="$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
     ${PANDOC_DIR:+RSTUDIO_PANDOC="$PANDOC_DIR"} \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \

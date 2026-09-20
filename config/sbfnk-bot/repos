@@ -17,6 +17,7 @@ ecorecipes
 epicentre-msf
 EpiAware
 epiforecasts
+epiforecasts/EpiBranch.jl timeout=180
 epiforecasts/EpiNow2 timeout=180
 epinowcast
 epiverse-tools

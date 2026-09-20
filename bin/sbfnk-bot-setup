@@ -349,7 +349,10 @@ case "${1:-}" in
     as_bot 'Rscript -e "v <- tryCatch(cmdstanr::cmdstan_version(error_on_NA = FALSE), error = function(e) NULL); if (is.null(v)) cmdstanr::install_cmdstan(cores = 4) else cat(\"cmdstan\", v, \"already installed\n\")"' \
       2>&1 | tail -3
     if [ -x "$BOT_HOME/.juliaup/bin/julia" ]; then
-      as_bot "$BOT_HOME/.juliaup/bin/julia --startup-file=no -e 'using Pkg; Pkg.activate(\"tools\"; shared = true); Pkg.add(\"JuliaFormatter\"); Pkg.precompile()'" \
+      # Julia keeps a package's precompiled cache under ~/.julia/compiled by
+      # version, and every project using that version reads it, so warming
+      # the heavy ones here spares each run ten minutes of cold precompiling.
+      as_bot "$BOT_HOME/.juliaup/bin/julia --startup-file=no -e 'using Pkg; Pkg.activate(\"tools\"; shared = true); Pkg.add([\"JuliaFormatter\", \"Documenter\", \"Aqua\", \"Turing\", \"Distributions\", \"ForwardDiff\", \"Mooncake\", \"DifferentiationInterface\", \"DifferentiationInterfaceTest\", \"DataFrames\", \"BenchmarkTools\"]); Pkg.precompile()'" \
         2>&1 | tail -2
     fi
     if command -v pipx >/dev/null; then
