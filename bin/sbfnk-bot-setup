@@ -138,7 +138,16 @@ OWNER_HOME="$(dscl . -read "/Users/$OWNER" NFSHomeDirectory | awk '{print $2}')"
 
 # From the bot's home: the caller's working directory is usually inside a
 # home folder the bot cannot enter, and the installers need a readable one.
-as_bot() { (cd "$BOT_HOME" && sudo -u "$BOT_USER" -H /bin/bash -c "$1"); }
+# The same PATH a run gets, so what is seeded here is what a run finds: the
+# CRAN framework's R ahead of a Homebrew one, which builds from source.
+BOT_PATH="/opt/homebrew/bin:/usr/local/bin:$BOT_HOME/.local/bin"
+BOT_PATH="$BOT_PATH:$BOT_HOME/.juliaup/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+[ -x /Library/Frameworks/R.framework/Resources/bin/Rscript ] \
+  && BOT_PATH="/Library/Frameworks/R.framework/Resources/bin:$BOT_PATH"
+as_bot() {
+  (cd "$BOT_HOME" && sudo -u "$BOT_USER" -H \
+    /usr/bin/env "PATH=$BOT_PATH" /bin/bash -c "$1")
+}
 
 store_secret() {
   local name="$1" value

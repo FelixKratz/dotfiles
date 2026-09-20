@@ -46,8 +46,12 @@
 set -uo pipefail
 
 # launchd hands over a minimal PATH; claude, gh and git live elsewhere.
+# The CRAN framework goes first where it exists: its R takes CRAN's macOS
+# binaries, while a Homebrew R builds every package from source.
 PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.juliaup/bin"
 PATH="$PATH:/usr/bin:/bin:/usr/sbin:/sbin"
+R_FRAMEWORK=/Library/Frameworks/R.framework/Resources/bin
+[ -x "$R_FRAMEWORK/Rscript" ] && PATH="$R_FRAMEWORK:$PATH"
 export PATH
 
 BOT=sbfnk-bot
