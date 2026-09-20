@@ -162,8 +162,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   works on it, publishing nothing until you approve. It runs every 10 min as
   its own macOS account, which cannot read your home folder, and Claude works
   in a sandboxed clone with a fresh configuration, no GitHub access and
-  nothing but the issue and the repository. The PR text goes through your
-  humanizer, cut to what a reviewer needs, and a second model with no tools
+  nothing but the issue and the repository. Your humanizer edits what it
+  publishes — the PR text, cut to what a reviewer needs, its questions, and
+  the prose it adds to the repository — and follows your edits to the skill
+  through an agent of your own. A second model with no tools
   screens text and every commit for anything the issue and the repository do
   not account for; anything flagged gets one round of fixing and a second
   screen. The work then waits for `bin/sbfnk-bot-review`: `approve`

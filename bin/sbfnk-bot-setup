@@ -135,6 +135,8 @@ esac
 OWNER="${SUDO_USER:-}"
 [ -n "$OWNER" ] && [ "$OWNER" != root ] || die "run with sudo from your own account"
 OWNER_HOME="$(dscl . -read "/Users/$OWNER" NFSHomeDirectory | awk '{print $2}')"
+OWNER_UID="$(id -u "$OWNER")"
+HUMANIZER_LABEL=none.bots.humanizer
 
 # From the bot's home: the caller's working directory is usually inside a
 # home folder the bot cannot enter, and the installers need a readable one.
@@ -163,6 +165,49 @@ store_secret() {
 
 # A LaunchDaemon running the bot as its own account, at low priority:
 #   $1 plist path  $2 label  $3 interval in seconds  $4 extra argument
+# An agent in $OWNER's own session: it pulls the humanizer clone and copies
+# the skill where the bot reads it, when the file changes and twice an hour.
+write_humanizer_agent() {
+  local plist="$OWNER_HOME/Library/LaunchAgents/$HUMANIZER_LABEL.plist"
+  local skill="$OWNER_HOME/.claude/skills/humanizer/SKILL.md"
+  install -d -o "$OWNER" -g staff -m 755 "$OWNER_HOME/Library/LaunchAgents"
+  cat > "$plist" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$HUMANIZER_LABEL</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>git -C "\$HOME/.claude/skills/humanizer" pull --quiet --ff-only 2&gt;/dev/null; cp "\$HOME/.claude/skills/humanizer/SKILL.md" "$SPOOL/humanizer.md" &amp;&amp; chmod 644 "$SPOOL/humanizer.md"</string>
+	</array>
+	<key>WatchPaths</key>
+	<array>
+		<string>$skill</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>1800</integer>
+	<key>RunAtLoad</key>
+	<true/>
+</dict>
+</plist>
+PLISTEOF
+  chown "$OWNER:staff" "$plist"
+  chmod 644 "$plist"
+  sudo -u "$OWNER" launchctl bootout "gui/$OWNER_UID/$HUMANIZER_LABEL" \
+    2>/dev/null || true
+  if sudo -u "$OWNER" launchctl bootstrap "gui/$OWNER_UID" "$plist" 2>/dev/null
+  then
+    say "the humanizer follows your edits (agent $HUMANIZER_LABEL)"
+  else
+    say "wrote $plist; load it in your own session with:"
+    say "  launchctl bootstrap gui/\$(id -u) $plist"
+  fi
+}
+
 write_daemon() {
   local plist="$1" label="$2" interval="$3" arg="$4" argxml=""
   [ -n "$arg" ] && argxml="
@@ -242,6 +287,10 @@ install_all() {
   if [ -r "$OWNER_HOME/.claude/skills/humanizer/SKILL.md" ]; then
     install -o root -g wheel -m 644 \
       "$OWNER_HOME/.claude/skills/humanizer/SKILL.md" "$OPT/humanizer.md"
+    # The copy in /opt is a floor. $OWNER goes on editing the skill, so an
+    # agent of his own keeps $SPOOL/humanizer.md current, and a run prefers
+    # that: /opt stays root's, which is why the live copy sits in the spool.
+    write_humanizer_agent
   else
     say "no humanizer skill in $OWNER_HOME/.claude/skills; PR text goes unedited"
   fi
@@ -363,9 +412,11 @@ case "${1:-}" in
   deps)
     say "installing shared dependencies as $BOT_USER; this takes a while"
     # Packages built under a different R keep working until they do not, so
-    # anything built elsewhere is replaced before the rest goes in.
-    as_bot 'Rscript -e "update.packages(ask = FALSE, checkBuilt = TRUE)"' \
-      2>&1 | tail -2
+    # anything built elsewhere is replaced before the rest goes in. An empty
+    # or missing library has nothing to replace, and a failure here leaves
+    # the installs below to do the work.
+    as_bot 'Rscript -e "lib <- Sys.getenv(\"R_LIBS_USER\"); dir.create(lib, recursive = TRUE, showWarnings = FALSE); if (length(list.files(lib))) try(update.packages(lib.loc = lib, ask = FALSE, checkBuilt = TRUE))"' \
+      2>&1 | tail -2 || true
     as_bot 'Rscript -e "install.packages(c(\"devtools\", \"testthat\", \"lintr\", \"roxygen2\", \"rstan\", \"rstantools\", \"cmdstanr\", \"data.table\", \"posterior\"), repos = c(CRAN = \"https://cloud.r-project.org\", \"https://stan-dev.r-universe.dev\"))"' \
       2>&1 | tail -3
     as_bot 'Rscript -e "v <- tryCatch(cmdstanr::cmdstan_version(error_on_NA = FALSE), error = function(e) NULL); if (is.null(v)) cmdstanr::install_cmdstan(cores = 4) else cat(\"cmdstan\", v, \"already installed\n\")"' \

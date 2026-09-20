@@ -65,8 +65,6 @@ BOT_EMAIL="242615673+sbfnk-bot@users.noreply.github.com"
 CONFIG_DIR="${SBFNK_BOT_CONFIG:-$(cd "$(dirname "$0")" && pwd)}"
 ALLOW_FILE="$CONFIG_DIR/repos"
 SETTINGS_FILE="$CONFIG_DIR/claude-settings.json"
-# sbfnk's humanizer skill, copied here by sbfnk-bot-setup install.
-HUMANIZER="$CONFIG_DIR/humanizer.md"
 SECRETS_DIR="$HOME/.config/sbfnk-bot"
 # Shared with sbfnk: the bot writes pending/ and log/, sbfnk writes
 # decisions/, and neither can write the other's.
@@ -75,6 +73,10 @@ PENDING="$SPOOL/pending"
 DECISIONS="$SPOOL/decisions"
 LOG_FILE="$SPOOL/log/activity.log"
 LEDGER="$SPOOL/log/ledger.tsv"
+# sbfnk's humanizer skill. The copy in the spool follows his edits to it;
+# the one beside the script is what the last install put there.
+HUMANIZER="$CONFIG_DIR/humanizer.md"
+[ -r "$SPOOL/humanizer.md" ] && HUMANIZER="$SPOOL/humanizer.md"
 STATE_DIR="$HOME/.local/share/sbfnk-bot-issues"
 CACHE_DIR="$HOME/.cache/sbfnk-bot-issues"
 RUNS_DIR="$STATE_DIR/runs"
@@ -761,17 +763,25 @@ EDIT_SCHEMA='{"type":"object","properties":{"title":{"type":"string"},
 # The pull request text, rewritten with sbfnk's humanizer by a model with no
 # tools and no other context. Echoes {title, body}, or nothing if it failed.
 humanize() {
-  local title="$1" body="$2" stat="$3" config="$4" out prompt
+  local title="$1" body="$2" stat="$3" config="$4" kind="${5:-pr}" out prompt
+  local what keep
   [ -r "$HUMANIZER" ] || return 0
+  if [ "$kind" = comment ]; then
+    what="a question about an issue, before it is put to $OWNER_LOGIN"
+    keep="what is being asked, and what the answer decides"
+  else
+    what="the title and description of a pull request, before it is published"
+    keep="what changed and why, how it was tested, and anything left open"
+  fi
   prompt="$(cat <<PROMPT
-Edit the title and description of a pull request before it is published.
+Edit $what.
 
 Use the humanizer skill below, in embedded mode: return only the final text.
 On top of it, make both as short as they can be while keeping every piece of
-relevant information: what changed and why, how it was tested, and anything
-left open. Cut restatements of the issue beyond what a reviewer needs, and
-anything the diff shows plainly. Keep code blocks, identifiers and links
-exactly as they are. Add nothing that is not in the text. British English.
+relevant information: $keep. Cut restatements of the issue beyond what a
+reader needs, and anything the diff shows plainly. Keep code blocks,
+identifiers and links exactly as they are. Add nothing that is not in the
+text. British English.
 
 <humanizer-skill>
 $(cat "$HUMANIZER")
@@ -806,6 +816,49 @@ $EDIT_NOTE
   jq -c '.structured_output // empty
          | select((.title | length) > 0 and (.body | length) > 0)' \
     <<< "$out" 2>/dev/null
+}
+
+# Prose a run added to the repository itself — a vignette, a README, a
+# changelog entry — goes through the same humanizer as the pull request text,
+# in the clone, and the edit is committed on top of the work.
+DOC_RE='\.(md|Rmd|Rmarkdown|qmd|txt|rst|org)$'
+edit_docs() {
+  local work="$1" from="$2" config="$3" files
+  [ -r "$HUMANIZER" ] || return 0
+  files="$(git -C "$work" diff --name-only "$from..HEAD" 2>/dev/null \
+    | grep -E "$DOC_RE")"
+  [ -n "$files" ] || return 0
+  mkdir -p "$config"
+  (cd "$work" && run_model "$config" -p "$(cat <<PROMPT
+Edit the prose this branch added to the files below, with the humanizer skill
+that follows, so that what is published reads as $OWNER_LOGIN writes.
+
+Edit only what the branch itself added or changed: run
+"git diff $from..HEAD -- <file>" on each file and leave every other line as
+it is. Keep code, output, examples, links, identifiers, maths and headings
+exactly as they are, and keep the meaning: this is an edit of the wording.
+British English. Change nothing outside these files, run no tests, and make
+no commits; the edit is committed for you.
+
+<files>
+$files
+</files>
+
+<humanizer-skill>
+$(cat "$HUMANIZER")
+</humanizer-skill>
+PROMPT
+)" --permission-mode acceptEdits ${EDIT_MODEL:+--model "$EDIT_MODEL"} \
+    --allowedTools Read Edit Glob Grep --max-budget-usd "$RUN_BUDGET" \
+    >/dev/null 2>&1)
+  git -C "$work" diff --quiet -- $(printf '%s ' $files) 2>/dev/null && return 0
+  git -C "$work" add -- $files >/dev/null 2>&1
+  bot_git -C "$work" commit --quiet \
+    -m "Edit the new documentation for style
+
+Co-authored-by: $CO_AUTHOR" >/dev/null 2>&1 \
+    || log "  the documentation edit could not be committed"
+  log "  edited the prose added to $(printf '%s\n' "$files" | wc -l | tr -d ' ') file(s)"
 }
 
 # Claude Code's bylines. Commits here carry sbfnk as co-author and nobody else.
@@ -1027,10 +1080,15 @@ park() {
   mkdir -p "$dir"
   body="$(printf '%s\n' "$body" | grep -viE "$BYLINE_RE")"
   if [ "$outcome" = pr ]; then
+    edit_docs "$work" "origin/$base" "$run/docs"
     strip_bylines "$work" "$base"
+  fi
+  if [ "$outcome" = pr ] || [ "$outcome" = comment ]; then
     printf '%s\n' "$body" > "$run/body-before-edit.md"
     edit="$(humanize "$title" "$body" \
-      "$(git -C "$work" diff --stat "origin/$base..HEAD")" "$run/edit")"
+      "$([ "$outcome" = pr ] \
+        && git -C "$work" diff --stat "origin/$base..HEAD")" \
+      "$run/edit" "$outcome")"
     if [ -n "$edit" ]; then
       title="$(jq -r .title <<< "$edit")"
       body="$(jq -r .body <<< "$edit" | grep -viE "$BYLINE_RE")"
