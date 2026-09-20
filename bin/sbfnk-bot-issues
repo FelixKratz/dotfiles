@@ -484,6 +484,12 @@ How to work:
 - Write a test that fails because of the problem, then fix it. Run the
   relevant tests, and the project's linter if it has one, before each
   commit.
+- Give each Bash call a single operation. A call that chains several
+  ("cmd1 && cmd2", "a; b", an -e script of several statements) is held for
+  an approval nobody is there to give, and so is refused. Several steps
+  belong in a script file that one call runs.
+- Compiling C++ or Stan code, running what you compiled and loading it into
+  R, Julia or Python all work here. So do rstan, cmdstanr and devtools.
 - The run is sandboxed. If something you need is refused (Operation not
   permitted, a refused host or port, a failed install), try one other way,
   then list exactly what was refused in "blocked": the command, and the
@@ -1505,6 +1511,12 @@ How to work:
   commit. This is a single run and nothing will wake you later.
 - Install whatever is missing; the R, Julia and Python libraries are yours
   and persist between runs.
+- Give each Bash call a single operation. A call that chains several
+  ("cmd1 && cmd2", "a; b", an -e script of several statements) is held for
+  an approval nobody is there to give, and so is refused. Several steps
+  belong in a script file that one call runs.
+- Compiling C++ or Stan code, running what you compiled and loading it into
+  R, Julia or Python all work here. So do rstan, cmdstanr and devtools.
 - The run is sandboxed. If something you need is refused (Operation not
   permitted, a refused host or port, a failed install), try one other way,
   then list exactly what was refused in "blocked": the command, and the
