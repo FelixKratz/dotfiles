@@ -362,6 +362,10 @@ case "${1:-}" in
   check) check ;;
   deps)
     say "installing shared dependencies as $BOT_USER; this takes a while"
+    # Packages built under a different R keep working until they do not, so
+    # anything built elsewhere is replaced before the rest goes in.
+    as_bot 'Rscript -e "update.packages(ask = FALSE, checkBuilt = TRUE)"' \
+      2>&1 | tail -2
     as_bot 'Rscript -e "install.packages(c(\"devtools\", \"testthat\", \"lintr\", \"roxygen2\", \"rstan\", \"rstantools\", \"cmdstanr\", \"data.table\", \"posterior\"), repos = c(CRAN = \"https://cloud.r-project.org\", \"https://stan-dev.r-universe.dev\"))"' \
       2>&1 | tail -3
     as_bot 'Rscript -e "v <- tryCatch(cmdstanr::cmdstan_version(error_on_NA = FALSE), error = function(e) NULL); if (is.null(v)) cmdstanr::install_cmdstan(cores = 4) else cat(\"cmdstan\", v, \"already installed\n\")"' \
