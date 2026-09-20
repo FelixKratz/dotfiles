@@ -256,18 +256,27 @@ install_all() {
       >/dev/null 2>&1 || true
     # Without a mirror, R cannot install anything and falls back to building
     # from source; macOS binaries make a dependency a download rather than a
-    # compile.
+    # compile. Only a CRAN build of R can take those binaries, and a
+    # Homebrew or self-built R refuses the option outright, so it is asked
+    # for only where it applies.
     cat > "$BOT_HOME/.Rprofile" <<'RPROFILE'
-options(
-  repos = c(CRAN = "https://cloud.r-project.org"),
-  pkgType = "both",
-  install.packages.check.source = "no",
-  install.packages.compile.from.source = "never",
-  Ncpus = 4L
-)
+local({
+  opts <- list(repos = c(CRAN = "https://cloud.r-project.org"), Ncpus = 4L)
+  if (.Platform$pkgType != "source") {
+    opts$pkgType <- "both"
+    opts$install.packages.check.source <- "no"
+    opts$install.packages.compile.from.source <- "never"
+  }
+  options(opts)
+})
 RPROFILE
     chown "$BOT_USER:staff" "$BOT_HOME/.Rprofile"
-    say "wrote $BOT_HOME/.Rprofile (CRAN mirror, binary packages)"
+    if [ "$(as_bot 'Rscript -e "cat(.Platform\$pkgType)"' 2>/dev/null)" \
+      = source ]; then
+      say "wrote $BOT_HOME/.Rprofile (CRAN mirror; this R builds from source)"
+    else
+      say "wrote $BOT_HOME/.Rprofile (CRAN mirror, binary packages)"
+    fi
   fi
   if $julia && [ ! -x "$BOT_HOME/.juliaup/bin/julia" ]; then
     as_bot 'curl -fsSL https://install.julialang.org | sh -s -- --yes' >/dev/null
