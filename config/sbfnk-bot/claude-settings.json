@@ -25,7 +25,8 @@
         "github.com",
         "api.github.com",
         "codeload.github.com",
-        "*.githubusercontent.com"
+        "*.githubusercontent.com",
+        "registry.npmjs.org"
       ]
     },
     "filesystem": {
@@ -37,7 +38,8 @@
         "~/.local",
         "~/Library/Python",
         "~/.cache",
-        "~/Library/Caches"
+        "~/Library/Caches",
+        "~/.npm"
       ],
       "denyRead": [
         "~/.config/sbfnk-bot",
