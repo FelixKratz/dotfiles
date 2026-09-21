@@ -78,6 +78,8 @@ def generate_mbsyncrc(config):
         auth = acc.get("auth", defaults.get("auth", "plain"))
         tls_type = acc.get("tls_type", defaults.get("tls_type", "IMAPS"))
         acc_cert = acc.get("certificate_file", cert_file)
+        # mbsync's 20s default is too short for Outlook to list a large folder
+        imap_timeout = acc.get("imap_timeout", defaults.get("imap_timeout", 120))
 
         lines.append(f"IMAPStore {name}")
         lines.append(f"Host {imap_host}")
@@ -95,6 +97,7 @@ def generate_mbsyncrc(config):
             lines.append(f'PassCmd +"{cmd}"')
 
         lines.append(f"TLSType {tls_type}")
+        lines.append(f"Timeout {imap_timeout}")
         if acc_cert:
             lines.append(f"CertificateFile {acc_cert}")
         lines.append("")

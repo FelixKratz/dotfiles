@@ -9,6 +9,7 @@ defaults:
   name: Your Name
   tls_type: IMAPS
   auth: plain
+  imap_timeout: 120  # seconds; mbsync's own default is 20
   certificate_file: /opt/homebrew/share/ca-certificates/cacert.pem
   msmtp_port: 587
   msmtp_tls_starttls: true
