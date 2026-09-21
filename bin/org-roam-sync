@@ -59,8 +59,9 @@ else
   trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 fi
 
-# 1. Commit local changes (tracked and new files) if there are any.
-if [ -n "$(git status --porcelain)" ]; then
+# Commit local changes (tracked and new files) if there are any.
+commit_local() {
+  [ -n "$(git status --porcelain)" ] || return 0
   # vulpea maintains the :active: filetag from find-file-hook and
   # before-save-hook, so notes written by anything other than Emacs — an AI
   # session, a sync from another machine — can gain their first TODO and never
@@ -72,14 +73,27 @@ if [ -n "$(git status --porcelain)" ]; then
   fi
   git add -A
   git commit -q -m "Auto-sync $(hostname -s) $(date '+%F %T')" && log "committed local changes"
-fi
+}
+
+# 1. Commit local changes.
+commit_local
 
 # 2. Rebase onto the remote; abort cleanly on conflict so the tree stays sane.
 git fetch -q origin "$BRANCH" || transient_failure "cannot reach origin/$BRANCH"
+# Notes keep changing while the fetch waits on the network (Emacs saves, the
+# scripts appending to the inbox), and rebase refuses a dirty
+# tree, so commit anything that arrived in the meantime.
+commit_local
 if ! git rebase -q "origin/$BRANCH"; then
-  git rebase --abort
-  stall "conflict rebasing onto origin/$BRANCH — resolve by hand in $REPO"
-  exit 1
+  if [ -d "$(git rev-parse --git-path rebase-merge)" ] ||
+     [ -d "$(git rev-parse --git-path rebase-apply)" ]; then
+    git rebase --abort
+    stall "conflict rebasing onto origin/$BRANCH — resolve by hand in $REPO"
+    exit 1
+  fi
+  # Rebase refused to start, most likely because a file changed again since
+  # the commit above; the next run picks it up.
+  transient_failure "rebase onto origin/$BRANCH did not start (see org-roam-sync.err)"
 fi
 
 # 3. Push if we have unpushed commits.
