@@ -266,6 +266,10 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
 
   (setq browse-url-browser-function #'browse-url-default-macosx-browser)
 
+  ;; `+notmuch/update' (SPC m u) defaults to gmi in ~/.mail/account.gmail;
+  ;; getmail.sh runs mbsync for every account and updates the index.
+  (setq +notmuch-sync-backend "~/.local/bin/getmail.sh all")
+
   (defun sf/notmuch-print-to-pdf (message)
     "Save the current notmuch message as a PDF."
     (let* ((subject (notmuch-prettify-subject
