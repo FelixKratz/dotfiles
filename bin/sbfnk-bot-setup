@@ -25,7 +25,7 @@
 #   claude setup-token, then:  sudo $S claude-token   (paste the token)
 #   sudo $S review-key           give the bot sbfnk-review-bot's private key,
 #                                from ~/.config/sbfnk-review-bot/key.pem or stdin,
-#                                so it can review PRs marked ready for review
+#                                so it can review the PRs it opens
 #   sudo $S check                show the bot cannot read your files
 #   sudo $S enable [--keep-running]
 #                                start the daemons; --keep-running leaves a

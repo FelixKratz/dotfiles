@@ -1155,10 +1155,7 @@ push_and_open() {
 
 This PR closes #$n." 2>&1)" \
     || { log "  pr create failed for $repo#$n: $url"; return 1; }
-  url="$(printf '%s\n' "$url" | grep -E '^https://' | tail -1)"
-  bot_gh pr edit "$url" --add-reviewer "$OWNER_LOGIN" >/dev/null 2>&1 \
-    || log "  could not request review from $OWNER_LOGIN on $url"
-  printf '%s' "$url"
+  printf '%s' "$(printf '%s\n' "$url" | grep -E '^https://' | tail -1)"
 }
 
 # Carry out sbfnk's decisions on parked work. The decision file is one verb
@@ -1370,20 +1367,23 @@ work_on() {
 
 # ------------------------------------------------------ pull requests it opened
 #
-# While a PR the bot opened is a draft, sbfnk iterates on it in public: his
-# reviews and comments are instructions, and the bot answers them with new
-# commits and replies. An update goes out on its own when the screen is clean
-# after the fix round, and is parked for approval otherwise.
+# A PR opens as a draft with no reviewer, and follows /review-loop straight
+# away: a fresh reviewer goes over the full diff against the org's REVIEW.md,
+# and posts findings as inline comments from sbfnk-review-bot, never a
+# summary. The bot fixes each one (replying with the commit and resolving the
+# thread) or pushes back (replying and leaving it open), and the reviewer
+# looks again at the new head. A claude-review check on the head records the
+# verdict: red while a review is pending, running or has findings open, green
+# once a full pass finds nothing. At most MAX_REVIEW_ROUNDS rounds since the
+# last clean pass.
 #
-# Once sbfnk marks the PR ready for review, and nothing of his is left
-# unanswered, it follows /review-loop: a fresh reviewer goes over the full
-# diff against the org's REVIEW.md, and posts findings as inline comments from
-# sbfnk-review-bot, never a summary. The bot fixes each one (replying with the
-# commit and resolving the thread) or pushes back (replying and leaving it
-# open), and the reviewer looks again at the new head. A claude-review check
-# on the head records the verdict: red while a review is pending, running or
-# has findings open, green once a full pass finds nothing. At most
-# MAX_REVIEW_ROUNDS rounds since the last clean pass.
+# A clean pass marks the PR ready and asks for sbfnk's review. When the loop
+# stops short (the round cap, or no review possible), the PR stays a draft
+# and sbfnk is asked all the same, since nothing more will happen without
+# him. His reviews and comments are instructions at any point: the bot
+# answers them with new commits and replies, which go out on their own when
+# the screen is clean after the fix round, and are parked for approval
+# otherwise. Each new head is reviewed again before he is asked again.
 
 REVIEW_BOT_LOGIN="sbfnk-review-bot[bot]"
 REVIEW_APP_ID=4359973
@@ -1452,6 +1452,26 @@ review_check() {
       -f conclusion="$conclusion" -f "output[title]=$title" \
       -f "output[summary]=$summary" >/dev/null 2>&1
   fi || log "  could not publish the claude-review check on $repo@${sha:0:7}"
+}
+
+# Put a PR in front of sbfnk: with ready=true take it out of draft, and ask
+# for his review unless he is already asked or has reviewed this head.
+hand_over() {
+  local repo="$1" n="$2" sha="$3" ready="$4" pr
+  pr="$(bot_gh api "repos/$repo/pulls/$n" 2>/dev/null)" || return 1
+  if $ready && [ "$(jq -r .draft <<< "$pr")" = true ]; then
+    bot_gh pr ready "$n" -R "$repo" >/dev/null 2>&1 \
+      || log "  could not mark $repo#$n ready for review"
+  fi
+  jq -e --arg u "$OWNER_LOGIN" \
+    '.requested_reviewers | map(.login) | index($u)' <<< "$pr" >/dev/null \
+    && return 0
+  bot_gh api "repos/$repo/pulls/$n/reviews" --paginate \
+    | jq -se --arg u "$OWNER_LOGIN" --arg s "$sha" 'add // []
+        | any(.user.login == $u and .commit_id == $s)' >/dev/null \
+    && return 0
+  bot_gh pr edit "$n" -R "$repo" --add-reviewer "$OWNER_LOGIN" >/dev/null 2>&1 \
+    || log "  could not request review from $OWNER_LOGIN on $repo#$n"
 }
 
 # Review threads as "comment_id thread_id resolved outdated", to answer a
@@ -1760,8 +1780,7 @@ publish_update() {
     fi
   done
   # A push invalidates whatever cleared the previous head.
-  if [ "$(jq -r .commits "$meta")" -gt 0 ] \
-    && [ "$(bot_gh api "repos/$repo/pulls/$n" --jq .draft)" = false ]; then
+  if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
     review_check "$repo" "$sha" failure "Not reviewed yet" \
       "No review has cleared $sha."
   fi
@@ -1835,6 +1854,7 @@ review_pr() {
   token="$(review_token "$repo")" || {
     log "  skip reviewing $repo#$n: no sbfnk-review-bot token (installed there?)"
     set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"]"
+    hand_over "$repo" "$n" "$sha" false
     return 1
   }
   log "  reviewing $repo#$n at ${sha:0:7}, round $round"
@@ -1861,6 +1881,7 @@ review_pr() {
     review_check "$repo" "$sha" failure "Not reviewed yet" \
       "The review of $sha did not complete."
     set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"]"
+    hand_over "$repo" "$n" "$sha" false
     return 0
   fi
   count="$(jq '.findings | length' <<< "$result")"
@@ -1877,6 +1898,7 @@ review_pr() {
     log "  review round $round on $repo#$n: no findings"
     set_pr_state "$repo" "$n" \
       ".reviewed += [\"$sha\"] | .rounds = 0 | .clean = \"$sha\""
+    hand_over "$repo" "$n" "$sha" true
     rm -rf "$work"
     return 0
   fi
@@ -1900,6 +1922,7 @@ review_pr() {
   if [ "$round" -ge "$MAX_REVIEW_ROUNDS" ]; then
     review_check "$repo" "$sha" failure "$count findings open after $round rounds" \
       "Stopped at the round cap; the open findings wait for $OWNER_LOGIN."
+    hand_over "$repo" "$n" "$sha" false
   else
     review_check "$repo" "$sha" failure "$count findings open" \
       "Round $round found $count points; the author is answering them."
@@ -1924,7 +1947,7 @@ tend_pr() {
 }
 
 tend_pr_inner() {
-  local repo="$1" n="$2" pr="$3" state since started_at feedback sha draft
+  local repo="$1" n="$2" pr="$3" state since started_at feedback sha
   state="$(pr_state "$repo" "$n")"
   since="$(jq -r '.handled_until // empty' <<< "$state")"
   [ -n "$since" ] || since="$(jq -r .created_at <<< "$pr")"
@@ -1943,9 +1966,7 @@ tend_pr_inner() {
     return 0
   fi
 
-  draft="$(jq -r .draft <<< "$pr")"
   sha="$(jq -r .head.sha <<< "$pr")"
-  [ "$draft" = false ] || return 1
   [ "$(jq -r '.clean // ""' <<< "$state")" != "$sha" ] || return 1
   jq -e --arg s "$sha" '(.reviewed // []) | index($s)' <<< "$state" \
     >/dev/null && return 1

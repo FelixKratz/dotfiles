@@ -182,12 +182,14 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   plan's usage limit does not count as a failure: model work waits for the
   reset and takes the job up again, while approvals keep going out. Work
   that cannot go out after all — the PR was merged while it waited — comes
-  back into `sbr` with the reason rather than being retried for ever. On the draft PRs it opened, your reviews
-  and comments are instructions: it answers with new commits and replies,
-  pushed straight away when the screen is clean. Mark a PR ready for review
-  and, once your comments are answered, a fresh reviewer goes over it as
-  `sbfnk-review-bot`, the bot answers that too, and so on for up to three
-  rounds. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
+  back into `sbr` with the reason rather than being retried for ever. A PR opens as a draft
+  with no reviewer, and a fresh reviewer goes over it as `sbfnk-review-bot`;
+  the bot answers the findings, and so on for up to five rounds. A clean pass
+  marks the PR ready and requests your review; if the rounds run out, it
+  stays a draft and you are asked anyway. Your reviews and comments are
+  instructions throughout: it answers with new commits and replies, pushed
+  straight away when the screen is clean, and the new head is reviewed again
+  before you are asked again. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
   runs a Remote Control session as you for doing the same from claude.ai or
   the Claude app; it asks before recording any decision. When
   someone else assigns an issue to the bot, it waits in `sbr` as a request
