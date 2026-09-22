@@ -1,7 +1,6 @@
 #!/bin/bash
-# Wrapper for msmtp-queue with correct paths
-export MSMTP=/opt/homebrew/bin/msmtp
-export MSMTPQ_Q=~/.msmtpq
-export MSMTPQ_LOG=~/.log/msmtpq.log
-export EMAIL_QUEUE_QUIET=t
-exec /opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq --q-mgmt "$1"
+# Queue management goes through the msmtpq wrapper to pick up its bash 3.2
+# patch. Keep it verbose: in this mode msmtpq only reports failed or skipped
+# sends through its log messages, which EMAIL_QUEUE_QUIET would hide.
+export EMAIL_QUEUE_QUIET=
+exec "$(dirname "$0")/msmtpq" --q-mgmt "$@"

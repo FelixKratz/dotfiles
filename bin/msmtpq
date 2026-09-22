@@ -3,7 +3,7 @@
 export MSMTP=/opt/homebrew/bin/msmtp
 export MSMTPQ_Q=~/.msmtpq
 export MSMTPQ_LOG=~/.log/msmtpq.log
-export EMAIL_QUEUE_QUIET=t
+export EMAIL_QUEUE_QUIET=${EMAIL_QUEUE_QUIET-t}
 
 # make_id in msmtp >= 1.8.33 breaks under macOS bash 3.2: `local -i INC`
 # counts as set, so ${INC+-} appends a stray dash to the queue filename.
