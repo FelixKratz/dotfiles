@@ -2,6 +2,9 @@
 # Wrapper for msmtpq with correct paths
 export MSMTP=/opt/homebrew/bin/msmtp
 export MSMTPQ_Q=~/.msmtpq
+# launchd runs the queue flush with a bare PATH; passwordeval needs
+# refresh-token from ~/.local/bin.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
 export MSMTPQ_LOG=~/.log/msmtpq.log
 export EMAIL_QUEUE_QUIET=${EMAIL_QUEUE_QUIET-t}
 

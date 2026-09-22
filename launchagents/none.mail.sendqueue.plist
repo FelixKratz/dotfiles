@@ -13,7 +13,7 @@
 		<string>-r</string>
 	</array>
 	<key>StandardOutPath</key>
-	<string>__HOME__/.log/msmtpq.log</string>
+	<string>/dev/null</string>
 	<key>StandardErrorPath</key>
 	<string>__HOME__/.log/msmtpq.err</string>
 	<key>StartInterval</key>
