@@ -1,6 +1,6 @@
 ---
 argument-hint: [PR-number ...]
-description: Poll one or more PRs for reviews, address all trusted review feedback (inline, review-body and conversation comments) one commit per fix, and resolve mechanical merge conflicts. Runs /review-loop once per head if it has not run, then waits for a human reviewer before stopping. With no argument, uses the PR for the current branch.
+description: Poll one or more PRs for reviews, address all trusted review feedback (inline, review-body and conversation comments) one commit per fix, and resolve mechanical merge conflicts. Runs /review-loop once per head if it has not run, marks the PR ready and requests review from sbfnk once that comes back green, then waits for the human review before stopping. With no argument, uses the PR for the current branch.
 ---
 
 You are watching one or more PRs in the current repository. Read the watch list from `$ARGUMENTS`: it may contain several space-separated PR numbers (e.g. `665 666`). If `$ARGUMENTS` is empty, use the single PR for the current branch (`gh pr view --json number -q .number`). Resolve the watch list once at the start of this turn.
@@ -76,7 +76,7 @@ ever without saying why.
 
 Repeat Steps 1–5 for each PR in the watch list. For the PR being processed, run these in parallel (substitute its number for `<PR>`):
 
-- `gh pr view <PR> --json number,headRefName,state,isDraft,mergeable,mergeStateStatus,reviews,reviewDecision,author,url,statusCheckRollup`
+- `gh pr view <PR> --json number,headRefName,headRefOid,state,isDraft,mergeable,mergeStateStatus,reviews,reviewRequests,reviewDecision,author,url,statusCheckRollup`
 - `gh api repos/{owner}/{repo}/pulls/<PR>/reviews --paginate` (formal reviews, including their body text)
 - `gh api repos/{owner}/{repo}/pulls/<PR>/comments --paginate` (inline review comments on the diff)
 - `gh api repos/{owner}/{repo}/issues/<PR>/comments --paginate` (general PR conversation comments)
@@ -107,10 +107,12 @@ reason about: a new commit simply has no check yet.
 
 Then:
 
-- **`SUCCESS`** — reviewed and clean at this head; go on to Step 3.
+- **`SUCCESS`** — reviewed and clean at this head. Hand the PR to the human
+  (below), then go on to Step 3.
 - **`FAILURE`, title naming open findings** — `/review-loop` stopped at its round
   cap. Do not re-run it; those findings are inline comments awaiting the human.
-  Go on to Step 3 and note it in the summary.
+  Leave the PR as it is (a draft stays a draft), go on to Step 3, and note in
+  the summary that it has not been handed over.
 - **`FAILURE`, title `Not reviewed yet`** — a push landed and nothing has
   reviewed it. Run `/review-loop <PR>`, as below.
 - **`FAILURE`, title `Review in progress`** — a review round was under way when
@@ -121,6 +123,18 @@ Then:
 - **No check on this head** — run `/review-loop <PR>` now, before waiting on
   anyone. It pushes its own commits, which moves the head; re-read the state
   afterwards rather than reasoning from what you fetched in Step 1.
+
+**Handing the PR to the human.** A green `claude-review` is the signal that the
+PR is worth sbfnk's time, so PRs are opened as drafts with no reviewer and wait
+for it. On `SUCCESS`, on a PR you authored:
+
+- If `isDraft` is true, mark it ready: `gh pr ready <PR>`.
+- Request review from sbfnk (`gh pr edit <PR> --add-reviewer sbfnk`) unless
+  sbfnk is already in `reviewRequests` or has reviewed the current head commit.
+  After you address a review of theirs and the new head comes back green, this
+  re-requests it, which is what tells them the fixes are in.
+
+Never turn a ready PR back into a draft, whatever a later review round finds.
 
 Run it once per head, not once per wake-up: a wake-up that finds the head
 unchanged and already reviewed must not review again. Otherwise the loop burns
