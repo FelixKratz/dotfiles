@@ -538,8 +538,8 @@ issue turns out not to need a change, saying why. Commits are discarded
 when the outcome is "comment".
 
 Otherwise return outcome "pr", with a title and a body for the pull
-request. The body says what changed and why, how it was tested, and
-anything left open. Do not add a "closes" line; that is added for you.
+request. The body says what changed and why. Do not add a "closes" line;
+that is added for you.
 PROMPT
 }
 
@@ -771,7 +771,7 @@ humanize() {
     keep="what is being asked, and what the answer decides"
   else
     what="the title and description of a pull request, before it is published"
-    keep="what changed and why, how it was tested, and anything left open"
+    keep="what changed and why"
   fi
   prompt="$(cat <<PROMPT
 Edit $what.
