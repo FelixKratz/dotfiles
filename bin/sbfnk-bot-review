@@ -57,6 +57,11 @@ refresh_bar() {
   return 0
 }
 
+# Help needs no spool, so it is answered here even away from the bot's host.
+case "${1:-}" in
+  -h|--help|help) awk 'NR > 1 && !/^#/ {exit} NR > 1' "$0"; exit 0 ;;
+esac
+
 # Not the bot's machine: run the same command there.
 if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   host="$(sed -e 's/#.*//' "$HOST_FILE" 2>/dev/null | tr -d '[:space:]')"
@@ -281,8 +286,6 @@ case "$cmd" in
       printf '\n== latest failure: %s ==\n' "$(basename "$latest" .txt)"
       clean < "$latest"
     fi ;;
-  -h|--help|help)
-    sed -n '2,24p' "$0" ;;
   *)
     die "unknown command '$cmd' (try --help)" ;;
 esac
