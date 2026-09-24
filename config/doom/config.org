@@ -476,6 +476,211 @@ See https://github.com/polymode/poly-R/issues/34
 (setq polymode-lsp-integration nil)
 #+end_src
 
+* Quarto Talks
+Talks live in =~/code/talks= as Quarto reveal.js decks.  The shared format
+settings sit in that repo's =_quarto.yml=, and =M-x sf/new-talk= starts a
+new deck =<name>_<YYYYMMDD>.qmd= from its =_template.qmd=.
+
+Figures go into the =figures/= directory next to the document (or =images/=
+or =img/= if one of those exists), and the image link lands on its own
+paragraph at point.  The default file name is the slug of the current slide
+heading.  These bindings work in any Markdown or Quarto buffer.
+
+| Key         | Action                                                     |
+|-------------+------------------------------------------------------------|
+| =SPC m i v= | Paste figure: Finder file, image data, image URL or path   |
+| =SPC m i F= | Insert figure from a file, copied in if outside the talk   |
+| =SPC m i u= | Download an image URL (clipboard as default) and insert it |
+#+begin_src emacs-lisp
+(defvar sf/talks-directory "~/code/talks/"
+  "Directory holding the Quarto reveal.js talks and their =_template.qmd=.")
+
+(defvar sf/figure-directory-names '("figures" "images" "img")
+  "Figure directories to look for next to a document, in order of preference.
+The first one is created when none exists.")
+
+(defun sf/new-talk (name date title venue)
+  "Create the talk NAME_DATE.qmd in `sf/talks-directory' from =_template.qmd=."
+  (interactive
+   (progn
+     (require 'org)
+     (list (read-string "Short name (e.g. kit): ")
+           (org-read-date nil nil nil "Date: ")
+           (read-string "Title: ")
+           (read-string "Venue (e.g. KIT, Karlsruhe): "))))
+  (let* ((dir (expand-file-name sf/talks-directory))
+         (base (format "%s_%s" (sf/figure--slug name)
+                       (string-replace "-" "" date)))
+         (file (expand-file-name (concat base ".qmd") dir))
+         (yaml-escape (lambda (s) (string-replace "\"" "\\\"" s))))
+    (when (file-exists-p file)
+      (user-error "%s already exists" file))
+    (find-file file)
+    (insert-file-contents (expand-file-name "_template.qmd" dir))
+    (pcase-dolist (`(,key . ,value)
+                   `(("%TITLE%" . ,(funcall yaml-escape title))
+                     ("%VENUE%" . ,(funcall yaml-escape venue))
+                     ("%DATE%" . ,(format-time-string
+                                   "%-d %B %Y" (org-time-string-to-time date)))
+                     ("%NAME%" . ,base)))
+      (goto-char (point-min))
+      (while (search-forward key nil t)
+        (replace-match value t t)))
+    ;; Start on the first slide, after the front matter
+    (goto-char (point-min))
+    (when (re-search-forward "^## " nil t)
+      (end-of-line))))
+
+(defun sf/figure--doc-file ()
+  "File of the current document, looking through polymode's indirect buffers."
+  (or (buffer-file-name (buffer-base-buffer))
+      (user-error "Buffer is not visiting a file")))
+
+(defun sf/figure--dir ()
+  "Figure directory next to the current document, created if missing."
+  (let* ((doc (file-name-directory (sf/figure--doc-file)))
+         (candidates (mapcar (lambda (d) (expand-file-name d doc))
+                             sf/figure-directory-names))
+         (dir (or (seq-find #'file-directory-p candidates) (car candidates))))
+    (make-directory dir t)
+    dir))
+
+(defun sf/figure--slug (s)
+  (string-trim (replace-regexp-in-string "[^a-z0-9]+" "_" (downcase s)) "_+" "_+"))
+
+(defun sf/figure--default-name ()
+  "Slug of the current slide's heading, else the document name and a timestamp."
+  (let ((heading (save-excursion
+                   (end-of-line)
+                   (when (re-search-backward "^#+[ \t]+\\(.*[^ \t]\\)" nil t)
+                     (sf/figure--slug (match-string-no-properties 1))))))
+    (if (and heading (not (string-empty-p heading)))
+        heading
+      (format "%s_%s" (file-name-base (sf/figure--doc-file))
+              (format-time-string "%Y%m%d%H%M%S")))))
+
+(defun sf/figure--read-target (ext &optional default)
+  "Read a file name in the figure directory, adding extension EXT if none is given."
+  (let ((dir (sf/figure--dir))
+        (default (or default (sf/figure--default-name)))
+        target)
+    (while (not target)
+      (let* ((name (read-string "Figure name: " default))
+             (file (expand-file-name
+                    (if (file-name-extension name) name (concat name "." ext))
+                    dir)))
+        (when (or (not (file-exists-p file))
+                  (y-or-n-p (format "%s exists; overwrite? "
+                                    (file-name-nondirectory file))))
+          (setq target file))))
+    target))
+
+(defun sf/figure--local-path (file)
+  "Path to FILE inside the document tree, copying it into the figure directory
+when it lies outside.  Truenames are compared because the figure directory
+may be a symlink to a shared figure library."
+  (let ((doc (file-name-directory (sf/figure--doc-file)))
+        (figdir (sf/figure--dir)))
+    (cond ((file-in-directory-p file figdir)
+           (expand-file-name (file-relative-name (file-truename file)
+                                                 (file-truename figdir))
+                             figdir))
+          ((file-in-directory-p file doc)
+           (expand-file-name (file-relative-name (file-truename file)
+                                                 (file-truename doc))
+                             doc))
+          (t (let ((target (sf/figure--read-target
+                            (file-name-extension file)
+                            (sf/figure--slug (file-name-base file)))))
+               (copy-file file target t)
+               target)))))
+
+(defun sf/figure--insert-link (file)
+  "Insert a Markdown image link to FILE as a paragraph of its own."
+  (let ((rel (file-relative-name file (file-name-directory (sf/figure--doc-file)))))
+    (unless (save-excursion (beginning-of-line) (looking-at-p "[ \t]*$"))
+      (end-of-line)
+      (insert "\n\n"))
+    (insert (format "![](%s)" rel))))
+
+(defun sf/figure--download (url)
+  "Download the image at URL into the figure directory and return its path."
+  (let ((tmp (make-temp-file "figure")))
+    (unwind-protect
+        (progn
+          (unless (zerop (call-process "curl" nil nil nil "-fsSL" "-o" tmp url))
+            (user-error "Could not download %s" url))
+          (let* ((mime (string-trim (shell-command-to-string
+                                     (concat "file -b --mime-type "
+                                             (shell-quote-argument tmp)))))
+                 (ext (pcase mime
+                        ("image/jpeg" "jpg")
+                        ("image/svg+xml" "svg")
+                        ((rx bos "image/" (let e (+ alnum)) eos) e)
+                        (_ (user-error "%s is %s, not an image" url mime))))
+                 (target (sf/figure--read-target ext)))
+            (copy-file tmp target t)
+            target))
+      (delete-file tmp))))
+
+(defun sf/figure--clipboard-file ()
+  "Path of a file copied in Finder, or nil."
+  (let ((path (string-trim
+               (shell-command-to-string
+                "osascript -e 'POSIX path of (the clipboard as «class furl»)' 2>/dev/null"))))
+    (and (not (string-empty-p path)) (file-exists-p path) path)))
+
+(defun sf/figure--clipboard-image ()
+  "Save an image on the clipboard to the figure directory and return its path, or nil."
+  (let ((tmp (make-temp-file "figure" nil ".png")))
+    (if (zerop (call-process "pngpaste" nil nil nil tmp))
+        (let ((target (sf/figure--read-target "png")))
+          (rename-file tmp target t)
+          target)
+      (delete-file tmp)
+      nil)))
+
+(defun sf/insert-figure-file (file)
+  "Insert FILE as an image, copying it into the figure directory if needed."
+  (interactive
+   (list (read-file-name "Figure: " (file-name-as-directory (sf/figure--dir)) nil t)))
+  (sf/figure--insert-link (sf/figure--local-path file)))
+
+(defun sf/insert-figure-url (url)
+  "Download the image at URL into the figure directory and insert it."
+  (interactive
+   (let ((clip (string-trim (shell-command-to-string "pbpaste"))))
+     (list (read-string "Image URL: "
+                        (and (string-match-p "\\`https?://[^[:space:]]+\\'" clip) clip)))))
+  (sf/figure--insert-link (sf/figure--download url)))
+
+(defun sf/paste-figure ()
+  "Insert the figure on the clipboard.
+A file copied in Finder is used in place (or copied in when outside the
+document tree), image data is saved with pngpaste, and an image URL or a
+file path copied as text is downloaded or used like a file."
+  (interactive)
+  (let ((text (string-trim (shell-command-to-string "pbpaste"))))
+    (sf/figure--insert-link
+     (cond ((when-let ((file (sf/figure--clipboard-file)))
+              (sf/figure--local-path file)))
+           ((sf/figure--clipboard-image))
+           ((string-match-p "\\`https?://[^[:space:]]+\\'" text)
+            (sf/figure--download text))
+           ((and (not (string-empty-p text))
+                 (file-regular-p (expand-file-name text)))
+            (sf/figure--local-path (expand-file-name text)))
+           (t (user-error "Clipboard holds no image, file or image URL"))))))
+
+(map! :after markdown-mode
+      :map markdown-mode-map
+      :localleader
+      (:prefix "i"
+       :desc "Figure from clipboard" "v" #'sf/paste-figure
+       :desc "Figure from file"      "F" #'sf/insert-figure-file
+       :desc "Figure from URL"       "u" #'sf/insert-figure-url))
+#+end_src
+
 * Magit
 ** Default Clone Directory
 #+begin_src emacs-lisp
