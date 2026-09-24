@@ -564,19 +564,28 @@ The first one is created when none exists.")
       (format "%s_%s" (file-name-base (sf/figure--doc-file))
               (format-time-string "%Y%m%d%H%M%S")))))
 
-(defun sf/figure--read-target (ext &optional default)
-  "Read a file name in the figure directory, adding extension EXT if none is given."
-  (let ((dir (sf/figure--dir))
-        (default (or default (sf/figure--default-name)))
-        target)
+(defun sf/figure--read-target (what ext &optional default)
+  "Read a name under which to save WHAT, with extension EXT, in the figure directory.
+WHAT describes the source in the prompt, e.g. \"clipboard image\".
+The answer is slugified, which turns a caption-like name with spaces or dots
+into a file name Pandoc can link to."
+  (let* ((dir (sf/figure--dir))
+         (ext (downcase (or ext "png")))
+         (prompt (format "Save %s into %s/ as (.%s): " what
+                         (file-name-nondirectory (directory-file-name dir)) ext))
+         (default (or default (sf/figure--default-name)))
+         target)
     (while (not target)
-      (let* ((name (read-string "Figure name: " default))
-             (file (expand-file-name
-                    (if (file-name-extension name) name (concat name "." ext))
-                    dir)))
-        (when (or (not (file-exists-p file))
-                  (y-or-n-p (format "%s exists; overwrite? "
-                                    (file-name-nondirectory file))))
+      (let* ((name (read-string prompt default))
+             (slug (sf/figure--slug
+                    (let ((case-fold-search t))
+                      (replace-regexp-in-string
+                       (concat "\\." (regexp-quote ext) "\\'") "" name))))
+             (file (expand-file-name (concat slug "." ext) dir)))
+        (when (and (not (string-empty-p slug))
+                   (or (not (file-exists-p file))
+                       (y-or-n-p (format "%s exists; overwrite? "
+                                         (file-name-nondirectory file)))))
           (setq target file))))
     target))
 
@@ -595,6 +604,7 @@ may be a symlink to a shared figure library."
                                                  (file-truename doc))
                              doc))
           (t (let ((target (sf/figure--read-target
+                            (format "copy of %s" (file-name-nondirectory file))
                             (file-name-extension file)
                             (sf/figure--slug (file-name-base file)))))
                (copy-file file target t)
@@ -606,7 +616,8 @@ may be a symlink to a shared figure library."
     (unless (save-excursion (beginning-of-line) (looking-at-p "[ \t]*$"))
       (end-of-line)
       (insert "\n\n"))
-    (insert (format "![](%s)" rel))))
+    ;; Pandoc needs angle brackets around a link target containing spaces
+    (insert (format (if (string-match-p " " rel) "![](<%s>)" "![](%s)") rel))))
 
 (defun sf/figure--download (url)
   "Download the image at URL into the figure directory and return its path."
@@ -623,7 +634,7 @@ may be a symlink to a shared figure library."
                         ("image/svg+xml" "svg")
                         ((rx bos "image/" (let e (+ alnum)) eos) e)
                         (_ (user-error "%s is %s, not an image" url mime))))
-                 (target (sf/figure--read-target ext)))
+                 (target (sf/figure--read-target "downloaded image" ext)))
             (copy-file tmp target t)
             target))
       (delete-file tmp))))
@@ -639,7 +650,7 @@ may be a symlink to a shared figure library."
   "Save an image on the clipboard to the figure directory and return its path, or nil."
   (let ((tmp (make-temp-file "figure" nil ".png")))
     (if (zerop (call-process "pngpaste" nil nil nil tmp))
-        (let ((target (sf/figure--read-target "png")))
+        (let ((target (sf/figure--read-target "clipboard image" "png")))
           (rename-file tmp target t)
           target)
       (delete-file tmp)
