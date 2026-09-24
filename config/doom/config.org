@@ -491,6 +491,11 @@ heading.  These bindings work in any Markdown or Quarto buffer.
 | =SPC m i v= | Paste figure: Finder file, image data, image URL or path   |
 | =SPC m i F= | Insert figure from a file, copied in if outside the talk   |
 | =SPC m i u= | Download an image URL (clipboard as default) and insert it |
+| =SPC m i d= | Citation link from a DOI (clipboard as default)            |
+
+Citations follow the slide style =[Author et al., *Journal*, Year](DOI URL)=,
+with metadata from doi.org.  Crossref often gives only the full journal name,
+which may need shortening by hand.
 #+begin_src emacs-lisp
 (defvar sf/talks-directory "~/code/talks/"
   "Directory holding the Quarto reveal.js talks and their =_template.qmd=.")
@@ -672,13 +677,60 @@ file path copied as text is downloaded or used like a file."
             (sf/figure--local-path (expand-file-name text)))
            (t (user-error "Clipboard holds no image, file or image URL"))))))
 
+(defun sf/doi--normalise (doi)
+  "DOI with any doi.org URL or doi: prefix and surrounding space removed."
+  (replace-regexp-in-string
+   "\\`\\(?:https?://\\(?:dx\\.\\)?doi\\.org/\\|doi:\\)" "" (string-trim doi)))
+
+(defun sf/doi--citation (doi)
+  "Slide citation link for DOI, as [Author et al., *Journal*, Year](URL)."
+  (let* ((json (with-temp-buffer
+                 (unless (zerop (call-process
+                                 "curl" nil t nil "-fsSL" "-H"
+                                 "Accept: application/vnd.citationstyles.csl+json"
+                                 (concat "https://doi.org/" doi)))
+                   (user-error "No metadata found for DOI %s" doi))
+                 (json-parse-string (buffer-string) :object-type 'alist
+                                    :array-type 'list)))
+         (field (lambda (key)
+                  (let ((v (alist-get key json)))
+                    (if (listp v) (car v) v))))
+         (names (mapcar (lambda (a) (or (alist-get 'family a) (alist-get 'literal a)))
+                        (alist-get 'author json)))
+         (authors (pcase (length names)
+                    (0 nil)
+                    (1 (car names))
+                    (2 (format "%s & %s" (car names) (cadr names)))
+                    (_ (format "%s et al." (car names)))))
+         (venue (or (funcall field 'container-title-short)
+                    (funcall field 'container-title)
+                    (alist-get 'name (funcall field 'institution))
+                    (alist-get 'publisher json)))
+         (year (caar (alist-get 'date-parts (or (alist-get 'issued json)
+                                                (alist-get 'published json))))))
+    (format "[%s](https://doi.org/%s)"
+            (string-join (delq nil (list authors
+                                         (and venue (format "*%s*" venue))
+                                         (and year (number-to-string year))))
+                         ", ")
+            doi)))
+
+(defun sf/insert-doi-citation (doi)
+  "Insert a slide citation link for DOI, fetching its metadata from doi.org."
+  (interactive
+   (let ((clip (sf/doi--normalise (shell-command-to-string "pbpaste"))))
+     (list (read-string "DOI: " (and (string-match-p "\\`10\\.[0-9]+/\\S-+\\'" clip)
+                                     clip)))))
+  (insert (sf/doi--citation (sf/doi--normalise doi))))
+
 (map! :after markdown-mode
       :map markdown-mode-map
       :localleader
       (:prefix "i"
        :desc "Figure from clipboard" "v" #'sf/paste-figure
        :desc "Figure from file"      "F" #'sf/insert-figure-file
-       :desc "Figure from URL"       "u" #'sf/insert-figure-url))
+       :desc "Figure from URL"       "u" #'sf/insert-figure-url
+       :desc "Citation from DOI"     "d" #'sf/insert-doi-citation))
 #+end_src
 
 * Magit
