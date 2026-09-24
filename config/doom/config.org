@@ -190,6 +190,10 @@ Allow Emacs to prompt for GPG passphrase in minibuffer.
 Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so
 multi-selection works in Vertico. Move to the next candidate after selecting,
 which makes repeated selection quicker.
+
+| Key   | Action                                              |
+|-------+-----------------------------------------------------|
+| =C-;= | Select the candidate and move to the next (Vertico) |
 #+begin_src emacs-lisp
 (defun sf/embark-select-and-next ()
   "Toggle the current Embark candidate and advance to the next one."
@@ -199,6 +203,70 @@ which makes repeated selection quicker.
 
 (after! embark
   (define-key vertico-map (kbd "C-;") #'sf/embark-select-and-next))
+#+end_src
+
+** Cheat Sheet
+=SPC h C= collects every key table in this file into one read-only Org buffer,
+grouped by section, with a link back to each section.  A table counts when its
+first column header starts with =Key=, so a new section joins the cheat sheet
+by documenting its keys in such a table.
+
+| Key       | Action               |
+|-----------+----------------------|
+| =SPC h C= | Show the cheat sheet |
+| =q=       | Close it             |
+#+begin_src emacs-lisp
+(defun sf/cheatsheet--tables (file)
+  "Key tables in FILE as (OUTLINE-PATH LINE TABLE-TEXT), in file order."
+  (require 'org-table)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (delay-mode-hooks (org-mode))
+    (let (tables)
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t]*| *Key" nil t)
+        (let ((begin (line-beginning-position)))
+          (when (and (org-at-table-p)
+                     (save-excursion (forward-line -1) (not (org-at-table-p))))
+            (let ((path (save-excursion
+                          (goto-char begin)
+                          (ignore-errors (org-get-outline-path t))))
+                  (line (line-number-at-pos begin)))
+              (goto-char (org-table-end))
+              (push (list path line (buffer-substring-no-properties begin (point)))
+                    tables)))))
+      (nreverse tables))))
+
+(defun sf/cheatsheet ()
+  "Show the key tables from config.org in one read-only buffer."
+  (interactive)
+  (let ((file (expand-file-name "config.org" doom-user-dir))
+        (buf (get-buffer-create "*cheat sheet*"))
+        last-top last-path)
+    (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert "#+title: Cheat sheet\n")
+        (pcase-dolist (`(,path ,line ,table) (sf/cheatsheet--tables file))
+          (unless (equal path last-path)
+            (unless (equal (car path) last-top)
+              (insert (format "\n* %s\n" (car path)))
+              (setq last-top (car path)))
+            (when (cdr path)
+              (insert (format "\n** %s\n" (string-join (cdr path) " / "))))
+            ;; Line numbers keep the link unambiguous where headings repeat
+            (insert (format "[[file:%s::%d][config]]\n" file line))
+            (setq last-path path))
+          (insert "\n" table)))
+      (org-mode)
+      (read-only-mode 1)
+      (if (bound-and-true-p evil-mode)
+          (evil-local-set-key 'normal "q" #'quit-window)
+        (local-set-key "q" #'quit-window))
+      (goto-char (point-min)))
+    (pop-to-buffer buf)))
+
+(map! :leader :desc "Cheat sheet" "h C" #'sf/cheatsheet)
 #+end_src
 
 * Email
@@ -225,6 +293,11 @@ The standard Doom attachment command uses =read-file-name=, whose =RET= action
 returns only the current candidate. In the attachment prompt, make =RET= consume
 all candidates selected with =C-;=. Selecting a directory opens Dired, where
 marked files can be attached with =C-c C-c=.
+
+| Key                  | Action                                                       |
+|----------------------+--------------------------------------------------------------|
+| =C-c C-a=, =SPC m a= | Attach files (compose buffer)                                |
+| =C-;=                | Select another file in the attach prompt; =RET= attaches all |
 #+begin_src emacs-lisp
 (defvar sf/mu4e-selected-attachments nil
   "Files selected in the active mu4e attachment prompt.")
@@ -282,12 +355,82 @@ marked files can be attached with =C-c C-c=.
 ** Search within viewed messages
 mu4e normally uses =n= and =N= for message navigation. In Evil normal state,
 retain the usual Vim behaviour so they repeat searches started with =/= or =?=.
+
+| Key       | Action                                           |
+|-----------+--------------------------------------------------|
+| =n= / =N= | Next / previous search match (mu4e message view) |
 #+begin_src emacs-lisp
 (after! mu4e
   (evil-define-key 'normal mu4e-view-mode-map
     "n" #'evil-search-next
     "N" #'evil-search-previous))
 #+end_src
+
+** Notmuch Keys
+The notmuch setup and its bindings live in =config/doom-private/email.el=.
+Flagging a message (=F=) marks it for capture, and =C= captures it as an Org
+TODO in =~/org-roam/mail.org= and clears the flag.
+
+| Key                   | Action                           |
+|-----------------------+----------------------------------|
+| =SPC e e=             | Notmuch home                     |
+| =SPC e j=             | Jump to a saved search           |
+| =SPC e s=             | Search (unthreaded)              |
+| =SPC e f= / =SPC e F= | Find with consult (list / tree)  |
+| =SPC e d=             | Messages in a folder             |
+| =SPC e c=             | Compose                          |
+| =SPC e r=             | Resume a message saved to a file |
+| =SPC e q=             | Flush the send queue             |
+
+| Key (message view) | Action                                   |
+|--------------------+------------------------------------------|
+| =r= / =R=          | Reply all / reply to sender              |
+| =A=                | Archive (remove the inbox tag)           |
+| =d=                | Move to trash and go to the next message |
+| =F=                | Toggle flag                              |
+| =C=                | Capture as Org TODO and clear the flag   |
+| =n= / =p=          | Next / previous open message             |
+| =N= / =P=          | Next / previous thread                   |
+| =U=                | Show only unread messages in the thread  |
+| =J=                | Jump to a saved search                   |
+| =H=                | Toggle HTML / plain-text preference      |
+| =V=                | View in browser                          |
+| =#=                | Save as PDF                              |
+| =cb=               | Bounce (resend) to another address       |
+| =gl= / =gL=        | Next / previous link                     |
+| =ga= / =gA=        | Next / previous attachment               |
+| =go=               | Open part in its default app             |
+| =gt=               | View attachment as text                  |
+| =gx=, =RET=        | Open URL at point                        |
+| =q=                | Close                                    |
+
+| Key (search list) | Action                                |
+|-------------------+---------------------------------------|
+| =RET=             | Open the thread's messages unthreaded |
+| =r= / =R=         | Reply all / reply to sender           |
+| =A=               | Archive thread                        |
+| =d=               | Delete thread and advance             |
+| =F=               | Toggle flag                           |
+| =S=               | Filter the search                     |
+| =U=               | Toggle threaded / unthreaded          |
+| =J=               | Jump to a saved search                |
+
+| Key (tree / unthreaded) | Action                                 |
+|-------------------------+----------------------------------------|
+| =C=                     | Capture as Org TODO and clear the flag |
+| =S=                     | Filter                                 |
+| =s=                     | New unthreaded search                  |
+| =*=                     | Tag every message matching the query   |
+| =U=                     | Toggle threaded / unthreaded           |
+| =V=                     | View in browser                        |
+
+| Key (compose) | Action                             |
+|---------------+------------------------------------|
+| =C-c C-f f=   | Pick the From identity             |
+| =C-c C-f F=   | Cycle the From identity            |
+| =C-c TAB=     | Expand address                     |
+| =C-c C-s=     | Insert signature                   |
+| =C-x C-s=     | Save draft (resume with =SPC e r=) |
 
 * Bluesky
 Credentials stored in =~/.authinfo.gpg= as:
@@ -324,9 +467,9 @@ ESS provides IDE-like features for R, Julia, and other statistical languages.
 ** Pipe Operators
 Custom functions for inserting the native R pipe operator =|>=.
 
-| Key   | Action                    |
-|-------+---------------------------|
-| =C-`= | Insert pipe with newline  |
+| Key   | Action                      |
+|-------+-----------------------------|
+| =C-`= | Insert pipe with newline    |
 | =C-~= | Insert pipe without newline |
 #+begin_src emacs-lisp
   (defun then_newline_R_operator ()
@@ -354,6 +497,12 @@ Default template for R documentation comments.
 #+end_src
 
 ** Keybindings
+The pipe keys above also work in the R console.
+
+| Key           | Action                                       |
+|---------------+----------------------------------------------|
+| =0=           | Beginning of input (R console, normal state) |
+| =M-k= / =M-j= | Previous / next matching input (console)     |
 #+begin_src emacs-lisp
 (map! :after ess
  (:map inferior-ess-r-mode-map
@@ -419,12 +568,12 @@ ESS-Julia gives us the same workflow as R:
 This makes =M-n v v= (eval chunk) work in Julia code blocks within Quarto files,
 just like it does for R. Without this, each code block would try to start a new REPL.
 
-| Key       | Action                    |
-|-----------+---------------------------|
-| =M-n v v= | Eval current chunk        |
-| =M-n v b= | Eval whole buffer         |
-| =C-c C-c= | Eval region/paragraph     |
-| =C-c C-s= | Switch Julia session      |
+| Key       | Action                |
+|-----------+-----------------------|
+| =M-n v v= | Eval current chunk    |
+| =M-n v b= | Eval whole buffer     |
+| =C-c C-c= | Eval region/paragraph |
+| =C-c C-s= | Switch Julia session  |
 #+begin_src emacs-lisp
 (after! polymode
   ;; Tell polymode to use ess-julia-mode for julia code blocks
@@ -760,6 +909,11 @@ on a repository:
 3. Magit opens fullframe in that workspace
 
 This means =SPC g g ~/code/new-project= instantly sets up a complete workspace.
+
+| Key         | Action                                                |
+|-------------+-------------------------------------------------------|
+| =gt= / =gT= | Next / previous workspace (Magit status)              |
+| =q=         | Quit Magit, and its workspace if that was all it held |
 #+begin_src emacs-lisp
 (after! magit
   (defun my/magit-setup-workspace ()
@@ -809,6 +963,11 @@ This means =SPC g g ~/code/new-project= instantly sets up a complete workspace.
 ** Forge Topic Buffers
 PR/issue view buffers inherit magit-mode-map which shadows standard evil keys.
 Restore normal evil navigation and add comment binding.
+
+| Key | Action                     |
+|-----+----------------------------|
+| =C= | Comment on the issue or PR |
+| =q= | Close                      |
 #+begin_src emacs-lisp
 (after! forge
   (evil-define-key 'normal forge-topic-mode-map
@@ -836,16 +995,16 @@ Doom's workspaces (built on =persp-mode=) provide buffer isolation per project.
 This is essential for keeping different projects separate.
 
 ** Key Bindings Reference
-| Key           | Action                              |
-|---------------+-------------------------------------|
-| =SPC TAB TAB= | Switch workspace                    |
-| =SPC TAB n=   | New workspace                       |
-| =SPC TAB d=   | Delete workspace                    |
-| =SPC TAB r=   | Rename workspace                    |
-| =SPC b b=     | Switch buffer (workspace only)      |
-| =SPC b B=     | Switch buffer (all buffers)         |
-| =SPC b r=     | Remove buffer from workspace        |
-| =SPC p p=     | Switch project (creates workspace)  |
+| Key           | Action                             |
+|---------------+------------------------------------|
+| =SPC TAB TAB= | Switch workspace                   |
+| =SPC TAB n=   | New workspace                      |
+| =SPC TAB d=   | Delete workspace                   |
+| =SPC TAB r=   | Rename workspace                   |
+| =SPC b b=     | Switch buffer (workspace only)     |
+| =SPC b B=     | Switch buffer (all buffers)        |
+| =SPC b W=     | Remove buffer from workspace       |
+| =SPC p p=     | Switch project (creates workspace) |
 
 ** Basic Setup
 #+begin_src emacs-lisp
@@ -1137,6 +1296,15 @@ The heading gets an ID so the talk shows up in the speaker's backlinks."
            :unnarrowed t))))
 #+end_src
 
+| Key         | Capture (after =SPC X=)           |
+|-------------+-----------------------------------|
+| =t=         | Todo for a person or project      |
+| =n=         | Note                              |
+| =er= / =ed= | Mail needing a reply / a decision |
+| =s=         | Talk notes                        |
+| =m=         | Meeting                           |
+| =r=         | Review                            |
+
 The mail templates file into =~/org-roam/mail.org=, which carries the
 =:active:= filetag so =sf/org-active-files= picks it up for the agenda.
 Flags arrive from Outlook and the phone, so =tag:flagged= is the capture
@@ -1166,6 +1334,20 @@ Switch context with =SPC n r p= (private) or =SPC n r w= (work).
 =SPC n a= opens the date-filtered agenda, which is the view to work from.
 =org-todo-list= ignores dates and lists every open task, so it belongs to the
 occasional stocktake rather than to a working day.
+
+| Key                       | Action                                 |
+|---------------------------+----------------------------------------|
+| =SPC n a=                 | Main agenda                            |
+| =SPC n r f=               | Find note                              |
+| =SPC n r g=               | Grep notes                             |
+| =SPC n r i=               | Insert link                            |
+| =C-c @=                   | Insert link to a person (insert state) |
+| =SPC n r b=               | Find backlink                          |
+| =SPC n r a= / =SPC n r d= | Add / remove tag                       |
+| =SPC n r p= / =SPC n r w= | Switch to private / work notes         |
+| =SPC n d d=               | Today's diary                          |
+| =SPC n d y=               | Yesterday's diary                      |
+| =SPC n d c=               | Diary for a date                       |
 #+begin_src emacs-lisp
 (defun sf/org-agenda-main ()
   "Open the main agenda: today, unscheduled tasks, and what is waiting."
@@ -1216,18 +1398,18 @@ When inserting references, automatically generate citation keys in format: =Auth
 #+end_src
 
 ** Keybindings
-| Key       | Action                                |
-|-----------+---------------------------------------|
-| =SPC B d= | Insert BibTeX from DOI                |
-| =SPC B s= | Search papers (all sources)           |
-| =SPC B c= | Search CrossRef                       |
+| Key       | Action                      |
+|-----------+-----------------------------|
+| =SPC B d= | Insert BibTeX from DOI      |
+| =SPC B s= | Search papers (all sources) |
+| =SPC B c= | Search CrossRef             |
 
 In search results buffer:
-| Key   | Action              |
-|-------+---------------------|
-| =i=   | Insert entry        |
-| =RET= | Open URL            |
-| =c=   | Copy to kill ring   |
+| Key   | Action            |
+|-------+-------------------|
+| =i=   | Insert entry      |
+| =RET= | Open URL          |
+| =c=   | Copy to kill ring |
 #+begin_src emacs-lisp
 (map! :leader
       (:prefix ("B" . "bibliography")
@@ -1241,9 +1423,9 @@ In search results buffer:
 Extends evil-surround with mode-specific surrounds.
 
 In LaTeX/TeX modes:
-| Key   | Surround with          |
-|-------+------------------------|
-| =S c= | =\command{}= (prompts) |
+| Key   | Surround with             |
+|-------+---------------------------|
+| =S c= | =\command{}= (prompts)    |
 | =S l= | =\begin{env}...\end{env}= |
 
 Standard evil-surround keys still work everywhere (=S (=, =S "=, =S t= for HTML tags, etc.)
@@ -1264,11 +1446,11 @@ Standard evil-surround keys still work everywhere (=S (=, =S "=, =S t= for HTML 
 Evil-snipe enhances =f=/=F=/=t=/=T= with 2-character search.
 By default it only searches the current line; this extends it to the visible area.
 
-| Key     | Action                          |
-|---------+---------------------------------|
-| =s xy=  | Jump to next "xy"               |
-| =S xy=  | Jump to previous "xy"           |
-| =;= / =,= | Repeat forward/backward       |
+| Key       | Action                  |
+|-----------+-------------------------|
+| =s xy=    | Jump to next "xy"       |
+| =S xy=    | Jump to previous "xy"   |
+| =;= / =,= | Repeat forward/backward |
 #+begin_src emacs-lisp
 (setq evil-snipe-scope 'visible)
 #+end_src
@@ -1297,6 +1479,10 @@ Chat with Claude directly in Emacs.
 
 ** Aider
 AI pair programming tool. =SPC c A= opens the transient menu.
+
+| Key       | Action     |
+|-----------+------------|
+| =SPC c A= | Aider menu |
 #+begin_src emacs-lisp
 (use-package! aidermacs
   :custom
@@ -1315,6 +1501,12 @@ AI pair programming tool. =SPC c A= opens the transient menu.
 
 *Tip:* In the Claude Code vterm buffer, use =C-c C-t= to enter copy mode for scrolling,
 then =ESC= to enable normal vim motions, =C-c C-t= again to exit.
+
+| Key       | Action                                     |
+|-----------+--------------------------------------------|
+| =SPC '=   | Claude Code menu                           |
+| =SPC C=   | Scroll Claude Code buffers to the bottom   |
+| =C-c C-t= | Toggle copy mode in the Claude Code buffer |
 #+begin_src emacs-lisp
 (use-package! claude-code-ide
   :config
