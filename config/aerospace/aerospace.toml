@@ -119,6 +119,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     esc = ['reload-config', 'mode main']
     r = ['flatten-workspace-tree', 'mode main']    # reset layout
     f = ['layout floating tiling', 'mode main']    # toggle float
+    s = ['exec-and-forget ~/.local/bin/aerospace-summon', 'mode main']    # bring frontmost app's windows here
     backspace = ['close-all-windows-but-current', 'mode main']
 
     alt-shift-h = ['join-with left', 'mode main']

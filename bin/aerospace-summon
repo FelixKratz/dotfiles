@@ -1,0 +1,17 @@
+#!/bin/bash
+# Move every window of the frontmost app to the focused AeroSpace workspace.
+#
+# An app can hold focus while all its windows sit on a hidden workspace:
+# floating windows stay where they first appeared, and dialogs AeroSpace
+# does not track (update prompts, auth sheets, save panels) never trigger
+# a workspace switch. Cmd-Tab to the app, then run this to bring it here.
+
+set -euo pipefail
+
+ws=$(aerospace list-workspaces --focused)
+pid=$(lsappinfo info -only pid "$(lsappinfo front)" | cut -d= -f2)
+
+aerospace list-windows --monitor all --pid "$pid" --format '%{window-id}' |
+  while read -r id; do
+    aerospace move-node-to-workspace --window-id "$id" "$ws"
+  done
