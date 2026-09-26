@@ -184,7 +184,7 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   that cannot go out after all — the PR was merged while it waited — comes
   back into `sbr` with the reason rather than being retried for ever. A PR opens as a draft
   with no reviewer, and a fresh reviewer goes over it as `sbfnk-review-bot`;
-  the bot answers the findings, and so on for up to five rounds. A clean pass
+  the bot answers the findings, and so on for up to ten rounds. A clean pass
   marks the PR ready and requests your review; if the rounds run out, it
   stays a draft and you are asked anyway. Your reviews and comments are
   instructions throughout: it answers with new commits and replies, pushed

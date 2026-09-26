@@ -220,10 +220,10 @@ opening a PR. If you find yourself with unreviewed PRs sitting there with no
 verdict, the fix is to publish the red check at PR-creation time rather than
 here.
 
-### Stop after 5 rounds### Stop after 5 rounds
+### Stop after 10 rounds
 
-If five rounds have not converged, stop. Report what is still open and leave it
-for the human. A reviewer that keeps finding new things after five passes is
+If ten rounds have not converged, stop. Report what is still open and leave it
+for the human. A reviewer that keeps finding new things after ten passes is
 either working to a bar the code will never meet or generating nits, and more
 commits will not fix either. Say which you think it is.
 
