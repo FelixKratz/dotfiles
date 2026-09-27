@@ -1169,9 +1169,10 @@ Custom agenda with vulpea integration.
 
 Dates do the filtering here, rather than tags. Anything carrying a =SCHEDULED=
 or =DEADLINE= stays out of sight until its date comes round — so a submission
-due on 16 November costs no attention in September — and the block that is meant
-to reach zero is the list of tasks with *no* date at all. Clearing that list
-means deciding when to do things, which is the decision worth making daily.
+due on 16 November costs no attention in September. A date means "start on this
+day"; tasks without one are the backlog, and the backlog is looked at once a
+week in its own view (=r=), where things get a real date, stay, or are killed.
+The daily view (space) shows today only.
 
 =org-todo-list= still shows everything, undated and dated alike, and is the
 right tool for a monthly stocktake rather than for daily work.
@@ -1197,11 +1198,11 @@ right tool for a monthly stocktake rather than for daily work.
       org-agenda-skip-deadline-if-done t
       org-agenda-skip-timestamp-if-done t)
 
-;; Tasks with no date of any kind. This is the scan: give each one a date, or
-;; kill it. Project containers are excluded — they are headings, not actions.
+;; Tasks with no date of any kind: the backlog, for the weekly review. Project
+;; containers are excluded — they are headings, not actions.
 (defconst sf/agenda-cmd-unscheduled
   '(tags-todo "-project/TODO|STRT"
-    ((org-agenda-overriding-header "Unscheduled — give these a date")
+    ((org-agenda-overriding-header "Backlog — date, keep or kill")
      (org-agenda-skip-function
       '(org-agenda-skip-entry-if 'scheduled 'deadline 'timestamp))
      (org-agenda-sorting-strategy '(priority-down category-keep)))))
@@ -1210,12 +1211,16 @@ right tool for a monthly stocktake rather than for daily work.
 ;; org tag matching is case-sensitive, and nothing here is tagged focus in any
 ;; case. Add it back if you ever start tagging.
 (setq org-agenda-custom-commands
-   `((" " "Agenda"
+   `((" " "Today"
       (,vulpea-agenda-cmd-refile
-       ,vulpea-agenda-cmd-today
-       ,sf/agenda-cmd-unscheduled
-       ,vulpea-agenda-cmd-waiting)
-      ((org-agenda-buffer-name vulpea-agenda-main-buffer-name)))))
+       ,vulpea-agenda-cmd-today)
+      ((org-agenda-buffer-name vulpea-agenda-main-buffer-name)))
+     ("r" "Weekly review"
+      (,sf/agenda-cmd-unscheduled
+       ,vulpea-agenda-cmd-waiting))))
+
+;; Deadlines surface a week ahead; two weeks put most of the month in view.
+(setq org-deadline-warning-days 7)
 #+end_src
 
 ** Capture Templates
