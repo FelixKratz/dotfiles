@@ -990,6 +990,38 @@ Restore normal evil navigation and add comment binding.
     "q" #'kill-current-buffer))
 #+end_src
 
+** Forge Topic Filters
+Forge's default "active" filter also lists closed issues and merged PRs
+that are still unread, which clutters the status buffer.  Show only open
+topics, with =-C= in forge dispatch (=@= under evil) to flip between open
+and all topics.
+#+begin_src emacs-lisp
+(after! forge
+  (setq forge-status-buffer-default-topic-filters
+        (forge--topics-spec :type 'topic :active nil :state 'open :order 'newest)
+        forge-list-buffer-default-topic-filters
+        (forge--topics-spec :type 'topic :active nil :state 'open :order 'newest))
+
+  (transient-define-suffix sf/forge-toggle-closed-topics ()
+    "Toggle between listing only open topics and all topics."
+    :description (lambda ()
+                   (if (and (bound-and-true-p forge--buffer-topics-spec)
+                            (oref forge--buffer-topics-spec state))
+                       "show closed/merged"
+                     "hide closed/merged"))
+    :inapt-if-not (lambda () (bound-and-true-p forge--buffer-topics-spec))
+    (interactive)
+    (let ((spec forge--buffer-topics-spec))
+      (oset spec active nil)
+      (oset spec state (if (oref spec state) nil 'open)))
+    (forge-refresh-buffer))
+
+  (transient-append-suffix 'forge-dispatch "-S"
+    '("-C" sf/forge-toggle-closed-topics))
+  (transient-append-suffix 'forge-topics-menu "-S"
+    '("-C" sf/forge-toggle-closed-topics)))
+#+end_src
+
 * Workspaces and Projectile
 Doom's workspaces (built on =persp-mode=) provide buffer isolation per project.
 This is essential for keeping different projects separate.
