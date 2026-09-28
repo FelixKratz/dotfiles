@@ -751,9 +751,44 @@ toggled to a value that never fires in the body."
         (notmuch-search notmuch-tree-basic-query)
       (notmuch-unthreaded notmuch-search-query-string)))
 
+  ;; s/S search and filter unthreaded in every notmuch buffer; zs/zS are the
+  ;; threaded equivalents.
+  (defun sf/notmuch-current-query ()
+    "Return the query of the current notmuch buffer, or nil if it has none."
+    (cond ((derived-mode-p 'notmuch-tree-mode) (notmuch-tree-get-query))
+          ((derived-mode-p 'notmuch-search-mode) notmuch-search-query-string)))
+
+  (defun sf/notmuch-filtered-query (query)
+    "Return the current buffer's query narrowed by QUERY."
+    (let ((current (sf/notmuch-current-query))
+          (grouped (notmuch-group-disjunctive-query-string query)))
+      (when (derived-mode-p 'notmuch-tree-mode)
+        (notmuch-tree-close-message-window))
+      (if (or (null current) (string= current "*"))
+          grouped
+        (concat (notmuch-group-disjunctive-query-string current)
+                " and " grouped))))
+
+  (defun sf/notmuch-filter-unthreaded (query)
+    "Narrow the current results by QUERY and show them unthreaded."
+    (interactive (list (notmuch-read-query "Filter (unthreaded): ")))
+    (notmuch-unthreaded (sf/notmuch-filtered-query query)))
+
+  (defun sf/notmuch-filter-threaded (query)
+    "Narrow the current results by QUERY and show them as threads."
+    (interactive (list (notmuch-read-query "Filter (threaded): ")))
+    (notmuch-search (sf/notmuch-filtered-query query)))
+
+  (dolist (map (list notmuch-common-keymap notmuch-hello-mode-map
+                     notmuch-search-mode-map notmuch-tree-mode-map))
+    (evil-define-key* 'normal map
+      "s" #'notmuch-unthreaded
+      "S" #'sf/notmuch-filter-unthreaded
+      "zs" #'notmuch-search
+      "zS" #'sf/notmuch-filter-threaded))
+
   ;; Evil keybindings — search mode
   (evil-define-key 'normal notmuch-search-mode-map
-    "S" #'notmuch-search-filter
     "A" #'sf/notmuch-search-archive
     "d" #'sf/notmuch-search-delete
     "F" #'sf/notmuch-search-toggle-flag
@@ -763,8 +798,6 @@ toggled to a value that never fires in the body."
 
   (evil-define-key 'normal notmuch-tree-mode-map
     "C" #'sf/notmuch-capture
-    "s" #'notmuch-unthreaded
-    "S" #'notmuch-tree-filter
     "V" #'sf/notmuch-view-in-browser
     (kbd "*") #'sf/notmuch-tree-tag-all)
 
