@@ -1233,6 +1233,108 @@ toggled to a value that never fires in the body."
           (apply orig-fun args)
         (when reenable (org-msg-mode 1)))))
   (advice-add 'notmuch-mua-new-forward-messages
-              :around #'sf/notmuch-forward-without-org-msg))
+              :around #'sf/notmuch-forward-without-org-msg)
+
+  ;; Forward an HTML message the way org-msg replies to one: the original
+  ;; is kept as HTML and appended below the org body on send, so nothing
+  ;; has to be converted back to org.  org-msg finds the original through
+  ;; the In-Reply-To header, which a forward lacks, so hand it the id.
+  (defvar sf/org-msg-forward-id nil
+    "Message-ID that org-msg should treat as the original while forwarding.")
+
+  (defun sf/org-msg-forward-original (orig-fun field)
+    (if (and sf/org-msg-forward-id (string= (downcase field) "in-reply-to"))
+        sf/org-msg-forward-id
+      (funcall orig-fun field)))
+  (advice-add 'org-msg-message-fetch-field :around #'sf/org-msg-forward-original)
+
+  (defun sf/notmuch-save-attachments (dir)
+    "Save the attachment parts of the raw message in this buffer to DIR.
+Return the list of files written.  Inline parts are left out because
+org-msg already carries them inside the exported HTML."
+    (let ((handles (mm-dissect-buffer t t))
+          files)
+      (cl-labels
+          ((walk (handle)
+             (if (stringp (car handle))
+                 (mapc #'walk (cdr handle))
+               (let ((name (or (mail-content-type-get
+                                (mm-handle-disposition handle) 'filename)
+                               (mail-content-type-get
+                                (mm-handle-type handle) 'name))))
+                 ;; A signature part only verifies the original's body,
+                 ;; which the forward re-encodes.
+                 (when (and name
+                            (equal (car (mm-handle-disposition handle))
+                                   "attachment")
+                            (not (member (mm-handle-media-type handle)
+                                         '("application/pkcs7-signature"
+                                           "application/x-pkcs7-signature"
+                                           "application/pgp-signature"))))
+                   (let ((file (expand-file-name
+                                (file-name-nondirectory name) dir)))
+                     (when (file-exists-p file)
+                       (setq file (expand-file-name
+                                   (format "%d-%s" (length files)
+                                           (file-name-nondirectory name))
+                                   dir)))
+                     (mm-save-part-to-file handle file)
+                     (push file files)))))))
+        (if (bufferp (car handles))
+            (walk handles)
+          (mapc #'walk (if (stringp (car handles)) (cdr handles) handles))))
+      (mm-destroy-parts handles)
+      (nreverse files)))
+
+  (defun sf/notmuch-forward (&optional prompt-for-sender)
+    "Forward the current message, keeping an HTML original as HTML.
+Plain-text messages go through the standard notmuch forward."
+    (interactive "P")
+    (let ((query (if (derived-mode-p 'notmuch-tree-mode)
+                     (notmuch-tree-get-message-id)
+                   (notmuch-show-get-message-id)))
+          message-id subject htmlp files)
+      (with-temp-buffer
+        (let ((coding-system-for-read 'no-conversion))
+          (notmuch--call-process notmuch-command nil t nil
+                                 "show" "--format=raw" query))
+        (setq message-id (message-fetch-field "Message-ID")
+              subject (message-make-forward-subject)
+              htmlp (org-msg-article-htmlp))
+        (when htmlp
+          (setq files (sf/notmuch-save-attachments
+                       (make-temp-file "notmuch-fwd-" t)))))
+      (if (not (and htmlp org-msg-mode message-id))
+          (notmuch-mua-new-forward-messages (list query) prompt-for-sender)
+        (notmuch-mua-mail nil subject
+                          (and (or prompt-for-sender
+                                   notmuch-always-prompt-for-sender)
+                               (list (cons 'From
+                                           (notmuch-mua-prompt-for-sender))))
+                          nil (notmuch-mua-get-switch-function))
+        (save-excursion
+          (message-add-header (concat "References: " message-id))
+          ;; org-msg only lays out the original below the body when the
+          ;; body is non-empty.
+          (goto-char (point-max))
+          (insert "\n"))
+        (let ((sf/org-msg-forward-id message-id)
+              ;; No recipient yet, so greet nobody by name.
+              (org-msg-greeting-fmt (and org-msg-greeting-fmt
+                                         (replace-regexp-in-string
+                                          "%s" "" org-msg-greeting-fmt t t))))
+          (org-msg-post-setup))
+        ;; `org-msg-attach-attach' prepends.
+        (dolist (file (reverse files))
+          (org-msg-attach-attach file))
+        ;; Set after the switch to org-msg-edit-mode, which clears locals.
+        (when notmuch-message-forwarded-tags
+          (setq notmuch-message-queued-tag-changes
+                (list (cons query notmuch-message-forwarded-tags))))
+        (set-buffer-modified-p nil)
+        (message-goto-to))))
+
+  (evil-define-key* 'normal notmuch-show-mode-map "cf" #'sf/notmuch-forward)
+  (evil-define-key* 'normal notmuch-tree-mode-map "cf" #'sf/notmuch-forward))
 
 ;;; email.el ends here
