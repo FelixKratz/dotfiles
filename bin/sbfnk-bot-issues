@@ -1962,6 +1962,7 @@ tend_pr_inner() {
       return 1
     fi
     $LIST_ONLY && { log "  would answer feedback on $repo#$n"; return 0; }
+    job_kind pr
     update_pr "$repo" "$n" "$feedback" "$started_at"
     return 0
   fi
@@ -1972,6 +1973,7 @@ tend_pr_inner() {
     >/dev/null && return 1
   [ "$(jq '.rounds // 0' <<< "$state")" -lt "$MAX_REVIEW_ROUNDS" ] || return 1
   $LIST_ONLY && { log "  would review $repo#$n"; return 0; }
+  job_kind pr
   review_pr "$repo" "$n" "$sha" "$(jq -r .base.ref <<< "$pr")" \
     "$(jq -r .head.ref <<< "$pr")"
 }
@@ -2007,12 +2009,14 @@ fi
 # take turns: after a PR job the next poll looks at issues first, so a busy
 # stretch of reviews cannot starve an issue waiting to be started.
 LAST_KIND_FILE="$STATE_DIR/last-job"
+# Recorded as a job starts: jobs run side by side for hours, and a poll
+# during one must already see what kind it is.
+job_kind() { echo "$1" > "$LAST_KIND_FILE"; }
 busy=false
 tend_prs() {
   while read -r -u 4 prepo pn; do
     [ -n "${prepo:-}" ] || continue
     if tend_pr "$prepo" "$pn"; then
-      $LIST_ONLY || echo pr > "$LAST_KIND_FILE"
       busy=true
       return 0
     fi
@@ -2044,8 +2048,8 @@ while read -r -u 3 repo n; do
     log "  would work on $repo#$n ($reason)"
     continue
   fi
+  job_kind issue
   work_on "$repo" "$n" "$event" "$reason"
-  echo issue > "$LAST_KIND_FILE"
   busy=true
   # One issue per run keeps a bad run from repeating across the backlog.
   break
