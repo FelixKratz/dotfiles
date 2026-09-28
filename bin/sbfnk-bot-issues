@@ -1844,7 +1844,7 @@ PROMPT
 # sbfnk-review-bot; a clean pass posts nothing and turns the check green.
 review_pr() {
   local repo="$1" n="$2" sha="$3" base="$4" head="$5" id work run out
-  local spec result token payload round count failed c
+  local spec result token payload round count failed c unanchored
   id="${repo//\//_}-review$n-$(date +%Y%m%d-%H%M%S)"
   work="$CACHE_DIR/work/$id"
   run="$RUNS_DIR/$id"
@@ -1912,13 +1912,34 @@ review_pr() {
   if ! GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/reviews" \
     --input - <<< "$payload" >/dev/null 2>&1; then
     # One line outside the diff rejects the lot; post them one by one.
+    unanchored="[]"
     while read -r c; do
       GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/comments" \
         --input - <<< "$(jq -c --arg sha "$sha" '. + {commit_id: $sha}' \
-          <<< "$c")" >/dev/null 2>&1 || failed=$((failed + 1))
+          <<< "$c")" >/dev/null 2>&1 \
+        || unanchored="$(jq -c --argjson c "$c" '. + [$c]' <<< "$unanchored")"
     done < <(jq -c '.comments[]' <<< "$payload")
+    # The rest go in one conversation comment, which the author answers like
+    # inline ones; left out, the round would wait on points nobody can see.
+    if [ "$(jq length <<< "$unanchored")" -gt 0 ]; then
+      log "  $(jq length <<< "$unanchored") finding(s) on $repo#$n did not anchor to the diff"
+      GH_TOKEN="$token" gh api -X POST "repos/$repo/issues/$n/comments" \
+        -f body="$(jq -r '"Points on lines outside the diff:\n\n"
+          + (map("**`\(.path)` line \(.line)**\n\n\(.body)") | join("\n\n---\n\n"))' \
+          <<< "$unanchored")" >/dev/null 2>&1 \
+        || failed="$(jq length <<< "$unanchored")"
+    fi
   fi
-  [ "$failed" -eq 0 ] || log "  $failed finding(s) on $repo#$n did not anchor to the diff"
+  if [ "$failed" -eq "$count" ]; then
+    log "  none of the $count finding(s) on $repo#$n could be posted"
+    review_check "$repo" "$sha" failure "Review not posted" \
+      "The review of $sha found $count points but could not post them."
+    set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"]"
+    hand_over "$repo" "$n" "$sha" false
+    rm -rf "$work"
+    return 0
+  fi
+  [ "$failed" -eq 0 ] || log "  $failed finding(s) on $repo#$n could not be posted"
   if [ "$round" -ge "$MAX_REVIEW_ROUNDS" ]; then
     review_check "$repo" "$sha" failure "$count findings open after $round rounds" \
       "Stopped at the round cap; the open findings wait for $OWNER_LOGIN."
