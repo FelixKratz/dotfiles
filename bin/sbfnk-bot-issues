@@ -1749,14 +1749,14 @@ publish_update() {
     --jq 'if .merged then "merged" else .state end' 2>/dev/null)"
   case "$state" in
     merged|closed)
-      publish_failed "$id" "$repo#$n was $state before this went out" "$2"
+      publish_failed "$id" "$repo#$n was $state before this went out" "${2:-}"
       return 1 ;;
   esac
   if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
     # Fast-forward only: if the branch moved meanwhile, sbfnk decides.
     err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" 2>&1)" \
       || { publish_failed "$id" "push to $head failed: $(printf '%s' "$err" \
-        | grep -v '^remote:' | grep . | tail -1)" "$2"; return 1; }
+        | grep -v '^remote:' | grep . | tail -1)" "${2:-}"; return 1; }
   fi
   f="$(mktemp)"
   sha="$(git -C "$work" rev-parse HEAD)"
