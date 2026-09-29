@@ -134,6 +134,19 @@ fallback is guarded — calling it there aborts the rest of the config.
 (setq display-line-numbers-type t)
 #+end_src
 
+Emacs keeps earlier themes enabled underneath a newly loaded one and merges their
+face attributes. A light theme that sets only a face's background, such as
+=doom-nord-light= for =solaire-default-face=, then inherits the dark theme's
+foreground and renders mail and other non-file buffers as pale text on a pale
+background. Loading a theme therefore disables the others first.
+#+begin_src emacs-lisp
+(defadvice! sf/disable-other-themes-a (_theme &optional _no-confirm no-enable)
+  "Disable enabled themes before `load-theme' enables a new one."
+  :before #'load-theme
+  (unless no-enable
+    (mapc #'disable-theme custom-enabled-themes)))
+#+end_src
+
 ** Show Modeline in All Popups
 Doom's popup system hides the modeline by default. Always show it so we can
 tell which window has focus.
