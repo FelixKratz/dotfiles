@@ -1292,6 +1292,62 @@ org-msg already carries them inside the exported HTML."
       (mm-destroy-parts handles)
       (nreverse files)))
 
+  (defconst sf/org-msg-forward-marker "---------- Forwarded message ----------"
+    "First line of the forwarded text below the org-msg separator.")
+
+  ;; org-msg builds the plain-text part from the org body alone, so a
+  ;; forward would reach plain-text readers without the forwarded message.
+  (defun sf/org-msg-forwarded-text ()
+    "Return the forwarded message below the separator, or nil."
+    (save-excursion
+      (goto-char (org-msg-end))
+      (forward-line 1)
+      (when (looking-at-p (regexp-quote sf/org-msg-forward-marker))
+        (org-unescape-code-in-string
+         (buffer-substring-no-properties (point) (point-max))))))
+
+  (defun sf/org-msg-add-forward-to-text (result)
+    (when-let ((forwarded (sf/org-msg-forwarded-text)))
+      (dolist (alt (car result))
+        (when (string= (car alt) "text/plain")
+          (setcdr alt (concat (cdr alt) "\n" forwarded)))))
+    result)
+  (advice-add 'org-msg-build-alternatives
+              :filter-return #'sf/org-msg-add-forward-to-text)
+
+  (defun sf/notmuch-forward-text (query)
+    "Return the message matching QUERY as text, headed as a forward.
+The body is rendered the way `notmuch-mua-reply' renders a citation."
+    (let* ((original (plist-get (notmuch-call-notmuch-sexp
+                                 "reply" "--format=sexp" "--format-version=5"
+                                 query)
+                                :original))
+           (headers (plist-get original :headers)))
+      (concat
+       ;; org-msg deletes the first line after its separator, which in a
+       ;; reply is the "X wrote:" line.
+       "\n"
+       sf/org-msg-forward-marker "\n"
+       (mapconcat (lambda (field)
+                    (when-let ((value (plist-get headers field)))
+                      (format "%s: %s\n" (substring (symbol-name field) 1)
+                              value)))
+                  '(:From :Date :Subject :To :Cc) "")
+       "\n"
+       (with-temp-buffer
+         (let ((notmuch-show-insert-text/plain-hook nil)
+               (notmuch-show-max-text-part-size 0)
+               (notmuch-show-insert-header-p-function
+                notmuch-mua-reply-insert-header-p-function)
+               (notmuch-show-indent-multipart nil)
+               (mm-inline-override-types (notmuch--inline-override-types)))
+           (cl-letf (((symbol-function 'notmuch-crypto-insert-sigstatus-button)
+                      #'ignore)
+                     ((symbol-function 'notmuch-crypto-insert-encstatus-button)
+                      #'ignore))
+             (notmuch-show-insert-body original (plist-get original :body) 0)
+             (buffer-substring-no-properties (point-min) (point-max))))))))
+
   (defun sf/notmuch-forward (&optional prompt-for-sender)
     "Forward the current message, keeping an HTML original as HTML.
 Plain-text messages go through the standard notmuch forward."
@@ -1320,10 +1376,10 @@ Plain-text messages go through the standard notmuch forward."
                           nil (notmuch-mua-get-switch-function))
         (save-excursion
           (message-add-header (concat "References: " message-id))
-          ;; org-msg only lays out the original below the body when the
-          ;; body is non-empty.
+          ;; org-msg moves the body below its separator, where it shows
+          ;; what is being forwarded and becomes the plain-text part.
           (goto-char (point-max))
-          (insert "\n"))
+          (insert (sf/notmuch-forward-text query)))
         (let ((sf/org-msg-forward-id message-id)
               ;; No recipient yet, so greet nobody by name.
               (org-msg-greeting-fmt (and org-msg-greeting-fmt
