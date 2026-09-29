@@ -1292,28 +1292,39 @@ org-msg already carries them inside the exported HTML."
       (mm-destroy-parts handles)
       (nreverse files)))
 
+  ;; notmuch queues the replied/forwarded tags in a buffer-local variable,
+  ;; and org-msg's switch to `org-msg-edit-mode' would otherwise wipe it.
+  (put 'notmuch-message-queued-tag-changes 'permanent-local t)
+
   (defconst sf/org-msg-forward-marker "---------- Forwarded message ----------"
     "First line of the forwarded text below the org-msg separator.")
 
-  ;; org-msg builds the plain-text part from the org body alone, so a
-  ;; forward would reach plain-text readers without the forwarded message.
-  (defun sf/org-msg-forwarded-text ()
-    "Return the forwarded message below the separator, or nil."
+  ;; org-msg builds the plain-text part from the org body alone, so replies
+  ;; and forwards would reach plain-text readers without the original.
+  ;; Append what sits below the separator: quoted for a reply, as is for a
+  ;; forward.
+  (defun sf/org-msg-citation-text ()
+    "Return the text below the org-msg separator for the plain-text part."
     (save-excursion
       (goto-char (org-msg-end))
-      (forward-line 1)
-      (when (looking-at-p (regexp-quote sf/org-msg-forward-marker))
-        (org-unescape-code-in-string
-         (buffer-substring-no-properties (point) (point-max))))))
+      (when (zerop (forward-line 1))
+        (let ((text (string-trim-right
+                     (org-unescape-code-in-string
+                      (buffer-substring-no-properties (point) (point-max))))))
+          (cond ((string-empty-p text) nil)
+                ((string-prefix-p sf/org-msg-forward-marker text) text)
+                (t (mapconcat (lambda (line)
+                                (if (string-empty-p line) ">" (concat "> " line)))
+                              (split-string text "\n") "\n")))))))
 
-  (defun sf/org-msg-add-forward-to-text (result)
-    (when-let ((forwarded (sf/org-msg-forwarded-text)))
+  (defun sf/org-msg-add-citation-to-text (result)
+    (when-let ((citation (sf/org-msg-citation-text)))
       (dolist (alt (car result))
         (when (string= (car alt) "text/plain")
-          (setcdr alt (concat (cdr alt) "\n" forwarded)))))
+          (setcdr alt (concat (cdr alt) "\n" citation "\n")))))
     result)
   (advice-add 'org-msg-build-alternatives
-              :filter-return #'sf/org-msg-add-forward-to-text)
+              :filter-return #'sf/org-msg-add-citation-to-text)
 
   (defun sf/notmuch-forward-text (query)
     "Return the message matching QUERY as text, headed as a forward.
@@ -1389,7 +1400,6 @@ Plain-text messages go through the standard notmuch forward."
         ;; `org-msg-attach-attach' prepends.
         (dolist (file (reverse files))
           (org-msg-attach-attach file))
-        ;; Set after the switch to org-msg-edit-mode, which clears locals.
         (when notmuch-message-forwarded-tags
           (setq notmuch-message-queued-tag-changes
                 (list (cons query notmuch-message-forwarded-tags))))
