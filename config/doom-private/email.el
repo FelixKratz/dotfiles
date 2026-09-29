@@ -804,6 +804,12 @@ toggled to a value that never fires in the body."
     (kbd "*") #'sf/notmuch-tree-tag-all
     "U" #'sf/notmuch-toggle-threading)
 
+  ;; Light themes such as doom-nord-light colour the sender line barely darker
+  ;; than the background; the comment face stays legible in light and dark.
+  (custom-set-faces!
+    '(notmuch-message-summary-face :foreground unspecified
+      :inherit font-lock-comment-face))
+
   ;; Tree/unthreaded view has no per-tag line styling built in, so overlay
   ;; unread (bold) and flagged (colour) ourselves after each line is drawn.
   (defface sf/notmuch-tree-unread-face
@@ -811,7 +817,7 @@ toggled to a value that never fires in the body."
     "Face for unread messages in notmuch tree/unthreaded view.")
 
   (defface sf/notmuch-tree-flagged-face
-    '((t :foreground "#e5c07b"))
+    '((t :inherit warning))
     "Face for flagged messages in notmuch tree/unthreaded view.")
 
   (defadvice! sf/notmuch-tree-highlight-tags (msg)
