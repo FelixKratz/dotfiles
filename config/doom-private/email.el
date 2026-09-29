@@ -747,8 +747,10 @@ toggled to a value that never fires in the body."
   (defun sf/notmuch-toggle-threading ()
     "Toggle between threaded and unthreaded view for the current query."
     (interactive)
-    (if (eq major-mode 'notmuch-tree-mode)
-        (notmuch-search notmuch-tree-basic-query)
+    (if (derived-mode-p 'notmuch-tree-mode)
+        (let ((query (notmuch-tree-get-query)))
+          (notmuch-tree-close-message-window)
+          (notmuch-search query))
       (notmuch-unthreaded notmuch-search-query-string)))
 
   ;; s/S search and filter unthreaded in every notmuch buffer; zs/zS are the
@@ -799,9 +801,7 @@ toggled to a value that never fires in the body."
   (evil-define-key 'normal notmuch-tree-mode-map
     "C" #'sf/notmuch-capture
     "V" #'sf/notmuch-view-in-browser
-    (kbd "*") #'sf/notmuch-tree-tag-all)
-
-  (evil-define-key 'normal notmuch-unthreaded-mode-map
+    (kbd "*") #'sf/notmuch-tree-tag-all
     "U" #'sf/notmuch-toggle-threading)
 
   ;; Tree/unthreaded view has no per-tag line styling built in, so overlay
