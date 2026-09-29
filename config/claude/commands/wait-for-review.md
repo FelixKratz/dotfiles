@@ -83,6 +83,7 @@ Repeat Steps 1–5 for each PR in the watch list. For the PR being processed, ru
 
 From the results determine:
 
+- **Is the PR still open?** Check `state` before anything else, and keep `state` in the `--json` field list on every wake-up, however much else you trim. `MERGED`: drop it from the watch list and report it merged. `CLOSED`: drop it, report that it was closed unmerged and by whom (from `gh api repos/{owner}/{repo}/issues/<PR>/events`), and do nothing further on it — no reviews, pushes, merges of `main` or comments. If that leaves the watch list empty, stop the loop (`ScheduleWakeup` with `stop: true`) rather than scheduling another wake-up.
 - Has CodeRabbit posted a review, and does this repo use CodeRabbit at all? (look for `coderabbitai[bot]` or `coderabbit-ai[bot]` in reviews/comments, or a `.coderabbit.yaml` / `.coderabbit.yml` in the repo root). If the repo does not use CodeRabbit, treat it as not required.
 - Has `sbfnk` posted a review? (That's the only human whose comments this command acts on. Other humans' reviews are noted for the summary but don't count for stopping.)
 - Which inline comments are unaddressed AND from a trusted author (see Trust model above)? A comment is unaddressed if nobody (including you) has replied to its thread with text that clearly resolves or pushes back on it.
@@ -150,7 +151,7 @@ has had no automated review and leave it to the human.
 
 After processing every PR in the watch list: if no PR has unaddressed trusted comments or fixable failing checks, but at least one PR is still pending (required review missing, automated review round still in flight, or checks still in progress):
 
-- Drop from the list any PR that is now fully done (merged, or auto-merge queued).
+- Drop from the list any PR that is now fully done (merged, closed, or auto-merge queued).
 - Call `ScheduleWakeup` with **all four** of `delaySeconds`, `noop`, `reason` and `prompt`. `noop` is required and easy to forget — omit it and the call fails with `noop is required when stop is not true`, no wake-up is scheduled, and the PR is left unwatched while your summary claims otherwise. Pass `noop=true` when the wake-up found nothing to do, `noop=false` when it acted (pushed a fix, addressed a comment).
 - Set `prompt="/wait-for-review <space-separated remaining PR numbers>"` and `reason="waiting on PRs #<remaining list> reviews/checks"`.
 - Pick `delaySeconds` from what you are actually waiting for: **180** while CI checks are still running, since those settle in minutes. **1800** when the only thing outstanding is `sbfnk`'s review — a human does not arrive on a three-minute cadence, and polling as if they might is pure spend. If you are waiting on both, use the shorter one until the checks finish.
