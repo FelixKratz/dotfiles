@@ -217,7 +217,8 @@ case "$cmd" in
         echo "== the screen found nothing to flag =="
         echo
       fi
-      if [ "$(meta "$id" .outcome)" = pr ] \
+      if { [ "$(meta "$id" .outcome)" = pr ] \
+           || [ "$(meta "$id" .outcome)" = update ]; } \
         && [ "$(meta "$id" '.edited // false')" != true ]; then
         echo "== not edited: the humanizer step did not run =="
         echo

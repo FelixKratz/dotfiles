@@ -163,8 +163,9 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   its own macOS account, which cannot read your home folder, and Claude works
   in a sandboxed clone with a fresh configuration, no GitHub access and
   nothing but the issue and the repository. Your humanizer edits what it
-  publishes — the PR text, cut to what a reviewer needs, its questions, and
-  the prose it adds to the repository — and follows your edits to the skill
+  publishes — the PR text, cut to what a reviewer needs, its questions, its
+  replies to review feedback, and the prose it adds to the repository,
+  including roxygen, docstrings and code comments — and follows your edits to the skill
   through an agent of your own. A second model with no tools
   screens text and every commit for anything the issue and the repository do
   not account for; anything flagged gets one round of fixing and a second

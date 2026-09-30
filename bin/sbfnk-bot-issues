@@ -818,15 +818,62 @@ $EDIT_NOTE
     <<< "$out" 2>/dev/null
 }
 
-# Prose a run added to the repository itself — a vignette, a README, a
-# changelog entry — goes through the same humanizer as the pull request text,
-# in the clone, and the edit is committed on top of the work.
-DOC_RE='\.(md|Rmd|Rmarkdown|qmd|txt|rst|org)$'
-edit_docs() {
-  local work="$1" from="$2" config="$3" files
+UPDATE_EDIT_SCHEMA='{"type":"object","properties":{
+  "replies":{"type":"array","items":{"type":"string"}},
+  "description":{"type":"string"}},"required":["replies"]}'
+
+# The replies to feedback on an open pull request, and its new description if
+# there is one, through the same humanizer. Echoes the update result with the
+# edited text in place, or nothing if the edit failed.
+humanize_update() {
+  local result="$1" config="$2" out
   [ -r "$HUMANIZER" ] || return 0
-  files="$(git -C "$work" diff --name-only "$from..HEAD" 2>/dev/null \
-    | grep -E "$DOC_RE")"
+  mkdir -p "$config"
+  out="$(cd "$config" && run_model "$config" -p "$(cat <<PROMPT
+Edit the replies to review feedback on a pull request, and its new
+description if there is one, before they are published.
+
+Use the humanizer skill below, in embedded mode: return only the final text.
+On top of it, make each as short as it can be while keeping every piece of
+relevant information: what was changed, or why not. Keep code blocks,
+identifiers and links exactly as they are. Add nothing that is not in the
+text. British English. Return the replies in the order given, one for each;
+return a description only if one is given.
+
+<humanizer-skill>
+$(cat "$HUMANIZER")
+</humanizer-skill>
+
+$(jq -r '.replies[] | "<reply>\n\(.body)\n</reply>\n"' <<< "$result")
+$(jq -r '.description // empty | "<description>\n\(.)\n</description>"' \
+  <<< "$result")
+PROMPT
+)" --tools "" ${EDIT_MODEL:+--model "$EDIT_MODEL"} \
+    --json-schema "$UPDATE_EDIT_SCHEMA" 2>/dev/null)"
+  jq -c --argjson r "$result" '.structured_output // empty
+    | select((.replies | length) == ($r.replies | length)
+             and all(.replies[]; length > 0)) as $e
+    | $r | .replies |= [to_entries[] | .value.body = $e.replies[.key]
+                        | .value]
+    | if $r.description and (($e.description // "") | length) > 0
+      then .description = $e.description else . end' \
+    <<< "$out" 2>/dev/null
+}
+
+# Prose a run added to the repository itself — a vignette, a README, a
+# changelog entry, and the roxygen, docstrings and comments in code — goes
+# through the same humanizer as the pull request text, in the clone, and the
+# edit is committed on top of the work.
+DOC_RE='\.(md|Rmd|Rmarkdown|qmd|txt|rst|org)$'
+CODE_RE='\.(R|r|jl|py|stan|c|cc|cpp|h|hpp|sh|js|ts)$'
+edit_docs() {
+  local work="$1" from="$2" config="$3" changed docs code files
+  [ -r "$HUMANIZER" ] || return 0
+  changed="$(git -C "$work" diff --name-only --diff-filter=ACMR "$from..HEAD" \
+    2>/dev/null)"
+  docs="$(grep -E "$DOC_RE" <<< "$changed")"
+  code="$(grep -E "$CODE_RE" <<< "$changed")"
+  files="$(printf '%s\n%s\n' "$docs" "$code" | grep .)"
   [ -n "$files" ] || return 0
   mkdir -p "$config"
   (cd "$work" && run_model "$config" -p "$(cat <<PROMPT
@@ -835,14 +882,21 @@ that follows, so that what is published reads as $OWNER_LOGIN writes.
 
 Edit only what the branch itself added or changed: run
 "git diff $from..HEAD -- <file>" on each file and leave every other line as
-it is. Keep code, output, examples, links, identifiers, maths and headings
-exactly as they are, and keep the meaning: this is an edit of the wording.
-British English. Change nothing outside these files, run no tests, and make
-no commits; the edit is committed for you.
+it is. In documentation files that is the prose. In code files it is only
+the documentation and comments (roxygen, docstrings, comment lines); leave
+the code itself, including strings, messages and names, exactly as it is.
+Keep code, output, examples, links, identifiers, maths, roxygen tags and
+headings exactly as they are, and keep the meaning: this is an edit of the
+wording. British English. Change nothing outside these files, run no tests,
+and make no commits; the edit is committed for you.
 
-<files>
-$files
-</files>
+<documentation-files>
+$docs
+</documentation-files>
+
+<code-files>
+$code
+</code-files>
 
 <humanizer-skill>
 $(cat "$HUMANIZER")
@@ -1622,7 +1676,7 @@ PROMPT
 update_pr() {
   local repo="$1" n="$2" feedback="$3" started_at="$4"
   local pr head base title prbody id work run out result summary flags fix
-  local commits dir sensitive
+  local commits dir sensitive edit edited=false
 
   pr="$(bot_gh api "repos/$repo/pulls/$n")" || return 1
   head="$(jq -r .head.ref <<< "$pr")"
@@ -1667,7 +1721,15 @@ update_pr() {
   fi
 
   note_blocked "$id" "$repo#$n" "$result"
+  edit_docs "$work" "origin/$head" "$run/docs"
   strip_bylines "$work" "$head"
+  edit="$(humanize_update "$result" "$run/edit")"
+  if [ -n "$edit" ]; then
+    result="$edit"
+    edited=true
+  else
+    log "  the humanizer step gave nothing back; keeping the replies as written"
+  fi
   # The text that would go out, and the new commits, for the screens.
   mkdir -p "$dir"
   jq -r '.replies[] | "## Reply to \(.kind) \(.id)\n\n\(.body)\n"' \
@@ -1691,10 +1753,11 @@ update_pr() {
     --arg title "$title" --arg head "$head" --arg base "$base" \
     --arg work "$work" --arg at "$(now_iso)" --argjson flags "$flags" \
     --arg upto "$started_at" --argjson commits "${commits:-0}" \
+    --argjson edited "$edited" \
     '{id: $id, repo: $repo, number: $pr, pr: $pr, outcome: "update",
       title: ("update to #" + ($pr | tostring) + ": " + $title),
       head: $head, base: $base, work: $work, created: $at, flags: $flags,
-      fixed: [], edited: true, handled_until: $upto, commits: $commits}' \
+      fixed: [], edited: $edited, handled_until: $upto, commits: $commits}' \
     > "$dir/meta.json"
   chmod -R go+rX "$dir"
 
