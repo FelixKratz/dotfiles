@@ -1138,6 +1138,10 @@ toggled to a value that never fires in the body."
         org-msg-default-alternatives '((new . (text html))
                                        (reply-to-html . (text html))
                                        (reply-to-text . (text)))
+        ;; Replies quote the original as "> " lines in the body, so it can
+        ;; be answered inline; `org-msg-convert-citation' turns them into
+        ;; blockquotes in the HTML part.
+        org-msg-posting-style nil
         org-msg-convert-citation t
         org-msg-signature "")
 
@@ -1392,6 +1396,8 @@ Plain-text messages go through the standard notmuch forward."
           (goto-char (point-max))
           (insert (sf/notmuch-forward-text query)))
         (let ((sf/org-msg-forward-id message-id)
+              ;; Top-posting keeps an HTML original as HTML below the body.
+              (org-msg-posting-style 'top-posting)
               ;; No recipient yet, so greet nobody by name.
               (org-msg-greeting-fmt (and org-msg-greeting-fmt
                                          (replace-regexp-in-string
