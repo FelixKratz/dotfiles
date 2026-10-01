@@ -1131,6 +1131,17 @@ toggled to a value that never fires in the body."
       (rfc2047-decode-string value)))
 
   (advice-add 'org-msg-message-fetch-field :around #'sf/org-msg-decode-header)
+
+  ;; `org-msg-org-to-xml' converts "> " citations in a fundamental-mode temp
+  ;; buffer, where `org-in-src-block-p' warns once per quoted line that
+  ;; org-element needs an Org buffer.
+  (defun sf/org-msg-blockquote-in-org-mode (fn &rest args)
+    (unless (derived-mode-p 'org-mode)
+      (delay-mode-hooks (org-mode)))
+    (apply fn args))
+
+  (advice-add 'org-msg-ascii-blockquote :around
+              #'sf/org-msg-blockquote-in-org-mode)
   (setq org-msg-options "html-postamble:nil H:5 num:nil ^:{} toc:nil author:nil email:nil \\n:t"
         org-msg-startup "hidestars indent inlineimages"
         org-msg-greeting-fmt "\nHi%s,\n\n"
