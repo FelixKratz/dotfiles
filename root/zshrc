@@ -200,9 +200,11 @@ ssht() {
 # Created by `pipx` on 2026-01-28 15:13:53
 export PATH="$PATH:$HOME/.local/bin"
 
-# Refresh sketchybar brew count after manual brew commands
+# Refresh sketchybar brew count after manual brew commands. Installs get the
+# usual 022 umask: under zshenv's 077 they would be private to this account,
+# and other accounts (the bot's) could no longer run what brew upgraded.
 brew() {
-  command brew "$@"
+  ( umask 022; command brew "$@" )
   local ret=$?
   sketchybar --trigger brew_update 2>/dev/null
   return $ret
