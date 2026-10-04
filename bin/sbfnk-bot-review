@@ -40,6 +40,9 @@
 #   sbfnk-bot-review log                 the bot's recent activity, why its
 #                                        latest failed run failed, and what
 #                                        the sandbox refused
+#   sbfnk-bot-review watch               follow the bot's activity live,
+#                                        without the skips; [1] and [2] are
+#                                        the workers, [d] the decisions pass
 #   sbfnk-bot-review count               how many wait (used by nudge)
 #
 # ID is the number list shows, or any unique prefix of the long id, and may
@@ -387,6 +390,9 @@ case "$cmd" in
       shown=true
     done
     $shown || echo "the bot is idle" ;;
+  watch)
+    tail -n 40 -F "$SPOOL/log/activity.log" 2>/dev/null \
+      | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' | clean ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
     if [ -s "$SPOOL/log/blocked.tsv" ]; then

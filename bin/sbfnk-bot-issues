@@ -136,8 +136,12 @@ done
 INTERACTIVE=false
 [ -t 1 ] && INTERACTIVE=true
 
+# Each line says which worker wrote it ([1], [2]; [d] for the decisions
+# pass), since jobs side by side write to the one log.
 log() {
-  printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"
+  local tag=""
+  if $DECISIONS_ONLY; then tag="[d] "; elif [ -n "${SLOT:-}" ]; then tag="[$SLOT] "; fi
+  printf '%s %s%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$tag" "$*" >> "$LOG_FILE"
   $INTERACTIVE && echo "$*" >&2
   return 0
 }
