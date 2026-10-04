@@ -744,11 +744,14 @@ run_model() {
   jq --arg c "$cache" --arg t "$temp" '
     .sandbox.filesystem.allowWrite += ([$c, $t] | map(select(length > 0))
       | map("/" + ., "//private" + .))' "$SETTINGS_FILE" > "$config/settings.json"
+  # Julia sees only the project and the standard library: the depot's global
+  # environment is shared by every job, and whatever one job added there
+  # would otherwise stack under another's project.
   env -u SSH_AUTH_SOCK \
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
     CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS=-j4 \
-    JULIA_NUM_PRECOMPILE_TASKS=4 \
+    JULIA_NUM_PRECOMPILE_TASKS=4 JULIA_LOAD_PATH="@:@stdlib" \
     PATH="$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
     ${PANDOC_DIR:+RSTUDIO_PANDOC="$PANDOC_DIR"} \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
