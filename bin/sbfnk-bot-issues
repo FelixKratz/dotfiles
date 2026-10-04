@@ -97,7 +97,7 @@ RUN_BUDGET="$MAX_BUDGET"
 # a job beyond the first starts only when the load average is under
 # LOAD_PCT per cent of the cores and the jobs before it have been running long
 # enough for the load to show them.
-MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-3}"
+MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-1}"
 LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-60}"
 SETTLE_SECS=300
 # Failed runs per assignment before the issue is left for a human.
@@ -217,10 +217,26 @@ CLAUDE_TOKEN="$(tr -d '[:space:]' < "$SECRETS_DIR/claude-token")"
 unset GH_TOKEN GITHUB_TOKEN CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
 bot_gh() { GH_TOKEN="$BOT_TOKEN" gh "$@"; }
 
-# git with sbfnk-bot's token, for the script's own fetches and pushes.
+# git with sbfnk-bot's token, for the script's own fetches and pushes. The
+# token goes in a header set through the environment: it stays out of the
+# process list, and nothing depends on gh having a configuration of its own
+# for this account. Messages in English, for the log and publish-errors.
 bot_git() {
-  GH_TOKEN="$BOT_TOKEN" git -c credential.helper= \
-    -c 'credential.helper=!gh auth git-credential' "$@"
+  LC_ALL=C GIT_CONFIG_COUNT=2 \
+    GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0="" \
+    GIT_CONFIG_KEY_1=http.https://github.com/.extraheader \
+    GIT_CONFIG_VALUE_1="AUTHORIZATION: basic $(printf 'x-access-token:%s' \
+      "$BOT_TOKEN" | openssl base64 -A)" \
+    git "$@"
+}
+
+# The line of git's output that says why it failed: the rejected ref, or the
+# error, else the last line that is not the remote's chatter.
+git_reason() {
+  local why
+  why="$(grep -E '^ ! \[|^(error|fatal):' <<< "$1" | head -2 | paste -sd ' ' -)"
+  [ -n "$why" ] || why="$(grep -v '^remote:' <<< "$1" | grep . | tail -1)"
+  printf '%s' "${why:-no output}"
 }
 
 lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
@@ -287,6 +303,20 @@ record() {
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(now_iso)" "$1" "$2" "$3" "$4" \
     "${5:-}" >> "$LEDGER"
 }
+
+# Issues and PRs the bot has stopped trying, as one file each in the shared
+# spool, so the review tool and the desk can list them. Each is rewritten
+# whenever the bot skips that target again, and one not rewritten for two
+# days (the issue closed, or was reassigned) is dropped.
+GIVEN_UP_DIR="$SPOOL/log/given-up"
+given_up() {
+  local f="$GIVEN_UP_DIR/${1//[\/#]/_}" since
+  mkdir -p "$GIVEN_UP_DIR" && chmod 755 "$GIVEN_UP_DIR"
+  since="$(cut -f4 "$f" 2>/dev/null)"
+  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "${since:-$(now_iso)}" > "$f"
+  chmod 644 "$f"
+}
+not_given_up() { rm -f "$GIVEN_UP_DIR/${1//[\/#]/_}"; }
 
 ledger_rows() {
   awk -F'\t' -v t="$1" -v e="$2" '$2 == t && $3 == e' "$LEDGER" 2>/dev/null
@@ -377,6 +407,7 @@ wants_work() {
       fails=$((fails + 0))
       if [ "$fails" -ge "$MAX_ATTEMPTS" ]; then
         log "  skip $repo#$n: failed $fails times, reassign to retry"
+        given_up "$repo#$n" issue "failed $fails times; reassign to retry"
         return 1
       fi
       echo "retry"
@@ -1194,21 +1225,29 @@ park() {
 }
 
 push_and_open() {
-  local repo="$1" n="$2" work="$3" branch="$4" base="$5" title="$6" body="$7"
-  local url
-  if bot_git -C "$work" ls-remote --exit-code --heads origin "$branch" \
-    >/dev/null 2>&1; then
+  local id="$1" sig="$2" repo="$3" n="$4" work="$5" branch="$6" base="$7"
+  local title="$8" body="$9" url err there
+  # A branch of that name is someone else's, unless an earlier attempt that
+  # got as far as the push left it there.
+  there="$(bot_git -C "$work" ls-remote --heads origin "$branch" 2>/dev/null \
+    | awk '{print $1; exit}')"
+  if [ -n "$there" ] && [ "$there" != "$(git -C "$work" rev-parse HEAD)" ]; then
     branch="$branch-$(date +%Y%m%d%H%M)"
   fi
   # Credentials come into play only here, after sbfnk has approved.
-  bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$branch" \
-    >/dev/null 2>&1 \
-    || { log "  push failed for $repo#$n"; return 1; }
+  err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$branch" \
+    2>&1)" || {
+    publish_failed "$id" "push to $branch failed: $(git_reason "$err")" "$sig"
+    return 1
+  }
   url="$(bot_gh pr create -R "$repo" --draft --base "$base" --head "$branch" \
     --title "$title" --body "$body
 
-This PR closes #$n." 2>&1)" \
-    || { log "  pr create failed for $repo#$n: $url"; return 1; }
+This PR closes #$n." 2>&1)" || {
+    publish_failed "$id" "pr create failed: $(printf '%s' "$url" | tail -1)" \
+      "$sig"
+    return 1
+  }
   printf '%s' "$(printf '%s\n' "$url" | grep -E '^https://' | tail -1)"
 }
 
@@ -1217,7 +1256,7 @@ This PR closes #$n." 2>&1)" \
 # the answer below it.
 act_on_decisions() {
   local meta id repo n event outcome work base branch title body verb
-  local flagged cost url decision sig
+  local flagged cost url decision sig err
   for meta in "$PENDING"/*/meta.json; do
     [ -f "$meta" ] || continue
     id="$(jq -r .id "$meta")"
@@ -1227,8 +1266,12 @@ act_on_decisions() {
     # on work that stays parked (polish) are remembered by their mtime.
     sig="$(stat -f %m "$decision")"
     grep -qx "$sig" "$PENDING/$id/done" 2>/dev/null && continue
-    # A decision of sbfnk's own gets a clean slate.
-    rm -f "$PENDING/$id/stuck"
+    # Given up on: only a decision made since then starts it again, with a
+    # clean slate.
+    if [ -f "$PENDING/$id/stuck" ]; then
+      [ "$decision" -nt "$PENDING/$id/stuck" ] || continue
+      rm -f "$PENDING/$id/stuck" "$PENDING/$id/tries"
+    fi
     verb="$(head -1 "$decision" | tr -d '[:space:]')"
     repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
     event="$(jq -r .event "$meta")"; outcome="$(jq -r .outcome "$meta")"
@@ -1300,13 +1343,17 @@ act_on_decisions() {
           continue
         fi
         if [ "$outcome" = pr ]; then
-          url="$(push_and_open "$repo" "$n" "$work" "$branch" "$base" \
-            "$title" "$body")" || continue
+          url="$(push_and_open "$id" "$sig" "$repo" "$n" "$work" "$branch" \
+            "$base" "$title" "$body")" || continue
           log "  $id: opened $url"
           record "$repo#$n" "$event" pr "$url" "$cost"
         else
-          bot_gh issue comment "$n" -R "$repo" --body "@$OWNER_LOGIN $body" \
-            >/dev/null 2>&1 || { log "  $id: could not comment"; continue; }
+          err="$(bot_gh issue comment "$n" -R "$repo" \
+            --body "@$OWNER_LOGIN $body" 2>&1)" || {
+            publish_failed "$id" "could not comment: $(printf '%s' "$err" \
+              | tail -1)" "$sig"
+            continue
+          }
           log "  $id: asked on $repo#$n"
           # Stamped after posting, so only a reply written later reopens it.
           record "$repo#$n" "$event" comment "$(now_iso)" "$cost"
@@ -1356,6 +1403,7 @@ work_on() {
   mkdir -p "$run"
 
   log "  working on $repo#$n ($reason): $title"
+  not_given_up "$repo#$n"
   bot_gh api -X POST "repos/$repo/issues/$n/reactions" -f content=eyes \
     >/dev/null 2>&1
 
@@ -1591,7 +1639,8 @@ pr_feedback() {
 # left alone until new feedback arrives.
 pr_failed() {
   set_pr_state "$1" "$2" \
-    ".failures = ((.failures // 0) + 1) | .failed_since = (.handled_until // \"\")"
+    ".failures = ((.failures // 0) + 1) | .failed_since = (.handled_until // \"\")
+     | .failed_at = \"$(now_iso)\""
 }
 
 pending_for_pr() {
@@ -1754,9 +1803,11 @@ update_pr() {
     --arg work "$work" --arg at "$(now_iso)" --argjson flags "$flags" \
     --arg upto "$started_at" --argjson commits "${commits:-0}" \
     --argjson edited "$edited" \
+    --arg head_sha "$(git -C "$work" rev-parse "origin/$head")" \
     '{id: $id, repo: $repo, number: $pr, pr: $pr, outcome: "update",
       title: ("update to #" + ($pr | tostring) + ": " + $title),
-      head: $head, base: $base, work: $work, created: $at, flags: $flags,
+      head: $head, head_sha: $head_sha, base: $base, work: $work,
+      created: $at, flags: $flags,
       fixed: [], edited: $edited, handled_until: $upto, commits: $commits}' \
     > "$dir/meta.json"
   chmod -R go+rX "$dir"
@@ -1776,28 +1827,32 @@ update_pr() {
   return 0
 }
 
-# Push the new commits and post the replies of a prepared update.
-# Publishing can fail for good (the PR was merged) or for now (GitHub was
-# down). The reason is kept beside the work so "sbr show" gives it, and after
-# PUBLISH_ATTEMPTS tries the decision is marked carried out so the bot stops
-# retrying it every pass; a fresh decision starts it again.
+# Publishing can fail for good (the PR was merged, its branch moved) or for
+# now (GitHub was down). The reason is kept beside the work so "sbr show"
+# gives it. After PUBLISH_ATTEMPTS failures since sbfnk last decided, or at
+# once for a failure that retrying cannot fix (give_up), the item is marked
+# stuck: the bot leaves it alone until he makes a fresh decision on it.
 PUBLISH_ATTEMPTS=3
 publish_failed() {
-  local id="$1" reason="$2" tries
-  printf '%s %s\n' "$(now_iso)" "$reason" >> "$PENDING/$id/publish-errors"
-  tries="$(grep -c . "$PENDING/$id/publish-errors" 2>/dev/null)"
+  local id="$1" reason="$2" sig="${3:-}" give_up="${4:-}" tries
+  local dir="$PENDING/$1"
+  printf '%s %s\n' "$(now_iso)" "$reason" >> "$dir/publish-errors"
+  echo x >> "$dir/tries"
+  tries="$(grep -c . "$dir/tries" 2>/dev/null)"
   log "  $id: $reason"
-  if [ "${tries:-1}" -ge "$PUBLISH_ATTEMPTS" ]; then
-    log "  $id: publishing failed $tries times, left for you (sbr show)"
-    echo "${3:-0}" >> "$PENDING/$id/done"
-    : > "$PENDING/$id/stuck"
+  if [ -n "$give_up" ] || [ "${tries:-1}" -ge "$PUBLISH_ATTEMPTS" ]; then
+    log "  $id: not published ($tries attempt(s)), left for you (sbr show)"
+    [ -n "$sig" ] && echo "$sig" >> "$dir/done"
+    : > "$dir/stuck"
+    chmod -R go+rX "$dir"
   fi
   return 1
 }
 
+# Push the new commits and post the replies of a prepared update.
 publish_update() {
   local id="$1" dir="$PENDING/$1" meta repo n head work upd body f sha
-  local threads cid tid state err
+  local threads cid tid state err parked_at now_at
   meta="$dir/meta.json"
   repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
   head="$(jq -r .head "$meta")"; work="$(jq -r .work "$meta")"
@@ -1812,14 +1867,31 @@ publish_update() {
     --jq 'if .merged then "merged" else .state end' 2>/dev/null)"
   case "$state" in
     merged|closed)
-      publish_failed "$id" "$repo#$n was $state before this went out" "${2:-}"
+      publish_failed "$id" "$repo#$n was $state before this went out" \
+        "${2:-}" give_up
       return 1 ;;
   esac
+  # Commits and replies written against a head that has since moved cannot
+  # land, so nothing goes out and sbfnk decides.
+  parked_at="$(jq -r '.head_sha // empty' "$meta")"
+  if [ -n "$parked_at" ]; then
+    err="$(bot_git -C "$work" ls-remote --exit-code origin \
+      "refs/heads/$head" 2>&1)" || {
+      publish_failed "$id" "could not read $head: $(git_reason "$err")" \
+        "${2:-}"
+      return 1
+    }
+    now_at="$(awk '{print $1; exit}' <<< "$err")"
+    if [ "$now_at" != "$parked_at" ]; then
+      publish_failed "$id" "$head moved since this was prepared: \
+${parked_at:0:7} then, ${now_at:0:7} now" "${2:-}" give_up
+      return 1
+    fi
+  fi
   if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
-    # Fast-forward only: if the branch moved meanwhile, sbfnk decides.
     err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" 2>&1)" \
-      || { publish_failed "$id" "push to $head failed: $(printf '%s' "$err" \
-        | grep -v '^remote:' | grep . | tail -1)" "${2:-}"; return 1; }
+      || { publish_failed "$id" "push to $head failed: $(git_reason "$err")" \
+        "${2:-}"; return 1; }
   fi
   f="$(mktemp)"
   sha="$(git -C "$work" rev-parse HEAD)"
@@ -1907,7 +1979,8 @@ PROMPT
 # sbfnk-review-bot; a clean pass posts nothing and turns the check green.
 review_pr() {
   local repo="$1" n="$2" sha="$3" base="$4" head="$5" id work run out
-  local spec result token payload round count failed c unanchored
+  local spec result token payload round count failed c unanchored posted
+  local tries
   id="${repo//\//_}-review$n-$(date +%Y%m%d-%H%M%S)"
   work="$CACHE_DIR/work/$id"
   run="$RUNS_DIR/$id"
@@ -1967,42 +2040,64 @@ review_pr() {
   fi
 
   # One review carrying the inline comments, so a round is one notification.
+  # A post counts only when GitHub answers with the id of what it created.
   payload="$(jq -c --arg sha "$sha" '{commit_id: $sha, event: "COMMENT",
     comments: [.findings[] | {path, line, side: "RIGHT", body}
       + (if .start_line and .start_line < .line
          then {start_line, start_side: "RIGHT"} else {} end)]}' <<< "$result")"
-  failed=0
-  if ! GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/reviews" \
-    --input - <<< "$payload" >/dev/null 2>&1; then
+  posted=0
+  if GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/reviews" \
+    --input - <<< "$payload" 2>/dev/null | jq -e .id >/dev/null 2>&1; then
+    posted="$count"
+  else
     # One line outside the diff rejects the lot; post them one by one.
     unanchored="[]"
     while read -r c; do
-      GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/comments" \
+      if GH_TOKEN="$token" gh api -X POST "repos/$repo/pulls/$n/comments" \
         --input - <<< "$(jq -c --arg sha "$sha" '. + {commit_id: $sha}' \
-          <<< "$c")" >/dev/null 2>&1 \
-        || unanchored="$(jq -c --argjson c "$c" '. + [$c]' <<< "$unanchored")"
+          <<< "$c")" 2>/dev/null | jq -e .id >/dev/null 2>&1; then
+        posted=$((posted + 1))
+      else
+        unanchored="$(jq -c --argjson c "$c" '. + [$c]' <<< "$unanchored")"
+      fi
     done < <(jq -c '.comments[]' <<< "$payload")
     # The rest go in one conversation comment, which the author answers like
     # inline ones; left out, the round would wait on points nobody can see.
+    # It is read back before it counts.
     if [ "$(jq length <<< "$unanchored")" -gt 0 ]; then
       log "  $(jq length <<< "$unanchored") finding(s) on $repo#$n did not anchor to the diff"
-      GH_TOKEN="$token" gh api -X POST "repos/$repo/issues/$n/comments" \
+      c="$(GH_TOKEN="$token" gh api -X POST "repos/$repo/issues/$n/comments" \
         -f body="$(jq -r '"Points on lines outside the diff:\n\n"
           + (map("**`\(.path)` line \(.line)**\n\n\(.body)") | join("\n\n---\n\n"))' \
-          <<< "$unanchored")" >/dev/null 2>&1 \
-        || failed="$(jq length <<< "$unanchored")"
+          <<< "$unanchored")" --jq '.id // empty' 2>/dev/null)"
+      if [ -n "$c" ] && bot_gh api "repos/$repo/issues/comments/$c" \
+        --jq .html_url 2>/dev/null | grep -q "/pull/$n#"; then
+        posted=$((posted + $(jq length <<< "$unanchored")))
+        log "  posted them as a comment: $repo#$n comment $c"
+      else
+        log "  the comment carrying them on $repo#$n could not be confirmed"
+      fi
     fi
   fi
-  if [ "$failed" -eq "$count" ]; then
-    log "  none of the $count finding(s) on $repo#$n could be posted"
+  failed=$((count - posted))
+  if [ "$posted" -eq 0 ]; then
+    # Nothing landed, so the head stays unreviewed and is tried again, up to
+    # MAX_ATTEMPTS times; then sbfnk is asked as he would be at the cap.
+    tries=$(( $(pr_state "$repo" "$n" \
+      | jq --arg s "$sha" '.post_failures[$s] // 0') + 1 ))
+    set_pr_state "$repo" "$n" ".post_failures[\"$sha\"] = $tries"
+    log "  none of the $count finding(s) on $repo#$n could be posted (attempt $tries)"
     review_check "$repo" "$sha" failure "Review not posted" \
       "The review of $sha found $count points but could not post them."
-    set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"]"
-    hand_over "$repo" "$n" "$sha" false
+    if [ "$tries" -ge "$MAX_ATTEMPTS" ]; then
+      set_pr_state "$repo" "$n" ".reviewed += [\"$sha\"]"
+      hand_over "$repo" "$n" "$sha" false
+    fi
     rm -rf "$work"
     return 0
   fi
   [ "$failed" -eq 0 ] || log "  $failed finding(s) on $repo#$n could not be posted"
+  count="$posted"
   if [ "$round" -ge "$MAX_REVIEW_ROUNDS" ]; then
     review_check "$repo" "$sha" failure "$count findings open after $round rounds" \
       "Stopped at the round cap; the open findings wait for $OWNER_LOGIN."
@@ -2039,12 +2134,20 @@ tend_pr_inner() {
 
   feedback="$(pr_feedback "$repo" "$n" "$since")"
   if [ "$(jq length <<< "$feedback")" -gt 0 ]; then
+    # Given up after MAX_ATTEMPTS failures, until sbfnk comments again.
     if [ "$(jq '.failures // 0' <<< "$state")" -ge "$MAX_ATTEMPTS" ] \
       && [ "$(jq -r '.failed_since // ""' <<< "$state")" \
-        = "$(jq -r '.handled_until // ""' <<< "$state")" ]; then
+        = "$(jq -r '.handled_until // ""' <<< "$state")" ] \
+      && ! jq -e --arg o "$OWNER_LOGIN" \
+        --arg t "$(jq -r '.failed_at // ""' <<< "$state")" \
+        'any(.[]; .author == $o and .created > $t)' <<< "$feedback" \
+        >/dev/null; then
       log "  skip $repo#$n: answering its feedback failed $MAX_ATTEMPTS times"
+      given_up "$repo#$n" pr \
+        "answering its feedback failed $MAX_ATTEMPTS times; comment on the PR to retry"
       return 1
     fi
+    not_given_up "$repo#$n"
     $LIST_ONLY && { log "  would answer feedback on $repo#$n"; return 0; }
     job_kind pr
     update_pr "$repo" "$n" "$feedback" "$started_at"
@@ -2143,6 +2246,8 @@ done 3<<< "$list"
 if $issues_first && ! $busy && [ -z "$ONE_ISSUE" ]; then
   tend_prs || rm -f "$LAST_KIND_FILE"
 fi
+
+find "$GIVEN_UP_DIR" -type f -mtime +2 -delete 2>/dev/null
 
 # Clones of parked work stay until a decision; anything else goes after a
 # week, and run records after three months.

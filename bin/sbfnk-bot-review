@@ -166,20 +166,30 @@ cmd="${1:-list}"
 case "$cmd" in
   list)
     ids="$(waiting)"
-    [ -n "$ids" ] || { echo "nothing waiting for review"; exit 0; }
+    # What the bot has stopped trying: nothing to decide here, but nothing
+    # will happen without you either.
+    given_up="$(cat "$SPOOL"/log/given-up/* 2>/dev/null | clean \
+      | awk -F'\t' '{printf "     given up: %s (%s, since %s): %s\n", $1, $2, $4, $3}')"
+    if [ -z "$ids" ]; then
+      echo "nothing waiting for review"
+      [ -z "$given_up" ] || printf '%s\n' "$given_up"
+      exit 0
+    fi
     # By number, since numbers are reused and no longer follow the order
     # things were parked in.
     ids="$(for id in $ids; do
       printf '%s\t%s\n' "$(meta "$id" '.seq // 999')" "$id"
     done | sort -n | cut -f2)"
     for id in $ids; do
+      # Unnumbered (a job stopped before it was numbered): the id addresses it.
       printf '#%-3s %s %s#%s: %s (%s)\n' \
-        "$(meta "$id" '.seq // "-"')" "$(meta "$id" .outcome)" \
+        "$(meta "$id" ".seq // \"- $id\"")" "$(meta "$id" .outcome)" \
         "$(meta "$id" .repo)" "$(meta "$id" .number)" \
         "$(meta "$id" .title | clean)" \
         "$(if [ -f "$PENDING/$id/stuck" ]; then echo "could not be published"; \
            else echo "$(meta "$id" '.flags | length') flag(s)"; fi)"
-    done ;;
+    done
+    [ -z "$given_up" ] || printf '%s\n' "$given_up" ;;
   count)
     # grep -c exits 1 on a count of 0, which is an answer, not a failure.
     waiting | grep -c . || true ;;

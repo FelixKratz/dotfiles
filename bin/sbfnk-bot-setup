@@ -48,7 +48,10 @@ SPOOL=/Users/Shared/sbfnk-bot
 LABEL=none.bots.issues
 PLIST=/Library/LaunchDaemons/$LABEL.plist
 # Heavy jobs that may run side by side (see MAX_JOBS in sbfnk-bot-issues).
-JOBS=3
+# One for now: jobs side by side kept working from stale bases.
+JOBS=1
+# The slots beyond the first; macOS seq counts down when asked "seq 2 1".
+extra_slots() { [ "$JOBS" -ge 2 ] && seq 2 "$JOBS"; return 0; }
 DECISIONS_LABEL=none.bots.decisions
 DECISIONS_PLIST=/Library/LaunchDaemons/$DECISIONS_LABEL.plist
 SECRETS=$BOT_HOME/.config/sbfnk-bot
@@ -344,7 +347,7 @@ RPROFILE
   # launchd runs one copy of a job, so each concurrent job slot is a daemon of
   # its own; the script decides whether there is room for it.
   write_daemon "$PLIST" "$LABEL" 600 ""
-  for i in $(seq 2 "$JOBS"); do
+  for i in $(extra_slots); do
     write_daemon "/Library/LaunchDaemons/$LABEL$i.plist" "$LABEL$i" 600 ""
   done
   for f in /Library/LaunchDaemons/"$LABEL"[0-9]*.plist; do
@@ -439,7 +442,7 @@ case "${1:-}" in
     [ -f "$PLIST" ] && [ -f "$DECISIONS_PLIST" ] || die "run install first"
     # The light pass first: restarting it never interrupts real work.
     restart_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL"
-    for i in "" $(seq 2 "$JOBS"); do
+    for i in "" $(extra_slots); do
       p="/Library/LaunchDaemons/$LABEL$i.plist"
       [ -f "$p" ] || continue
       if [ "${2:-}" = --keep-running ] \
@@ -451,7 +454,7 @@ case "${1:-}" in
     done
     say "started; heavy work polls every ten minutes, decisions every two" ;;
   disable)
-    for l in "$DECISIONS_LABEL" "$LABEL" $(for i in $(seq 2 "$JOBS"); do echo "$LABEL$i"; done); do
+    for l in "$DECISIONS_LABEL" "$LABEL" $(for i in $(extra_slots); do echo "$LABEL$i"; done); do
       if launchctl bootout "system/$l" 2>/dev/null; then
         say "stopped $l"
       else
