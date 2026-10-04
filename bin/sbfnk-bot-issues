@@ -97,7 +97,7 @@ RUN_BUDGET="$MAX_BUDGET"
 # a job beyond the first starts only when the load average is under
 # LOAD_PCT per cent of the cores and the jobs before it have been running long
 # enough for the load to show them.
-MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-1}"
+MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-2}"
 LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-60}"
 SETTLE_SECS=300
 # Failed runs per assignment before the issue is left for a human.
@@ -625,16 +625,23 @@ slugify() {
 # working directory, which is all the sandbox lets the model write to.
 prepare_clone() {
   local repo="$1" base="$2" work="$3" branch="$4"
-  local mirror="$CACHE_DIR/repos/$repo.git"
+  local mirror="$CACHE_DIR/repos/$repo.git" lock rc=0
+  # Jobs side by side share the mirror: one fetches into it at a time, and
+  # each then works in a clone of its own.
+  mkdir -p "$(dirname "$mirror")"
+  lock="$mirror.lock"
+  until shlock -p $$ -f "$lock" 2>/dev/null; do sleep 2; done
+  HELD+=("$lock")
   if [ ! -d "$mirror" ]; then
-    mkdir -p "$(dirname "$mirror")"
     bot_git clone --quiet --bare "https://github.com/$repo.git" "$mirror" \
-      >/dev/null 2>&1 || return 1
+      >/dev/null 2>&1 || rc=1
   fi
-  bot_git -C "$mirror" fetch --quiet --prune origin \
-    '+refs/heads/*:refs/heads/*' >/dev/null 2>&1 || return 1
-  git clone --quiet --branch "$base" "$mirror" "$work" >/dev/null 2>&1 \
-    || return 1
+  [ "$rc" -eq 0 ] && { bot_git -C "$mirror" fetch --quiet --prune origin \
+    '+refs/heads/*:refs/heads/*' >/dev/null 2>&1 || rc=1; }
+  [ "$rc" -eq 0 ] && { git clone --quiet --branch "$base" "$mirror" "$work" \
+    >/dev/null 2>&1 || rc=1; }
+  rm -f "$lock"
+  [ "$rc" -eq 0 ] || return 1
   git -C "$work" remote set-url origin "https://github.com/$repo.git"
   # Working on an open PR, the branch is the one just checked out.
   [ "$branch" = "$base" ] && return 0

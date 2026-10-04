@@ -48,8 +48,7 @@ SPOOL=/Users/Shared/sbfnk-bot
 LABEL=none.bots.issues
 PLIST=/Library/LaunchDaemons/$LABEL.plist
 # Heavy jobs that may run side by side (see MAX_JOBS in sbfnk-bot-issues).
-# One for now: jobs side by side kept working from stale bases.
-JOBS=1
+JOBS=2
 # The slots beyond the first; macOS seq counts down when asked "seq 2 1".
 extra_slots() { [ "$JOBS" -ge 2 ] && seq 2 "$JOBS"; return 0; }
 DECISIONS_LABEL=none.bots.decisions
