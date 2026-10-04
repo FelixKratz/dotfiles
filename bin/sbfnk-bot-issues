@@ -664,7 +664,7 @@ fi
 note_limit() {
   local msg until at h m ampm
   msg="$(jq -r 'select(.is_error == true) | .result // empty' "$1" 2>/dev/null)"
-  grep -qiE 'usage limit|hit your limit|limit reached|out of extra usage' \
+  grep -qiE 'usage limit|hit your ([a-z]+ )?limit|limit reached|out of extra usage' \
     <<< "$msg" || return 1
   until="$(grep -oE '\|[0-9]{10}' <<< "$msg" | tr -d '|' | head -1)"
   if [ -z "$until" ]; then
