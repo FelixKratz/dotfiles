@@ -190,7 +190,8 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   stays a draft and you are asked anyway. Your reviews and comments are
   instructions throughout: it answers with new commits and replies, pushed
   straight away when the screen is clean, and the new head is reviewed again
-  before you are asked again. Once something else pushes to one of its PRs,
+  before you are asked again. A PR that conflicts with its base gets the
+  base merged in (never a rebase), once per head. Once something else pushes to one of its PRs,
   such as one of your own sessions, the bot leaves that PR alone, and `sbr`
   lists it, until you comment `bot: resume` on it. Branches that edit
   `.github/workflows/` go out from your account with `sbr push`. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
