@@ -364,7 +364,7 @@ case "$cmd" in
     err="$(as_you -C "$tmp" push "$url" "${sha}:refs/heads/$branch" 2>&1)" || {
       printf '%s\n' "$err" | grep -E '^ ! |^(error|fatal):' >&2
       grep -q 'workflow' <<< "$err" \
-        && echo "your own gh login lacks the workflow scope: gh auth refresh -u sbfnk -s workflow" >&2
+        && echo "your sbfnk login lacks the workflow scope: with sbfnk active (gh auth switch -u sbfnk), run gh auth refresh -h github.com -s workflow" >&2
       die "push failed; nothing changed"
     }
     if [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
