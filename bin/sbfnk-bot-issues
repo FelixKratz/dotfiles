@@ -162,17 +162,21 @@ trap release_all EXIT
 
 # The first slot is always there for a job; a later one only while the
 # machine has room for another.
+# ROOM_WHY says why not, for "sbr now".
 room_for_another() {
   local slot="$1" i lock now load ncpu
   now=$(date +%s)
+  ROOM_WHY="the jobs before it have only just started"
   for i in $(seq 1 $((slot - 1))); do
     lock="$LOCK_FILE"; [ "$i" -gt 1 ] && lock="$STATE_DIR/lock.$i"
-    [ -f "$lock" ] || return 1
+    [ -f "$lock" ] || { ROOM_WHY="job $i is not running"; return 1; }
     [ $((now - $(stat -f %m "$lock"))) -ge "$SETTLE_SECS" ] || return 1
   done
   load="$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')"
   ncpu="$(sysctl -n hw.ncpu 2>/dev/null)"
+  ROOM_WHY="the load cannot be read"
   [ -n "$load" ] && [ -n "$ncpu" ] || return 1
+  ROOM_WHY="load $load on $ncpu cores, and it starts below $LOAD_PCT%"
   awk -v l="$load" -v n="$ncpu" -v p="$LOAD_PCT" 'BEGIN { exit !(l < n * p / 100) }'
 }
 
@@ -187,10 +191,20 @@ else
     HELD+=("$lock")
     if [ "$i" -gt 1 ] && ! room_for_another "$i"; then
       rm -f "$lock"; HELD=()
-      $INTERACTIVE && echo "no room for job $i (load or settling)" >&2
+      $INTERACTIVE && echo "no room for job $i: $ROOM_WHY" >&2
+      # Said in "sbr now" until a job of this number runs, which replaces it.
+      mkdir -p "$SPOOL/log/now" 2>/dev/null && chmod 755 "$SPOOL/log/now"
+      printf 'job %s: waiting, checked %s: %s\n' "$i" "$(date +%H:%M)" \
+        "$ROOM_WHY" > "$SPOOL/log/now/job$i.txt" 2>/dev/null \
+        && chmod 644 "$SPOOL/log/now/job$i.txt"
       exit 0
     fi
     SLOT="$i"
+    # Waiting notes from later slots that are not running are out of date.
+    for j in $(seq $((i + 1)) "$MAX_JOBS"); do
+      [ "$j" -gt "$i" ] || continue
+      [ -f "$STATE_DIR/lock.$j" ] || rm -f "$SPOOL/log/now/job$j.txt"
+    done
     break
   done
   if [ -z "$SLOT" ]; then
