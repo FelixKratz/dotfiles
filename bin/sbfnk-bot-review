@@ -158,6 +158,26 @@ decide() {
 
 meta() { jq -r "$2" "$PENDING/$1/meta.json"; }
 
+# Where an item stands, for list: a decision on its way, what it needs from
+# you, or the screen's flags.
+state() {
+  local d="$DECISIONS/$1" verb
+  if [ -f "$d" ] && ! undecided "$1" \
+    && { [ ! -f "$PENDING/$1/stuck" ] || [ "$d" -nt "$PENDING/$1/stuck" ]; }; then
+    verb="$(head -1 "$d" | tr -d '[:space:]')"
+    case "$verb" in
+      polish|answer) echo "$verb recorded, waits for the bot's next job" ;;
+      *) echo "$verb recorded, carried out within two minutes" ;;
+    esac
+  elif [ -f "$PENDING/$1/stuck" ] && [ -s "$PENDING/$1/branch.bundle" ]; then
+    echo "edits CI workflows: sbr push $(meta "$1" '.seq // empty')"
+  elif [ -f "$PENDING/$1/stuck" ]; then
+    echo "could not be published, see show"
+  else
+    echo "$(meta "$1" '.flags | length') flag(s)"
+  fi
+}
+
 # The full commits and diff, paged when there is a terminal to page on.
 show_diff() {
   [ -s "$PENDING/$1/diff.patch" ] || { echo "#$(meta "$1" '.seq // empty') has no diff"; return 0; }
@@ -194,8 +214,7 @@ case "$cmd" in
         "$(meta "$id" ".seq // \"- $id\"")" "$(meta "$id" .outcome)" \
         "$(meta "$id" .repo)" "$(meta "$id" .number)" \
         "$(meta "$id" .title | clean)" \
-        "$(if [ -f "$PENDING/$id/stuck" ]; then echo "could not be published"; \
-           else echo "$(meta "$id" '.flags | length') flag(s)"; fi)"
+        "$(state "$id")"
     done
     [ -z "$given_up" ] || printf '%s\n' "$given_up" ;;
   count)
