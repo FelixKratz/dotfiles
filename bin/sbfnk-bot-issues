@@ -348,6 +348,22 @@ given_up() {
 }
 not_given_up() { rm -f "$GIVEN_UP_DIR/${1//[\/#]/_}"; }
 
+# An issue marker goes as soon as the bot would no longer skip the issue:
+# reassigned (a new assignment starts afresh) or unassigned.
+sweep_given_up() {
+  local f target kind repo n event fails
+  for f in "$GIVEN_UP_DIR"/*; do
+    [ -f "$f" ] || continue
+    IFS=$'\t' read -r target kind _ < "$f"
+    [ "$kind" = issue ] || continue
+    repo="${target%#*}"; n="${target##*#}"
+    read -r event _ <<< "$(assignment_event "$repo" "$n" 2>/dev/null)"
+    fails="$(ledger_rows "$target" "${event:-none}" \
+      | awk -F'\t' '$4 == "failed"' | wc -l)"
+    [ "$((fails + 0))" -ge "$MAX_ATTEMPTS" ] || rm -f "$f"
+  done
+}
+
 ledger_rows() {
   awk -F'\t' -v t="$1" -v e="$2" '$2 == t && $3 == e' "$LEDGER" 2>/dev/null
 }
@@ -2398,6 +2414,7 @@ if $issues_first && ! $busy && [ -z "$ONE_ISSUE" ]; then
   tend_prs || rm -f "$LAST_KIND_FILE"
 fi
 
+$LIST_ONLY || sweep_given_up
 find "$GIVEN_UP_DIR" -type f -mtime +2 -delete 2>/dev/null
 
 # Clones of parked work stay until a decision; anything else goes after a
