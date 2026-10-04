@@ -730,10 +730,10 @@ limited() {
 }
 
 now_watch() {
-  local config="$1" parent="$2" started t
+  local config="$1" model="$2" started t
   started=$(date +%s)
   mkdir -p "$NOW_DIR" 2>/dev/null && chmod 755 "$NOW_DIR" 2>/dev/null
-  while kill -0 "$parent" 2>/dev/null; do
+  while kill -0 "$model" 2>/dev/null; do
     t="$(ls -t "$config"/projects/*/*.jsonl 2>/dev/null | head -1)"
     {
       printf 'job %s: %s\n' "${SLOT:-0}" "${NOW_TITLE:-model work}"
@@ -783,8 +783,9 @@ run_model() {
       PushNotification Agent Task "$@" < /dev/null > "$config/out.json" &
   model=$!
   # Detached from this shell's output, so a caller reading it through $(...)
-  # does not wait on the watcher; it also stops should this shell be killed.
-  now_watch "$config" "$BASHPID" >/dev/null 2>&1 &
+  # does not wait on the watcher. It follows the model's own process, since
+  # macOS's bash 3.2 has no BASHPID for this shell's.
+  now_watch "$config" "$model" >/dev/null 2>&1 &
   watcher=$!
   wait "$model"
   rc=$?
