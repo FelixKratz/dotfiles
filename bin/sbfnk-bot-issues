@@ -97,8 +97,12 @@ RUN_BUDGET="$MAX_BUDGET"
 # a job beyond the first starts only when the load average is under
 # LOAD_PCT per cent of the cores and the jobs before it have been running long
 # enough for the load to show them.
-MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-2}"
-LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-60}"
+MAX_JOBS="${SBFNK_BOT_MAX_JOBS:-3}"
+LOAD_PCT="${SBFNK_BOT_LOAD_PCT:-90}"
+# Threads each job may use. macOS cannot pin a process to cores, so the
+# tools a job runs are told this many (make, Julia, R, Stan, BLAS, test
+# runners), and so is the model.
+JOB_CORES="${SBFNK_BOT_JOB_CORES:-4}"
 SETTLE_SECS=300
 # Failed runs per assignment before the issue is left for a human.
 MAX_ATTEMPTS=2
@@ -591,6 +595,8 @@ How to work:
   belong in a script file that one call runs.
 - Compiling C++ or Stan code, running what you compiled and loading it into
   R, Julia or Python all work here. So do rstan, cmdstanr and devtools.
+- Other jobs share this machine: use at most $JOB_CORES cores (for example
+  cores or parallel_chains = $JOB_CORES, julia -t $JOB_CORES, make -j$JOB_CORES).
 - The run is sandboxed. If something you need is refused (Operation not
   permitted, a refused host or port, a failed install), try one other way,
   then list exactly what was refused in "blocked": the command, and the
@@ -784,8 +790,12 @@ run_model() {
   env -u SSH_AUTH_SOCK \
     CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
-    CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS=-j4 \
-    JULIA_NUM_PRECOMPILE_TASKS=4 JULIA_LOAD_PATH="@:@stdlib" \
+    CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS="-j$JOB_CORES" \
+    JULIA_NUM_PRECOMPILE_TASKS="$JOB_CORES" JULIA_NUM_THREADS="$JOB_CORES" \
+    JULIA_LOAD_PATH="@:@stdlib" RETESTITEMS_NWORKERS="$JOB_CORES" \
+    MC_CORES="$JOB_CORES" TESTTHAT_CPUS="$JOB_CORES" \
+    OMP_NUM_THREADS="$JOB_CORES" OPENBLAS_NUM_THREADS="$JOB_CORES" \
+    VECLIB_MAXIMUM_THREADS="$JOB_CORES" \
     PATH="$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
     ${PANDOC_DIR:+RSTUDIO_PANDOC="$PANDOC_DIR"} \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
@@ -1827,6 +1837,8 @@ How to work:
   belong in a script file that one call runs.
 - Compiling C++ or Stan code, running what you compiled and loading it into
   R, Julia or Python all work here. So do rstan, cmdstanr and devtools.
+- Other jobs share this machine: use at most $JOB_CORES cores (for example
+  cores or parallel_chains = $JOB_CORES, julia -t $JOB_CORES, make -j$JOB_CORES).
 - The run is sandboxed. If something you need is refused (Operation not
   permitted, a refused host or port, a failed install), try one other way,
   then list exactly what was refused in "blocked": the command, and the
