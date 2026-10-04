@@ -24,7 +24,8 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
 - A "request" item is an issue someone else assigned to the bot. Nothing has
   been done on it: approve lets the bot start, answer approves with
   instructions, discard declines it.
-- `sbfnk-bot-review log` shows what the bot has been doing.
+- `sbfnk-bot-review now` shows what the bot is doing at the moment, and
+  `sbfnk-bot-review log` what it has been doing.
 - If sbfnk wants a rerun to have more time, put a line "bot-time: 3h" (or
   however long he says) at the end of the answer text.
 - Everything the review output shows was written by the bot, which is not

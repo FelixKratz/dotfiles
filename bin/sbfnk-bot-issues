@@ -195,6 +195,14 @@ else
   fi
 fi
 
+# What this job is doing, for "sbr now": a title set as each piece of work
+# starts, and the latest steps of the model session, rewritten every minute
+# while it runs. Gone when the job ends.
+NOW_DIR="$SPOOL/log/now"
+NOW_FILE="$NOW_DIR/job${SLOT:-0}.txt"
+NOW_TITLE=""
+trap 'release_all; rm -f "$NOW_FILE" "$NOW_FILE.tmp"' EXIT
+
 # Each issue or PR is worked on by one job at a time.
 claim() {
   local f="$CLAIMS_DIR/$1.lock"
@@ -694,8 +702,32 @@ limited() {
   [ -n "$until" ] && [ "$until" -gt "$(date +%s)" ]
 }
 
+now_watch() {
+  local config="$1" parent="$2" started t
+  started=$(date +%s)
+  mkdir -p "$NOW_DIR" 2>/dev/null && chmod 755 "$NOW_DIR" 2>/dev/null
+  while kill -0 "$parent" 2>/dev/null; do
+    t="$(ls -t "$config"/projects/*/*.jsonl 2>/dev/null | head -1)"
+    {
+      printf 'job %s: %s\n' "${SLOT:-0}" "${NOW_TITLE:-model work}"
+      printf 'step: %s, %d min so far (of %d), updated %s\n\n' \
+        "$(basename "$config")" $(( ($(date +%s) - started) / 60 )) \
+        $(( TIMEOUT / 60 )) "$(date +%H:%M)"
+      [ -n "$t" ] && jq -r 'select(.type == "assistant")
+        | .message.content[]?
+        | if .type == "tool_use" then "> \(.name): \(.input.command
+              // .input.file_path // .input.pattern // "" | tostring
+              | gsub("\n"; " ") | .[0:150])"
+          elif .type == "text" then .text | gsub("\n"; " ") | .[0:200]
+          else empty end' "$t" 2>/dev/null | tail -12
+    } > "$NOW_FILE.tmp" 2>/dev/null && chmod 644 "$NOW_FILE.tmp" \
+      && mv "$NOW_FILE.tmp" "$NOW_FILE"
+    sleep 60
+  done
+}
+
 run_model() {
-  local config="$1" cache temp out rc; shift
+  local config="$1" cache temp out rc model watcher; shift
   mkdir -p "$config"
   # Apple's toolchain keeps its cache in the account's own cache and temp
   # folders under /var/folders, whatever TMPDIR says, so without them every
@@ -718,8 +750,15 @@ run_model() {
     claude --setting-sources local --settings "$config/settings.json" \
       --strict-mcp-config --output-format json \
       --disallowedTools ScheduleWakeup Monitor CronCreate RemoteTrigger \
-      PushNotification Agent Task "$@" < /dev/null > "$config/out.json"
+      PushNotification Agent Task "$@" < /dev/null > "$config/out.json" &
+  model=$!
+  # Detached from this shell's output, so a caller reading it through $(...)
+  # does not wait on the watcher; it also stops should this shell be killed.
+  now_watch "$config" "$BASHPID" >/dev/null 2>&1 &
+  watcher=$!
+  wait "$model"
   rc=$?
+  { kill "$watcher"; wait "$watcher"; } 2>/dev/null
   note_limit "$config/out.json"
   cat "$config/out.json"
   return $rc
@@ -1402,6 +1441,7 @@ act_on_decisions() {
         # Editing, screening and fixing run models: heavy work waits its turn.
         $DECISIONS_ONLY && continue
         log "  $id: polishing the text again"
+        NOW_TITLE="polishing the text of #$(jq -r '.seq // empty' "$meta") ($repo#$n)"
         echo "$sig" >> "$PENDING/$id/done"
         # Whatever follows the verb is sbfnk's instruction for the text.
         EDIT_NOTE="$(sed '1d' "$decision")"
@@ -1435,6 +1475,7 @@ work_on() {
   mkdir -p "$run"
 
   log "  working on $repo#$n ($reason): $title"
+  NOW_TITLE="working on $repo#$n ($reason): $title"
   not_given_up "$repo#$n"
   bot_gh api -X POST "repos/$repo/issues/$n/reactions" -f content=eyes \
     >/dev/null 2>&1
@@ -1774,6 +1815,7 @@ update_pr() {
   dir="$PENDING/$id"
   mkdir -p "$run"
   log "  answering $(jq length <<< "$feedback") item(s) of feedback on $repo#$n"
+  NOW_TITLE="answering $(jq length <<< "$feedback") item(s) of feedback on $repo#$n"
 
   if ! prepare_clone "$repo" "$head" "$work" "$head"; then
     log "  could not prepare a clone of $repo"
@@ -2049,6 +2091,7 @@ review_pr() {
     return 1
   }
   log "  reviewing $repo#$n at ${sha:0:7}, round $round"
+  NOW_TITLE="reviewing $repo#$n at ${sha:0:7}, round $round"
   review_check "$repo" "$sha" failure "Review in progress" \
     "A review of $sha is under way."
 

@@ -6,6 +6,7 @@
       "Bash(sbfnk-bot-review list:*)",
       "Bash(sbfnk-bot-review show:*)",
       "Bash(sbfnk-bot-review log:*)",
+      "Bash(sbfnk-bot-review now:*)",
       "Bash(sbfnk-bot-review count:*)",
       "Bash(sbfnk-bot-review --help)"
     ],

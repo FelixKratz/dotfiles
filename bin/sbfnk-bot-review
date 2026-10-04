@@ -35,6 +35,8 @@
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
 #                                        itself is not redone
+#   sbfnk-bot-review now                 what the bot is doing: the job, and
+#                                        the latest steps of its session
 #   sbfnk-bot-review log                 the bot's recent activity, why its
 #                                        latest failed run failed, and what
 #                                        the sandbox refused
@@ -376,6 +378,15 @@ case "$cmd" in
     id="$(resolve "${1:-}")" || exit 1
     shift 2>/dev/null
     decide "$id" polish "$*" ;;
+  now)
+    shown=false
+    for f in "$SPOOL"/log/now/job*.txt; do
+      [ -f "$f" ] || continue
+      $shown && echo
+      clean < "$f"
+      shown=true
+    done
+    $shown || echo "the bot is idle" ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
     if [ -s "$SPOOL/log/blocked.tsv" ]; then
