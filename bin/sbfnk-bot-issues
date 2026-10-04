@@ -234,6 +234,24 @@ bot_git() {
 # branch) fails the same way every time: echoes give_up for publish_failed.
 push_refused() { grep -q '\[remote rejected\]' <<< "$1" && echo give_up; return 0; }
 
+# The bot's token cannot change CI: a branch that edits .github/workflows/
+# goes out from sbfnk's account. Its commits are bundled into the spool, with
+# the branch to push to and the ref the bundle builds on, for "sbr push";
+# once the branch is there, a fresh approval publishes the rest.
+touches_workflows() {
+  git -C "$1" diff --name-only "$2..HEAD" 2>/dev/null \
+    | grep -q '^\.github/workflows/'
+}
+hand_push() {
+  local id="$1" work="$2" from="$3" branch="$4" dir="$PENDING/$1"
+  git -C "$work" bundle create "$dir/branch.bundle" HEAD "^$from" \
+    >/dev/null 2>&1 || return 1
+  printf '%s\n%s\n' "$branch" "${from#origin/}" > "$dir/push-to"
+  chmod -R go+rX "$dir"
+  publish_failed "$id" "the branch edits .github/workflows/, which the bot \
+may not push: run 'sbr push' on it, and it publishes the rest" "$5" give_up
+}
+
 # The line of git's output that says why it failed: the rejected ref, or the
 # error, else the last line that is not the remote's chatter.
 git_reason() {
@@ -1238,13 +1256,20 @@ push_and_open() {
   if [ -n "$there" ] && [ "$there" != "$(git -C "$work" rev-parse HEAD)" ]; then
     branch="$branch-$(date +%Y%m%d%H%M)"
   fi
-  # Credentials come into play only here, after sbfnk has approved.
-  err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$branch" \
-    2>&1)" || {
-    publish_failed "$id" "push to $branch failed: $(git_reason "$err")" "$sig" \
-      "$(push_refused "$err")"
-    return 1
-  }
+  # Already there: an earlier attempt, or sbfnk with "sbr push".
+  if [ "$there" != "$(git -C "$work" rev-parse HEAD)" ]; then
+    if touches_workflows "$work" "origin/$base"; then
+      hand_push "$id" "$work" "origin/$base" "$branch" "$sig"
+      return 1
+    fi
+    # Credentials come into play only here, after sbfnk has approved.
+    err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$branch" \
+      2>&1)" || {
+      publish_failed "$id" "push to $branch failed: $(git_reason "$err")" \
+        "$sig" "$(push_refused "$err")"
+      return 1
+    }
+  fi
   url="$(bot_gh pr create -R "$repo" --draft --base "$base" --head "$branch" \
     --title "$title" --body "$body
 
@@ -1887,13 +1912,20 @@ publish_update() {
       return 1
     }
     now_at="$(awk '{print $1; exit}' <<< "$err")"
-    if [ "$now_at" != "$parked_at" ]; then
+    # At the update's own head, sbfnk pushed it with "sbr push".
+    if [ "$now_at" != "$parked_at" ] \
+      && [ "$now_at" != "$(git -C "$work" rev-parse HEAD)" ]; then
       publish_failed "$id" "$head moved since this was prepared: \
 ${parked_at:0:7} then, ${now_at:0:7} now" "${2:-}" give_up
       return 1
     fi
   fi
-  if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
+  if [ "$(jq -r .commits "$meta")" -gt 0 ] \
+    && [ "${now_at:-}" != "$(git -C "$work" rev-parse HEAD)" ]; then
+    if touches_workflows "$work" "origin/$head"; then
+      hand_push "$id" "$work" "origin/$head" "$head" "${2:-}"
+      return 1
+    fi
     err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" 2>&1)" \
       || { publish_failed "$id" "push to $head failed: $(git_reason "$err")" \
         "${2:-}" "$(push_refused "$err")"; return 1; }

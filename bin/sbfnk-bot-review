@@ -27,6 +27,10 @@
 #                                        (or stdin) on the PR, publicly and as
 #                                        you, and drop the parked update; the
 #                                        bot then answers your comment
+#   sbfnk-bot-review push [ID]           push the bot's commits from your own
+#                                        account, when they edit CI files its
+#                                        token may not push; the bot then
+#                                        publishes the rest
 #   sbfnk-bot-review discard [ID]        drop the work
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
@@ -53,7 +57,7 @@ die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
 refresh_bar() {
   local plugin="${XDG_CONFIG_HOME:-$HOME/.config}/sketchybar/plugins/bot.sh"
   case "$1" in
-    approve|force|answer|comment|discard|polish)
+    approve|force|answer|comment|push|discard|polish)
       [ -x "$plugin" ] && command -v sketchybar >/dev/null 2>&1 || return 0
       NAME=bot CONFIG_DIR="${plugin%/plugins/bot.sh}" "$plugin" \
         >/dev/null 2>&1 ;;
@@ -308,6 +312,47 @@ case "$cmd" in
   discard)
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
+  push)
+    id="$(resolve "${1:-}")" || exit 1
+    dir="$PENDING/$id"
+    [ -s "$dir/branch.bundle" ] && [ -s "$dir/push-to" ] \
+      || die "#$(meta "$id" .seq) has nothing for you to push"
+    repo="$(meta "$id" .repo)"
+    branch="$(sed -n 1p "$dir/push-to")"; from="$(sed -n 2p "$dir/push-to")"
+    token="$(gh auth token -u sbfnk 2>/dev/null)" \
+      || die "no gh login for sbfnk here (gh auth login)"
+    url="https://github.com/$repo.git"
+    # Your token in a header set through the environment, as the bot does.
+    as_you() {
+      LC_ALL=C GIT_CONFIG_COUNT=2 \
+        GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0="" \
+        GIT_CONFIG_KEY_1=http.https://github.com/.extraheader \
+        GIT_CONFIG_VALUE_1="AUTHORIZATION: basic $(printf 'x-access-token:%s' \
+          "$token" | openssl base64 -A)" \
+        git "$@"
+    }
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+    git init -q "$tmp"
+    # The bundle holds only the bot's commits; what they build on comes from
+    # GitHub.
+    as_you -C "$tmp" fetch -q "$url" "$from" \
+      || die "could not fetch $from from $repo"
+    git -C "$tmp" fetch -q "$dir/branch.bundle" HEAD \
+      || die "the bundle does not apply to $repo's $from"
+    sha="$(git -C "$tmp" rev-parse FETCH_HEAD)"
+    echo "pushing ${sha:0:7} to $repo $branch"
+    err="$(as_you -C "$tmp" push "$url" "${sha}:refs/heads/$branch" 2>&1)" || {
+      printf '%s\n' "$err" | grep -E '^ ! |^(error|fatal):' >&2
+      grep -q 'workflow' <<< "$err" \
+        && echo "your own gh login lacks the workflow scope: gh auth refresh -u sbfnk -s workflow" >&2
+      die "push failed; nothing changed"
+    }
+    if [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
+      echo "pushed; the screen flagged it, so read 'show' and approve --force to publish the rest"
+    else
+      decide "$id" approve
+    fi ;;
   polish)
     id="$(resolve "${1:-}")" || exit 1
     shift 2>/dev/null

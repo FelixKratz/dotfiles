@@ -15,6 +15,10 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
   `answer` does not apply to it. `comment N "..."` posts sbfnk's words on
   the PR, publicly and as him, and drops the update so the bot answers the
   comment instead. Say that it is public before running it.
+- Work that edits `.github/workflows/` cannot be pushed with the bot's
+  token, so `show` says to run `push N`. That pushes the bot's commits from
+  sbfnk's account and lets the bot publish the rest. Run it only when he
+  asks.
 - The list also shows issues and PRs the bot has given up on, with what
   starts it again. These need nothing from the desk.
 - A "request" item is an issue someone else assigned to the bot. Nothing has
