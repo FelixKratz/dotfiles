@@ -1377,6 +1377,8 @@ act_on_decisions() {
             "$base" "$title" "$body")" || continue
           log "  $id: opened $url"
           record "$repo#$n" "$event" pr "$url" "$cost"
+          [ -n "${url##*/}" ] && set_pr_state "$repo" "${url##*/}" \
+            ".heads = [\"$(git -C "$work" rev-parse HEAD)\"]"
         else
           err="$(bot_gh issue comment "$n" -R "$repo" \
             --body "@$OWNER_LOGIN $body" 2>&1)" || {
@@ -1970,7 +1972,8 @@ ${parked_at:0:7} then, ${now_at:0:7} now" "${2:-}" give_up
   fi
   rm -f "$f"
   set_pr_state "$repo" "$n" \
-    ".handled_until = \"$(jq -r .handled_until "$meta")\" | .failures = 0"
+    ".handled_until = \"$(jq -r .handled_until "$meta")\" | .failures = 0
+     | .heads = ((.heads // ((.reviewed // []) + [.clean // empty])) + [\"$sha\"])"
   log "  $id: pushed $(jq -r .commits "$meta") commit(s) and replied on $repo#$n"
   release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
   rm -rf "${PENDING:?}/$id" "$work"
@@ -2163,8 +2166,37 @@ tend_pr() {
 }
 
 tend_pr_inner() {
-  local repo="$1" n="$2" pr="$3" state since started_at feedback sha
+  local repo="$1" n="$2" pr="$3" state since started_at feedback sha heads
   state="$(pr_state "$repo" "$n")"
+  # A head the bot did not push means someone else (often a session of
+  # sbfnk's, under the same account) has taken the PR on, and the bot stays
+  # out of it until he writes "bot: resume" on the PR. PRs opened before
+  # pushed heads were recorded count the heads already reviewed instead.
+  sha="$(jq -r .head.sha <<< "$pr")"
+  heads="$(jq -c '.heads // ((.reviewed // []) + [.clean // empty])' <<< "$state")"
+  # Nothing recorded at all: a PR it opened and has not looked at yet.
+  [ "$heads" != "[]" ] || heads="[\"$sha\"]"
+  if ! jq -e --arg s "$sha" 'index($s)' <<< "$heads" >/dev/null; then
+    [ -n "$(jq -r '.handed_off_at // empty' <<< "$state")" ] \
+      || set_pr_state "$repo" "$n" ".handed_off_at = \"$(now_iso)\""
+    if [ -n "$(bot_gh api "repos/$repo/issues/$n/comments" --paginate --jq \
+      ".[] | select(.user.login == \"$OWNER_LOGIN\"
+                    and .created_at > \"$(pr_state "$repo" "$n" \
+                      | jq -r .handed_off_at)\"
+                    and (.body | test(\"bot: resume\"; \"i\"))) | .id" \
+      2>/dev/null)" ]; then
+      log "  $repo#$n: handed back, taking it on again at ${sha:0:7}"
+      set_pr_state "$repo" "$n" \
+        ".heads = ($heads + [\"$sha\"]) | del(.handed_off_at)"
+      state="$(pr_state "$repo" "$n")"
+      not_given_up "$repo#$n"
+    else
+      log "  skip $repo#$n: ${sha:0:7} was pushed from elsewhere"
+      given_up "$repo#$n" pr \
+        "taken on elsewhere (${sha:0:7} was not pushed by the bot); comment \"bot: resume\" to hand it back"
+      return 1
+    fi
+  fi
   since="$(jq -r '.handled_until // empty' <<< "$state")"
   [ -n "$since" ] || since="$(jq -r .created_at <<< "$pr")"
   started_at="$(now_iso)"
@@ -2191,7 +2223,6 @@ tend_pr_inner() {
     return 0
   fi
 
-  sha="$(jq -r .head.sha <<< "$pr")"
   [ "$(jq -r '.clean // ""' <<< "$state")" != "$sha" ] || return 1
   jq -e --arg s "$sha" '(.reviewed // []) | index($s)' <<< "$state" \
     >/dev/null && return 1

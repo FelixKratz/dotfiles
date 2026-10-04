@@ -197,7 +197,7 @@ case "$cmd" in
     # What the bot has stopped trying: nothing to decide here, but nothing
     # will happen without you either.
     given_up="$(cat "$SPOOL"/log/given-up/* 2>/dev/null | clean \
-      | awk -F'\t' '{printf "     given up: %s (%s, since %s): %s\n", $1, $2, $4, $3}')"
+      | awk -F'\t' '{printf "     left alone: %s (%s, since %s): %s\n", $1, $2, $4, $3}')"
     if [ -z "$ids" ]; then
       echo "nothing waiting for review"
       [ -z "$given_up" ] || printf '%s\n' "$given_up"
