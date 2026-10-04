@@ -23,6 +23,10 @@
 #                                        change in a PR; the bot runs again.
 #                                        A line "bot-time: 3h" gives that run
 #                                        more time
+#   sbfnk-bot-review comment [ID] [TEXT] on an update to an open PR: post TEXT
+#                                        (or stdin) on the PR, publicly and as
+#                                        you, and drop the parked update; the
+#                                        bot then answers your comment
 #   sbfnk-bot-review discard [ID]        drop the work
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
@@ -49,7 +53,7 @@ die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
 refresh_bar() {
   local plugin="${XDG_CONFIG_HOME:-$HOME/.config}/sketchybar/plugins/bot.sh"
   case "$1" in
-    approve|force|answer|discard|polish)
+    approve|force|answer|comment|discard|polish)
       [ -x "$plugin" ] && command -v sketchybar >/dev/null 2>&1 || return 0
       NAME=bot CONFIG_DIR="${plugin%/plugins/bot.sh}" "$plugin" \
         >/dev/null 2>&1 ;;
@@ -270,7 +274,7 @@ case "$cmd" in
   answer)
     id="$(resolve "${1:-}")" || exit 1
     [ "$(meta "$id" .outcome)" != update ] \
-      || die "#$(meta "$id" .seq) is an update to an open PR: comment on the PR instead, then approve or discard this"
+      || die "#$(meta "$id" .seq) is an update to an open PR: answers are private, so use 'comment', which posts on the PR"
     shift 2>/dev/null
     text="$*"
     if [ -z "$text" ]; then
@@ -279,6 +283,28 @@ case "$cmd" in
     fi
     [ -n "$text" ] || die "empty answer"
     decide "$id" answer "$text" ;;
+  comment)
+    id="$(resolve "${1:-}")" || exit 1
+    [ "$(meta "$id" .outcome)" = update ] \
+      || die "#$(meta "$id" .seq) is not an update to an open PR: use 'answer' to reply privately"
+    shift 2>/dev/null
+    text="$*"
+    if [ -z "$text" ]; then
+      [ -t 0 ] && echo "Type the comment (public, on the PR), then Ctrl-D:" >&2
+      text="$(cat)"
+    fi
+    [ -n "$text" ] || die "empty comment"
+    repo="$(meta "$id" .repo)"; n="$(meta "$id" .number)"
+    # As sbfnk whichever gh account is active: the bot takes only his
+    # comments as instructions.
+    token="$(gh auth token -u sbfnk 2>/dev/null)" \
+      || die "no gh login for sbfnk here (gh auth login)"
+    url="$(GH_TOKEN="$token" gh pr comment "$n" -R "$repo" --body "$text")" \
+      || die "could not comment on $repo#$n; the update stays parked"
+    echo "commented: $url"
+    # Dropping the update leaves your comment as the newest feedback, which
+    # the bot answers on its next pass.
+    decide "$id" discard ;;
   discard)
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
