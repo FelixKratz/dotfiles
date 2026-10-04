@@ -40,7 +40,7 @@
 #   sbfnk-bot-review log                 the bot's recent activity, why its
 #                                        latest failed run failed, and what
 #                                        the sandbox refused
-#   sbfnk-bot-review watch               follow the bot's activity live,
+#   sbfnk-bot-review watch               "now", then the bot's activity live,
 #                                        without the skips; [1] and [2] are
 #                                        the workers, [d] the decisions pass
 #   sbfnk-bot-review count               how many wait (used by nudge)
@@ -191,6 +191,18 @@ show_diff() {
   else
     clean < "$PENDING/$1/diff.patch"
   fi
+}
+
+# What each worker is on, from the status files the bot keeps per job.
+show_now() {
+  local f shown=false
+  for f in "$SPOOL"/log/now/job*.txt; do
+    [ -f "$f" ] || continue
+    $shown && echo
+    clean < "$f"
+    shown=true
+  done
+  $shown || echo "the bot is idle"
 }
 
 cmd="${1:-list}"
@@ -381,16 +393,10 @@ case "$cmd" in
     id="$(resolve "${1:-}")" || exit 1
     shift 2>/dev/null
     decide "$id" polish "$*" ;;
-  now)
-    shown=false
-    for f in "$SPOOL"/log/now/job*.txt; do
-      [ -f "$f" ] || continue
-      $shown && echo
-      clean < "$f"
-      shown=true
-    done
-    $shown || echo "the bot is idle" ;;
+  now) show_now ;;
   watch)
+    show_now
+    printf '\n== activity (Ctrl-C to stop) ==\n'
     tail -n 40 -F "$SPOOL/log/activity.log" 2>/dev/null \
       | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' | clean ;;
   log)
