@@ -230,6 +230,10 @@ bot_git() {
     git "$@"
 }
 
+# A push GitHub refused on its merits (a missing token scope, a protected
+# branch) fails the same way every time: echoes give_up for publish_failed.
+push_refused() { grep -q '\[remote rejected\]' <<< "$1" && echo give_up; return 0; }
+
 # The line of git's output that says why it failed: the rejected ref, or the
 # error, else the last line that is not the remote's chatter.
 git_reason() {
@@ -1237,7 +1241,8 @@ push_and_open() {
   # Credentials come into play only here, after sbfnk has approved.
   err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$branch" \
     2>&1)" || {
-    publish_failed "$id" "push to $branch failed: $(git_reason "$err")" "$sig"
+    publish_failed "$id" "push to $branch failed: $(git_reason "$err")" "$sig" \
+      "$(push_refused "$err")"
     return 1
   }
   url="$(bot_gh pr create -R "$repo" --draft --base "$base" --head "$branch" \
@@ -1891,7 +1896,7 @@ ${parked_at:0:7} then, ${now_at:0:7} now" "${2:-}" give_up
   if [ "$(jq -r .commits "$meta")" -gt 0 ]; then
     err="$(bot_git -C "$work" push --quiet origin "HEAD:refs/heads/$head" 2>&1)" \
       || { publish_failed "$id" "push to $head failed: $(git_reason "$err")" \
-        "${2:-}"; return 1; }
+        "${2:-}" "$(push_refused "$err")"; return 1; }
   fi
   f="$(mktemp)"
   sha="$(git -C "$work" rev-parse HEAD)"
