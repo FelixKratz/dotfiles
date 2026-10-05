@@ -370,15 +370,20 @@ given_up() {
 }
 not_given_up() { rm -f "$GIVEN_UP_DIR/${1//[\/#]/_}"; }
 
-# An issue marker goes as soon as the bot would no longer skip the issue:
-# reassigned (a new assignment starts afresh) or unassigned.
+# A marker goes as soon as it no longer holds: an issue reassigned (a new
+# assignment starts afresh) or unassigned, a PR merged or closed.
 sweep_given_up() {
   local f target kind repo n event fails
   for f in "$GIVEN_UP_DIR"/*; do
     [ -f "$f" ] || continue
     IFS=$'\t' read -r target kind _ < "$f"
-    [ "$kind" = issue ] || continue
     repo="${target%#*}"; n="${target##*#}"
+    if [ "$kind" = pr ]; then
+      [ "$(bot_gh api "repos/$repo/pulls/$n" --jq .state 2>/dev/null)" = closed ] \
+        && rm -f "$f"
+      continue
+    fi
+    [ "$kind" = issue ] || continue
     read -r event _ <<< "$(assignment_event "$repo" "$n" 2>/dev/null)"
     fails="$(ledger_rows "$target" "${event:-none}" \
       | awk -F'\t' '$4 == "failed"' | wc -l)"
