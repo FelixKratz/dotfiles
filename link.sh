@@ -87,7 +87,7 @@ for dir in $CODE_DIR/dotfiles*; do
           # Claude Code config: only link shareable config, not runtime state
           # Runtime state (history.jsonl, cache/, projects/, etc.) stays local
           mkdir -p $HOME/.claude
-          for entry in CLAUDE.md settings.json; do
+          for entry in CLAUDE.md settings.json working-rules.md; do
             cf="$file/$entry"
             [ -e "$cf" ] || continue
             ln $LN_FLAG $cf $HOME/.claude/
