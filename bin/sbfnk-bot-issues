@@ -1537,6 +1537,31 @@ act_on_decisions() {
   done
 }
 
+# A run takes hours, and the base moves meanwhile. Before the result is
+# parked its branch, still private, is rebased onto the current base: the PR
+# then opens without conflicts it never had a chance to see, and without a
+# merge commit, which would carry the base's own changes (CI workflows among
+# them) into the push. A rebase that conflicts is abandoned, and the conflict
+# pass takes it up once the PR is open.
+onto_current_base() {
+  local work="$1" base="$2" before after
+  before="$(git -C "$work" rev-parse "origin/$base")"
+  bot_git -C "$work" fetch --quiet origin \
+    "+refs/heads/$base:refs/remotes/origin/$base" >/dev/null 2>&1 || return 0
+  after="$(git -C "$work" rev-parse "origin/$base")"
+  [ "$before" = "$after" ] && return 0
+  if GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
+    git -C "$work" rebase --quiet "origin/$base" >/dev/null 2>&1; then
+    log "  $base moved during the run (${before:0:7} to ${after:0:7}); rebased onto it"
+  else
+    git -C "$work" rebase --abort >/dev/null 2>&1
+    # The diff for review compares with origin/$base, so it goes back to the
+    # base the work was done on.
+    git -C "$work" update-ref "refs/remotes/origin/$base" "$before"
+    log "  $base moved during the run and the branch conflicts with it; the conflict pass takes it up once the PR is open"
+  fi
+}
+
 work_on() {
   local repo="$1" n="$2" event="$3" reason="$4"
   local title base branch work id run out result outcome body pr_title
@@ -1564,6 +1589,7 @@ work_on() {
     record "$repo#$n" "$event" failed "clone"
     return 1
   fi
+  log "  starting from $base at $(git -C "$work" rev-parse --short "origin/$base")"
 
   issue_text "$repo" "$n" "$event" > "$run/issue.txt"
   # Redirected, not piped: in a pipeline it would set TIMEOUT in a subshell.
@@ -1614,6 +1640,7 @@ work_on() {
     fi
   fi
 
+  [ "$outcome" = pr ] && onto_current_base "$work" "$base"
   park "$id" "$repo" "$n" "$event" "$outcome" "${pr_title:-$title}" "$body" \
     "$work" "$base" "$branch" "$cost"
   record "$repo#$n" "$event" pending "$id" "$cost"
