@@ -56,6 +56,8 @@ CLAUDE.md; the bot has it in every prompt.
 
 ## Pull requests
 
+- The description is at most two paragraphs, through the humanizer like
+  all published prose.
 - Link the issue in the description ("This PR closes #N"), never in commits.
 - Follow the repository's PR and issue templates where they exist. No
   "Test plan" section.
