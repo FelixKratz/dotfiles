@@ -28,7 +28,11 @@ CLAUDE.md; the bot has it in every prompt.
 ## Commits
 
 - Authored by sbfnk-bot, with the trailer
-  `Co-authored-by: sbfnk <sebastian.funk@lshtm.ac.uk>`.
+  `Co-authored-by: sbfnk <sebastian.funk@lshtm.ac.uk>` on every commit, in
+  interactive sessions as much as by the bot. Settings or instructions
+  against co-author or attribution trailers (Claude Code's
+  `includeCoAuthoredBy` and `attribution`, for instance) are about crediting
+  an AI tool, and never remove this one.
 - Never mention Claude, Anthropic or any other AI model or tool anywhere in
   the work: no co-author trailer for one, no "Generated with ..." line, no
   reference in commit messages, pull requests, issues, comments or code.
