@@ -35,7 +35,8 @@ nudge — standing conditions worth surfacing
   nudge list                    Everything, including snoozed and decayed.
   nudge bar                     One line for the tmux status bar.
   nudge shell                   Greeting for new shells.
-  nudge check                   Re-run the polled checks (hourly job).
+  nudge check [home]            Re-run the polled checks (hourly job), or
+                                only the home-network one (every 5 min).
 USAGE
 }
 
@@ -294,7 +295,20 @@ check_sbfnk_bot() {
   fi
 }
 
+# The home-network checks (DNS, the mini and its SSH log) live in the private
+# repo and are sourced from there when present.
+check_home() {
+  local f="${XDG_CONFIG_HOME:-$HOME/.config}/nudge/home.sh"
+  [ -r "$f" ] || return 0
+  # shellcheck source=/dev/null
+  . "$f"
+  home_check
+}
+
 cmd_check() {
+  case "${1:-}" in
+    home) check_home; return ;;
+  esac
   check_reboot
   check_claude_backup
   check_sbfnk_bot
@@ -307,7 +321,7 @@ case "${1:-shell}" in
   list) cmd_list ;;
   bar) cmd_bar ;;
   shell) cmd_shell ;;
-  check) cmd_check ;;
+  check) shift; cmd_check "$@" ;;
   -h | --help | help) usage ;;
   *) echo "nudge: unknown command '$1'" >&2; usage >&2; exit 1 ;;
 esac
