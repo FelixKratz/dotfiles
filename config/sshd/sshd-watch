@@ -1,0 +1,18 @@
+#!/bin/bash
+# Keep sshd's login events on disk for the laptop's `nudge check home` to read:
+# macOS holds these Info-level messages in memory only, for about an hour.
+# Appending line by line reopens the file each time, so newsyslog can rotate it
+# under a running stream.
+out=/var/log/sshd-watch.log
+/usr/bin/log stream --style compact --level info --predicate '
+  process BEGINSWITH "sshd" AND (
+    eventMessage BEGINSWITH "Accepted publickey" OR
+    eventMessage CONTAINS "Invalid user" OR
+    eventMessage CONTAINS "authenticating user" OR
+    eventMessage CONTAINS "maximum authentication" OR
+    eventMessage BEGINSWITH "Failed password" OR
+    eventMessage BEGINSWITH "Failed keyboard")' |
+  while IFS= read -r line; do
+    case "$line" in Filtering* | Timestamp*) continue ;; esac
+    printf '%s\n' "$line" >> "$out"
+  done

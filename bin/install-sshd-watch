@@ -1,0 +1,22 @@
+#!/bin/bash
+# Install the sshd-watch daemon from config/sshd/, which records SSH login
+# events to /var/log/sshd-watch.log for the laptop's `nudge check home`.
+# Run with sudo on the machine to watch.
+set -euo pipefail
+
+[ "$(id -u)" -eq 0 ] || { echo "run with sudo" >&2; exit 1; }
+
+src="$(cd "$(dirname "$0")/.." && pwd)/config/sshd"
+label=none.sshd.watch
+
+install -d -m 755 /usr/local/libexec
+install -m 755 -o root -g wheel "$src/sshd-watch" /usr/local/libexec/sshd-watch
+install -m 644 -o root -g wheel "$src/sshd-watch.newsyslog.conf" /etc/newsyslog.d/sshd-watch.conf
+install -m 644 -o root -g wheel "$src/$label.plist" "/Library/LaunchDaemons/$label.plist"
+touch /var/log/sshd-watch.log
+chmod 644 /var/log/sshd-watch.log
+
+launchctl bootout "system/$label" 2>/dev/null || true
+launchctl bootstrap system "/Library/LaunchDaemons/$label.plist"
+sleep 1
+launchctl print "system/$label" | grep -E '^\s+state = '
