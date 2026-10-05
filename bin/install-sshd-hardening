@@ -1,0 +1,34 @@
+#!/bin/bash
+# Install config/sshd/200-hardening.conf into /etc/ssh/sshd_config.d/ and make
+# sshd read it. Run with sudo on the machine to harden. macOS starts a fresh
+# sshd per connection, so open sessions are untouched and the next login uses
+# the new settings; keep one session open until a new login has worked.
+set -euo pipefail
+
+[ "$(id -u)" -eq 0 ] || { echo "run with sudo" >&2; exit 1; }
+
+src="$(cd "$(dirname "$0")/.." && pwd)/config/sshd/200-hardening.conf"
+[ -f "$src" ] || src="${1:?usage: install-sshd-hardening [path/to/200-hardening.conf]}"
+main=/etc/ssh/sshd_config
+dropdir=/etc/ssh/sshd_config.d
+include="Include $dropdir/*"
+backup="$main.bak.$(date +%Y%m%d%H%M%S)"
+
+cp -p "$main" "$backup"
+mkdir -p "$dropdir"
+install -m 644 -o root -g wheel "$src" "$dropdir/200-hardening.conf"
+
+if ! grep -qxF "$include" "$main"; then
+  { echo "$include"; cat "$backup"; } > "$main"
+fi
+
+if ! /usr/sbin/sshd -t; then
+  echo "sshd -t failed; restoring $main and removing the drop-in" >&2
+  cp -p "$backup" "$main"
+  rm -f "$dropdir/200-hardening.conf"
+  exit 1
+fi
+
+echo "Installed. Effective settings:"
+/usr/sbin/sshd -T 2>/dev/null | grep -Ei '^(passwordauthentication|kbdinteractiveauthentication|permitrootlogin|allowusers|authenticationmethods|maxauthtries|logingracetime) '
+echo "Backup of the old config: $backup"
