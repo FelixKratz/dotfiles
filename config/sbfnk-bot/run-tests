@@ -5,9 +5,10 @@
 # approval nobody is there to give.
 #
 # Usage, from the repository root:
-#   run-tests                  the whole suite
 #   run-tests FILE...          only these test files
-#   run-tests --deps [FILE...] install the test dependencies first (R)
+#   run-tests --all            the whole suite (CI runs it on every push, so
+#                              this is for a change that reaches everywhere)
+#   run-tests --deps FILE...   install the test dependencies first (R)
 #
 # Julia: the package's test environment, through TestEnv for single files;
 # files of ReTestItems or TestItemRunner suites go through those. R:
@@ -18,6 +19,16 @@ set -uo pipefail
 
 deps=false
 [ "${1:-}" = --deps ] && { deps=true; shift; }
+all=false
+[ "${1:-}" = --all ] && { all=true; shift; }
+# The whole suite only when asked for by name: the default is the files a
+# change touches, and CI runs everything on every push anyway.
+if [ $# -eq 0 ] && ! $all; then
+  echo "run-tests: name the test files that cover your change, e.g." \
+    "run-tests test/test_foo.jl. CI runs the whole suite on every push;" \
+    "run-tests --all runs it here, for a change that reaches across the package." >&2
+  exit 2
+fi
 minutes="${RUN_TESTS_MINUTES:-25}"
 
 # macOS has no timeout(1); perl's alarm survives the exec. "run" replaces

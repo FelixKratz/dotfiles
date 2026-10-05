@@ -644,9 +644,11 @@ How to work:
   starting new checks with 15 minutes left, and say in the text what a
   fuller check should cover.
 - Run tests with run-tests: "run-tests test/file.jl" (or a testthat file)
-  runs those files in the package's test environment, plain "run-tests" the
-  whole suite, "run-tests --deps ..." installs R test dependencies first.
-  It needs no inline julia -e or Rscript -e, which are refused here.
+  runs those files in the package's test environment; "run-tests --deps
+  ..." installs R test dependencies first. It needs no inline julia -e or
+  Rscript -e, which are refused here. Do not run the whole suite to confirm
+  things are green: CI does that on every push. "run-tests --all" is for a
+  change that reaches across the package, at most once, at the end.
 - Do not push, open pull requests, comment on GitHub or run gh. You have
   no GitHub credentials, and network access is limited to package
   repositories. $OWNER_LOGIN reviews what you return before anything is
@@ -1865,7 +1867,8 @@ How to work:
 - Run the test files that cover each change, and the linter, in the
   foreground, before each commit: "run-tests test/file.jl" (or a testthat
   file) runs them in the package's test environment, needing no inline
-  julia -e or Rscript -e, which are refused here. CI runs the whole suite.
+  julia -e or Rscript -e, which are refused here. Do not rerun the whole
+  suite to confirm things are green: CI runs it on every push.
   This is a single run and nothing will wake you later.
 - Install whatever is missing; the R, Julia and Python libraries are yours
   and persist between runs.
