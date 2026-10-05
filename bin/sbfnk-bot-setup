@@ -456,6 +456,10 @@ case "${1:-}" in
         restart_daemon "$p" "$LABEL$i"
       fi
     done
+    # launchd's first interval comes ten minutes after loading; the first
+    # worker need not wait for it.
+    launchctl print "system/$LABEL" 2>/dev/null | grep -q 'state = running' \
+      || launchctl kickstart "system/$LABEL" 2>/dev/null || true
     say "started; heavy work polls every ten minutes, decisions every two" ;;
   disable)
     for l in "$DECISIONS_LABEL" "$LABEL" $(for i in $(extra_slots); do echo "$LABEL$i"; done); do
