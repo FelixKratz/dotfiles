@@ -1810,6 +1810,11 @@ An item of kind "conflict" comes from this script, not a person, and says
 which branch this one conflicts with. Merge that branch in with git merge
 (never rebase, reset or force), resolve each conflict keeping the intent of
 both sides, run the tests, and commit the merge. Change nothing else for it.
+An item of kind "ci" also comes from this script: it lists the checks that
+fail on this branch, with their output. Find the cause. If it lies in this
+pull request's change, including coverage it should have added, fix it and
+say what it was. If it does not (a flaky test, the CI setup, or a failure
+the base branch has too), change nothing for it and say why.
 
 $(jq -r '.[] | "<feedback id=\"\(.id)\" kind=\"\(.kind)\" author=\"\(.author)\"\(if .path then " file=\"\(.path):\(.line)\"" else "" end)>\n\(.body)\n</feedback>\n"' <<< "$feedback")
 
@@ -2267,6 +2272,44 @@ review_pr() {
   return 0
 }
 
+# Failing CI, in words the model can act on. Its sandbox has no GitHub
+# access, so each failing check's own summary, and for a GitHub Actions job
+# the end of its log, are fetched here. Echoes the text.
+MAX_CI_ROUNDS=3
+ci_failures() {
+  local repo="$1" checks="$2" c id
+  jq -c '.[] | select(.conclusion == "failure" or .conclusion == "timed_out")' \
+    <<< "$checks" | while read -r c; do
+    jq -r '"### \(.name): \(.conclusion)\n\(.title)\n\(.summary | .[0:1500])"' <<< "$c"
+    if [ "$(jq -r .app <<< "$c")" = github-actions ]; then
+      id="$(jq -r .id <<< "$c")"
+      printf '\nFailing step: %s\n' "$(bot_gh api "repos/$repo/actions/jobs/$id" \
+        --jq '[.steps[] | select(.conclusion == "failure") | .name] | join(", ")' \
+        2>/dev/null)"
+      # Logs come with terminal colours, which gh prints only when asked.
+      # The failure itself sits well before the summary that ends a log: the
+      # stretch from the first failure marker, then the last lines.
+      printf '\nFrom the log:\n```\n'
+      bot_gh api --allow-escape-sequences "repos/$repo/actions/jobs/$id/logs" \
+        2>/dev/null | perl -pe 's/\e\[[0-9;?]*[A-Za-z]//g; s/\r//g' \
+        | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z //' \
+        | grep -v '^##\[group\]\|^##\[endgroup\]' | cut -c1-300 | awk '
+          { line[NR] = $0 }
+          !first && /Test Failed|Error During Test|^ERROR|Error:|FAILED|[Ff]ailure/ {
+            first = NR }
+          END {
+            from = first ? (first > 5 ? first - 5 : 1) : NR + 1
+            to = first ? first + 70 : 0
+            for (i = from; i <= to && i <= NR; i++) print line[i]
+            if (first) print "..."
+            for (i = (NR > 30 ? NR - 29 : 1); i <= NR; i++) if (i > to) print line[i]
+          }'
+      printf '```\n'
+    fi
+    echo
+  done
+}
+
 # Look after one PR the bot opened. Returns 0 when it did something heavy.
 tend_pr() {
   local repo="$1" n="$2" pr
@@ -2282,6 +2325,7 @@ tend_pr() {
 
 tend_pr_inner() {
   local repo="$1" n="$2" pr="$3" state since started_at feedback sha heads
+  local checks
   state="$(pr_state "$repo" "$n")"
   # A head the bot did not push means someone else (often a session of
   # sbfnk's, under the same account) has taken the PR on, and the bot stays
@@ -2352,6 +2396,37 @@ tend_pr_inner() {
          body: ("This branch conflicts with " + $b + ": merge origin/" + $b
                 + " into it.")}]')" "$started_at"
     return 0
+  fi
+
+  # Failing CI gets one attempt per head, once every check on it has finished,
+  # and at most MAX_CI_ROUNDS heads in a row. The bot's own claude-review
+  # check is its review, not CI.
+  if [ "$(jq -r '.ci_tried // ""' <<< "$state")" != "$sha" ]; then
+    checks="$(bot_gh api "repos/$repo/commits/$sha/check-runs" --paginate \
+      --jq '.check_runs[] | select(.name != "claude-review") | {id, name,
+        status, conclusion, app: .app.slug, title: (.output.title // ""),
+        summary: (.output.summary // "")}' 2>/dev/null | jq -s -c .)"
+    if jq -e 'length > 0 and all(.status == "completed")' <<< "${checks:-[]}" \
+      >/dev/null 2>&1; then
+      if ! jq -e 'any(.conclusion == "failure" or .conclusion == "timed_out")' \
+        <<< "$checks" >/dev/null; then
+        [ "$(jq '.ci_rounds // 0' <<< "$state")" -eq 0 ] \
+          || set_pr_state "$repo" "$n" ".ci_rounds = 0"
+      elif [ "$(jq '.ci_rounds // 0' <<< "$state")" -lt "$MAX_CI_ROUNDS" ]; then
+        $LIST_ONLY && { log "  would fix the failing CI on $repo#$n"; return 0; }
+        job_kind pr
+        set_pr_state "$repo" "$n" \
+          ".ci_tried = \"$sha\" | .ci_rounds = ((.ci_rounds // 0) + 1)"
+        log "  $repo#$n: CI fails on ${sha:0:7} ($(jq -r '[.[]
+          | select(.conclusion == "failure" or .conclusion == "timed_out")
+          | .name] | join(", ")' <<< "$checks")); fixing it"
+        update_pr "$repo" "$n" "$(jq -c -n --arg b "$(ci_failures "$repo" "$checks")" \
+          --arg bot "$BOT" --arg at "$started_at" \
+          '[{kind: "ci", id: 0, author: $bot, created: $at, body: $b}]')" \
+          "$started_at"
+        return 0
+      fi
+    fi
   fi
   [ "$(jq -r '.clean // ""' <<< "$state")" != "$sha" ] || return 1
   jq -e --arg s "$sha" '(.reviewed // []) | index($s)' <<< "$state" \
