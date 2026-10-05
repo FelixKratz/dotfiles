@@ -193,6 +193,28 @@ show_diff() {
   fi
 }
 
+# Colour for a terminal: a colour per worker tag, and the line itself green
+# for what went out, yellow for what waits on you, red for what failed.
+colour_log() {
+  if [ ! -t 1 ]; then cat; return; fi
+  awk -v e="$(printf '\033')" '
+    BEGIN {
+      w["[1]"] = e "[36m"; w["[2]"] = e "[35m"; w["[3]"] = e "[34m"
+      w["[d]"] = e "[90m"; r = e "[0m"
+    }
+    {
+      line = $0
+      if (line ~ /opened|pushed|no findings|: approved/) c = e "[32m"
+      else if (line ~ /sbr push|parked|left for you|waits|waiting|usage limit/) c = e "[33m"
+      else if (line ~ /fail|could not|refused|not published|missing|error/) c = e "[31m"
+      else if (line ~ / poll |done$/) c = e "[2m"
+      else c = ""
+      if ($3 in w) { sub(/\[[0-9d]\]/, w[$3] $3 r (c ? c : ""), line) }
+      print (c ? c : "") line r
+      fflush()
+    }'
+}
+
 # What each worker is on, from the status files the bot keeps per job.
 show_now() {
   local f shown=false
@@ -398,7 +420,8 @@ case "$cmd" in
     show_now
     printf '\n== activity (Ctrl-C to stop) ==\n'
     tail -n 40 -F "$SPOOL/log/activity.log" 2>/dev/null \
-      | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' | clean ;;
+      | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' | clean \
+      | colour_log ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
     if [ -s "$SPOOL/log/blocked.tsv" ]; then
