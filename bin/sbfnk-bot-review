@@ -193,17 +193,22 @@ show_diff() {
   fi
 }
 
-# Colour for a terminal: a colour per worker tag, and the line itself green
-# for what went out, yellow for what waits on you, red for what failed.
+# The log, line by line as it comes: control characters dropped as "clean"
+# does (the bot wrote it), and in a terminal a colour per worker tag, with
+# the line green for what went out, yellow for what waits on you, red for
+# what failed. awk flushes each line; tr in a pipe would hold them back.
 colour_log() {
-  if [ ! -t 1 ]; then cat; return; fi
-  awk -v e="$(printf '\033')" '
+  local tty=0
+  [ -t 1 ] && tty=1
+  LC_ALL=C awk -v e="$(printf '\033')" -v tty="$tty" '
     BEGIN {
       w["[1]"] = e "[36m"; w["[2]"] = e "[35m"; w["[3]"] = e "[34m"
       w["[d]"] = e "[90m"; r = e "[0m"
     }
     {
       line = $0
+      gsub(/[\001-\010\013-\037\177]/, "", line)
+      if (!tty) { print line; fflush(); next }
       if (line ~ /opened|pushed|no findings|: approved/) c = e "[32m"
       else if (line ~ /sbr push|parked|left for you|waits|waiting|usage limit/) c = e "[33m"
       else if (line ~ /fail|could not|refused|not published|missing|error/) c = e "[31m"
@@ -420,7 +425,7 @@ case "$cmd" in
     show_now
     printf '\n== activity (Ctrl-C to stop) ==\n'
     tail -n 40 -F "$SPOOL/log/activity.log" 2>/dev/null \
-      | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' | clean \
+      | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' \
       | colour_log ;;
   log)
     tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
