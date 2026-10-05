@@ -2335,6 +2335,21 @@ tend_pr_inner() {
   heads="$(jq -c '.heads // ((.reviewed // []) + [.clean // empty])' <<< "$state")"
   # Nothing recorded at all: a PR it opened and has not looked at yet.
   [ "$heads" != "[]" ] || heads="[\"$sha\"]"
+  # Commits a GitHub app adds on top of the bot's own (a workflow that
+  # regenerates documentation, say) do not take the PR over: every commit
+  # after the bot's last head must come from a login ending in [bot].
+  if ! jq -e --arg s "$sha" 'index($s)' <<< "$heads" >/dev/null \
+    && bot_gh api "repos/$repo/pulls/$n/commits" --paginate \
+      --jq '.[] | "\(.sha) \(.author.login // "")"' 2>/dev/null \
+      | awk -v h="$heads" '
+          index(h, "\"" $1 "\"") { since = 1; others = 0; next }
+          since && $2 !~ /\[bot\]$/ { others = 1 }
+          END { exit !(since && !others) }'; then
+    log "  $repo#$n: ${sha:0:7} adds only automated commits; still the bot's"
+    heads="$(jq -c --arg s "$sha" '. + [$s]' <<< "$heads")"
+    set_pr_state "$repo" "$n" ".heads = $heads | del(.handed_off_at)"
+    not_given_up "$repo#$n"
+  fi
   if ! jq -e --arg s "$sha" 'index($s)' <<< "$heads" >/dev/null; then
     [ -n "$(jq -r '.handed_off_at // empty' <<< "$state")" ] \
       || set_pr_state "$repo" "$n" ".handed_off_at = \"$(now_iso)\""
