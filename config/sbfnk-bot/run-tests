@@ -1,0 +1,84 @@
+#!/bin/bash
+# run-tests — run a package's tests, or only some of its test files, as one
+# command. It is on sbfnk-bot's PATH so a run never needs an inline
+# `julia -e` or `Rscript -e` script, which the model's tools hold for an
+# approval nobody is there to give.
+#
+# Usage, from the repository root:
+#   run-tests                  the whole suite
+#   run-tests FILE...          only these test files
+#   run-tests --deps [FILE...] install the test dependencies first (R)
+#
+# Julia: the package's test environment, through TestEnv for single files;
+# files of ReTestItems or TestItemRunner suites go through those. R:
+# devtools::test, filtered to the files given. Python: pytest.
+# Stops after RUN_TESTS_MINUTES (default 25) minutes.
+
+set -uo pipefail
+
+deps=false
+[ "${1:-}" = --deps ] && { deps=true; shift; }
+minutes="${RUN_TESTS_MINUTES:-25}"
+
+# macOS has no timeout(1); perl's alarm survives the exec. "run" replaces
+# this script with the command, "step" runs one and comes back.
+run() { exec perl -e 'alarm shift; exec @ARGV' "$((minutes * 60))" "$@"; }
+step() { perl -e 'alarm shift; exec @ARGV' "$((minutes * 60))" "$@"; }
+
+# Quote each argument for a Julia or R string literal.
+jl_list() {
+  local f out=""
+  for f in "$@"; do out="$out\"${f//\"/\\\"}\", "; done
+  printf '[%s]' "${out%, }"
+}
+
+if [ -f Project.toml ] && grep -q '^name *=' Project.toml; then
+  pkg="$(sed -n 's/^name *= *"\(.*\)"/\1/p' Project.toml | head -1)"
+  # TestEnv lives in the shared tools environment that sbfnk-bot-setup deps
+  # fills.
+  export JULIA_LOAD_PATH="@:@tools:@stdlib"
+  if [ $# -eq 0 ]; then
+    run julia --project=. --startup-file=no \
+      -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
+  fi
+  files="$(jl_list "$@")"
+  runner=plain
+  grep -q ReTestItems test/runtests.jl 2>/dev/null && runner=retestitems
+  grep -q TestItemRunner test/runtests.jl 2>/dev/null && runner=testitemrunner
+  case "$runner" in
+    retestitems)
+      body="using ReTestItems, $pkg; ReTestItems.runtests($files...)" ;;
+    testitemrunner)
+      body="using TestItemRunner; @run_package_tests filter = ti -> any(f -> endswith(ti.filename, f), $files)" ;;
+    *)
+      body="using Test, $pkg; @testset \"run-tests\" begin; for f in $files; include(joinpath(pwd(), f)); end; end" ;;
+  esac
+  run julia --project=. --startup-file=no -e "
+    using Pkg; Pkg.instantiate()
+    using TestEnv; TestEnv.activate()
+    $body"
+fi
+
+if [ -f DESCRIPTION ]; then
+  if $deps; then
+    step Rscript -e 'remotes::install_deps(dependencies = TRUE, upgrade = "never")' \
+      || exit $?
+  fi
+  if [ $# -eq 0 ]; then
+    run Rscript -e 'devtools::test(stop_on_failure = TRUE)'
+  fi
+  # devtools::test filters on the name between "test-" and ".R".
+  names=""
+  for f in "$@"; do
+    n="$(basename "$f" .R)"; n="${n#test-}"; n="${n#test_}"
+    names="$names${names:+|}$n"
+  done
+  run Rscript -e "devtools::test(filter = '^($names)\$', stop_on_failure = TRUE)"
+fi
+
+if [ -f pyproject.toml ] || [ -f setup.py ] || [ -f setup.cfg ]; then
+  run python3 -m pytest "$@"
+fi
+
+echo "run-tests: no Julia (Project.toml), R (DESCRIPTION) or Python package here" >&2
+exit 2

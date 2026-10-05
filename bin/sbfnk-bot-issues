@@ -75,6 +75,9 @@ LOG_FILE="$SPOOL/log/activity.log"
 LEDGER="$SPOOL/log/ledger.tsv"
 # sbfnk's humanizer skill. The copy in the spool follows his edits to it;
 # the one beside the script is what the last install put there.
+# The working rules shared with sbfnk's own sessions (config/claude in the
+# dotfiles), installed beside the script.
+WORKING_RULES="$CONFIG_DIR/working-rules.md"
 HUMANIZER="$CONFIG_DIR/humanizer.md"
 [ -r "$SPOOL/humanizer.md" ] && HUMANIZER="$SPOOL/humanizer.md"
 STATE_DIR="$HOME/.local/share/sbfnk-bot-issues"
@@ -587,6 +590,14 @@ already does, and do not refer to conversations, meetings, emails, notes,
 other projects, or anything else you might know from elsewhere. Do not read
 files outside this repository.
 
+The working rules for all of $OWNER_LOGIN's repositories follow; his own
+sessions work by them too. Where they differ from this prompt, this prompt
+wins: here the humanizer edit, publishing and marking the pull request ready
+are done for you after the run.
+<working-rules>
+$(cat "$WORKING_RULES" 2>/dev/null)
+</working-rules>
+
 How to work:
 - Read CLAUDE.md, AGENTS.md, CONTRIBUTING.md and any style guide in the
   repository first, and follow them.
@@ -628,9 +639,14 @@ How to work:
   end your turn, the run is over.
 - The run is stopped after $((TIMEOUT / 60)) minutes and anything not yet
   returned is lost. Keep checks proportionate: a few seeds and short chains
-  for model fits, and the relevant test files before the whole suite. Commit
-  as you go, stop starting new checks with 15 minutes left, and say in the
-  text what a fuller check should cover.
+  for model fits, and the test files that cover your change; CI runs the
+  whole suite and the version matrix on every push. Commit as you go, stop
+  starting new checks with 15 minutes left, and say in the text what a
+  fuller check should cover.
+- Run tests with run-tests: "run-tests test/file.jl" (or a testthat file)
+  runs those files in the package's test environment, plain "run-tests" the
+  whole suite, "run-tests --deps ..." installs R test dependencies first.
+  It needs no inline julia -e or Rscript -e, which are refused here.
 - Do not push, open pull requests, comment on GitHub or run gh. You have
   no GitHub credentials, and network access is limited to package
   repositories. $OWNER_LOGIN reviews what you return before anything is
@@ -801,7 +817,8 @@ run_model() {
     MC_CORES="$JOB_CORES" TESTTHAT_CPUS="$JOB_CORES" \
     OMP_NUM_THREADS="$JOB_CORES" OPENBLAS_NUM_THREADS="$JOB_CORES" \
     VECLIB_MAXIMUM_THREADS="$JOB_CORES" \
-    PATH="$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
+    PATH="$CONFIG_DIR/bin:$PATH${PANDOC_DIR:+:$PANDOC_DIR}" \
+    BASH_DEFAULT_TIMEOUT_MS=600000 BASH_MAX_TIMEOUT_MS=1800000 \
     ${PANDOC_DIR:+RSTUDIO_PANDOC="$PANDOC_DIR"} \
     GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL" \
     GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL" \
@@ -1831,14 +1848,25 @@ $prbody
 Everything you write will be public. Use only what the repository, the
 pull request and the feedback tell you, and mention nothing from elsewhere.
 
+The working rules for all of $OWNER_LOGIN's repositories follow; his own
+sessions work by them too. Where they differ from this prompt, this prompt
+wins: here the humanizer edit, publishing and marking the pull request ready
+are done for you after the run.
+<working-rules>
+$(cat "$WORKING_RULES" 2>/dev/null)
+</working-rules>
+
 How to work:
 - Follow CLAUDE.md, AGENTS.md and CONTRIBUTING.md in the repository.
 - Add new commits on top of the branch, one per finding or point. Describe
   the fix in the message, not the review ("Guard against empty input", not
   "Address review comment"). Do not rewrite the commits that are already
   there: they are public.
-- Run the relevant tests and the linter, in the foreground, before each
-  commit. This is a single run and nothing will wake you later.
+- Run the test files that cover each change, and the linter, in the
+  foreground, before each commit: "run-tests test/file.jl" (or a testthat
+  file) runs them in the package's test environment, needing no inline
+  julia -e or Rscript -e, which are refused here. CI runs the whole suite.
+  This is a single run and nothing will wake you later.
 - Install whatever is missing; the R, Julia and Python libraries are yours
   and persist between runs.
 - Give each Bash call a single operation. A call that chains several
