@@ -2470,6 +2470,9 @@ candidates() {
 
 if $DECISIONS_ONLY; then
   act_on_decisions
+  # Here, every two minutes, so a marker that no longer holds goes promptly
+  # rather than after whatever long job a heavy pass is on.
+  sweep_given_up
   exit 0
 fi
 
@@ -2540,7 +2543,6 @@ if $issues_first && ! $busy && [ -z "$ONE_ISSUE" ]; then
   tend_prs || rm -f "$LAST_KIND_FILE"
 fi
 
-$LIST_ONLY || sweep_given_up
 find "$GIVEN_UP_DIR" -type f -mtime +2 -delete 2>/dev/null
 
 # Clones of parked work stay until a decision; anything else goes after a
