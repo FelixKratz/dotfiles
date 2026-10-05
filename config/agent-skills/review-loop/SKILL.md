@@ -1,11 +1,16 @@
 ---
+name: review-loop
 argument-hint: [PR-number] [--dry-run]
-description: Review a PR with a fresh-context reviewer, fix what it finds one commit at a time, and re-review until a full pass comes back clean. Local and on demand — no CI, no tokens spent unless you run it.
+description: Review a PR with a fresh-context reviewer, fix what it finds one commit at a time, and re-review until a full pass comes back clean. Local and on demand — no CI, no tokens spent unless you run it. Shared by every coding agent (Claude Code, Codex, Antigravity).
 ---
+
+<!-- The one copy for all coding agents: edit it in the dotfiles at
+config/agent-skills/review-loop/SKILL.md; link.sh links it into each agent's
+skills folder. -->
 
 Drive a PR to the point where an independent review of it finds nothing.
 
-Read the target from `$ARGUMENTS`: a PR number, or the PR for the current branch
+Read the target from the arguments: a PR number, or the PR for the current branch
 (`gh pr view --json number -q .number`) if empty. `--dry-run` reviews and reports
 without committing or pushing anything.
 
@@ -14,9 +19,12 @@ costs-money step — not something that fires on every push.
 
 ## The reviewer must not be this session
 
-Every review round runs in a **fresh subagent** via the Agent tool. Never review
-the diff yourself in this session, and never let a round reuse the previous
-round's agent.
+Every review round runs in a **fresh reviewer** that has none of this session's
+context: in Claude Code, a new subagent through the Agent tool; in Codex, a new
+`codex exec` process; in any other agent, whatever starts a separate session.
+Never review the diff yourself in this session, and never let a round reuse the
+previous round's reviewer. If the agent has no way to start one, say so and do
+not claim an independent review ran.
 
 This is the whole reason the command exists. If the session that wrote the code
 also judges it, the reasoning that produced each decision is still in context,
@@ -48,12 +56,12 @@ The specification comes in two halves:
 
   Many repos have no repo half, and that is fine — generic-language and
   convention concerns belong to a competent reviewer and the repo's own
-  `CLAUDE.md`, not to a per-repo checklist. A repo half exists only where there
+  `CLAUDE.md` or `AGENTS.md`, not to a per-repo checklist. A repo half exists only where there
   is something non-obvious and specific to say.
 
 Hand the agent whichever halves exist and tell it to follow them: the org half
 for method, the repo half (if any) for what to look for here, and the repo's
-`CLAUDE.md` (if any) for its conventions. Do not paste your own review criteria
+`CLAUDE.md` or `AGENTS.md` (if any) for its conventions. Do not paste your own review criteria
 over them, and do not fall back to a generic checklist when a spec exists — the
 point is that contributors and maintainers review against the same bar. (An
 older repo may still carry a full spec, method and all, in its own

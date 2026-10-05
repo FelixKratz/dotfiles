@@ -208,6 +208,36 @@ for dir in $CODE_DIR/dotfiles*; do
             echo "Linked $f → ~/.config/$name/$(basename $f)"
           done
           ;;
+        agent-skills)
+          # Skills shared by every coding agent: one source, linked into each
+          # agent's skills folder. A skill that used to be a Claude command
+          # leaves links to the old file behind (the command itself, and
+          # Antigravity's folder wrapping it); those go first.
+          for skill in $file/*(N/); do
+            [ -f "$skill/SKILL.md" ] || continue
+            sk="${skill:t}"
+            for old in "$HOME/.claude/commands/$sk.md" "$HOME/.codex/prompts/$sk.md"; do
+              [[ -L "$old" && "$(readlink "$old")" == */dotfiles*/config/* ]] \
+                && rm "$old" && echo "Removed $old (now a shared skill)"
+            done
+            for target in "$HOME/.claude/skills" "$HOME/.codex/skills" \
+                "$HOME/.gemini/antigravity-cli/skills"; do
+              mkdir -p "$target"
+              if [[ -d "$target/$sk" && ! -L "$target/$sk" ]]; then
+                if [[ -L "$target/$sk/SKILL.md" \
+                    && "$(ls -A "$target/$sk")" == SKILL.md \
+                    && "$(readlink "$target/$sk/SKILL.md")" == */dotfiles*/config/claude/commands/* ]]; then
+                  rm "$target/$sk/SKILL.md" && rmdir "$target/$sk"
+                else
+                  echo "Skipped $skill → $target/$sk (a local skill of that name exists)"
+                  continue
+                fi
+              fi
+              ln $LN_FLAG "$skill" "$target/"
+              echo "Linked $skill → $target/$sk"
+            done
+          done
+          ;;
         notmuch)
           # Hooks belong beside the Xapian database rather than in ~/.config,
           # so they follow database.path. Ask notmuch where that is and fall
