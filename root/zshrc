@@ -147,6 +147,9 @@ if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZDOTDIR:-${HOME}}/.zimrc ]]; then
 fi
 # Initialize modules.
 source ${ZIM_HOME}/init.zsh
+# Claude Code's shells write logs with "> file" over and over; zim's
+# noclobber refuses that, so it stays on for typing only.
+[[ -n $CLAUDECODE ]] && setopt clobber
 
 # ------------------------------
 # Post-init module configuration
