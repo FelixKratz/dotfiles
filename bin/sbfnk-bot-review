@@ -174,6 +174,9 @@ state() {
       polish|answer) echo "$verb recorded, waits for the bot's next job" ;;
       *) echo "$verb recorded, carried out within two minutes" ;;
     esac
+  elif [ -f "$PENDING/$1/stuck" ] \
+    && tail -1 "$PENDING/$1/publish-errors" 2>/dev/null | grep -qE 'was (merged|closed) before'; then
+    echo "the PR was merged or closed meanwhile: sbr discard $(meta "$1" '.seq // empty')"
   elif [ -f "$PENDING/$1/stuck" ] && [ -s "$PENDING/$1/branch.bundle" ]; then
     echo "edits CI workflows: sbr push $(meta "$1" '.seq // empty')"
   elif [ -f "$PENDING/$1/stuck" ]; then
@@ -381,6 +384,14 @@ case "$cmd" in
     [ -s "$dir/branch.bundle" ] && [ -s "$dir/push-to" ] \
       || die "#$(meta "$id" .seq) has nothing for you to push"
     repo="$(meta "$id" .repo)"
+    # A PR merged or closed since has nowhere to push to.
+    if [ "$(meta "$id" .outcome)" = update ]; then
+      state="$(gh api "repos/$repo/pulls/$(meta "$id" .number)" \
+        --jq 'if .merged then "merged" else .state end' 2>/dev/null)"
+      case "$state" in merged|closed)
+        die "$repo#$(meta "$id" .number) was $state since: nothing to push to; sbr discard $(meta "$id" .seq)" ;;
+      esac
+    fi
     branch="$(sed -n 1p "$dir/push-to")"; from="$(sed -n 2p "$dir/push-to")"
     token="$(gh auth token -u sbfnk 2>/dev/null)" \
       || die "no gh login for sbfnk here (gh auth login)"

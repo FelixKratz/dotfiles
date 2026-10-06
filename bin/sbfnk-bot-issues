@@ -1927,7 +1927,7 @@ PROMPT
 update_pr() {
   local repo="$1" n="$2" feedback="$3" started_at="$4"
   local pr head base title prbody id work run out result summary flags fix
-  local commits dir sensitive edit edited=false own
+  local commits dir sensitive edit edited=false own head_sha
 
   pr="$(bot_gh api "repos/$repo/pulls/$n")" || return 1
   head="$(jq -r .head.ref <<< "$pr")"
@@ -1947,6 +1947,9 @@ update_pr() {
     pr_failed "$repo" "$n"
     return 0
   fi
+  # The head the work starts from, for the check before publishing. Read now:
+  # the model may fetch during its run, which moves origin/$head with it.
+  head_sha="$(git -C "$work" rev-parse "origin/$head")"
   set_job_timeout "$repo" < <(jq -r --arg o "$OWNER_LOGIN" \
     '.[] | select(.author == $o) | .body' <<< "$feedback")
   # A branch made from the PR head: origin/$head marks what is already public.
@@ -2016,7 +2019,7 @@ update_pr() {
     --arg work "$work" --arg at "$(now_iso)" --argjson flags "$flags" \
     --arg upto "$started_at" --argjson commits "${commits:-0}" \
     --argjson edited "$edited" \
-    --arg head_sha "$(git -C "$work" rev-parse "origin/$head")" \
+    --arg head_sha "$head_sha" \
     '{id: $id, repo: $repo, number: $pr, pr: $pr, outcome: "update",
       title: ("update to #" + ($pr | tostring) + ": " + $title),
       head: $head, head_sha: $head_sha, base: $base, work: $work,
@@ -2080,6 +2083,8 @@ publish_update() {
     --jq 'if .merged then "merged" else .state end' 2>/dev/null)"
   case "$state" in
     merged|closed)
+      # Nothing to push to any more, by hand or otherwise.
+      rm -f "$dir/branch.bundle" "$dir/push-to"
       publish_failed "$id" "$repo#$n was $state before this went out" \
         "${2:-}" give_up
       return 1 ;;
