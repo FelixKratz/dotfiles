@@ -1,0 +1,19 @@
+#!/bin/bash
+# Run the AeroSpace focus follower (config/aerospace/follow-focus.swift).
+#
+# Compiled rather than run through the Swift interpreter, which keeps about
+# 400 MB resident for a process that lives as long as the session. Rebuilds
+# whenever the source is newer than the binary.
+
+set -euo pipefail
+
+src=$HOME/.config/aerospace/follow-focus.swift
+bin=${XDG_CACHE_HOME:-$HOME/.cache}/aerospace-follow-focus/follow-focus
+
+if [[ ! -x "$bin" || "$src" -nt "$bin" ]]; then
+  mkdir -p "$(dirname "$bin")"
+  swiftc -O -o "$bin.tmp" "$src"
+  mv "$bin.tmp" "$bin"
+fi
+
+exec "$bin"

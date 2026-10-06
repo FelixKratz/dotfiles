@@ -324,6 +324,7 @@ AGENT_GROUP=(
   none.mail      mail
   none.orgroam   notes
   none.claude    desktop
+  none.aerospace desktop
 )
 
 # The agents link.sh installed last time, so an agent removed from the repo, or
