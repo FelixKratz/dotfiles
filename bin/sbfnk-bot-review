@@ -37,6 +37,9 @@
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
 #                                        itself is not redone
+#   sbfnk-bot-review polish --strip-flagged [ID]
+#                                        the same, removing what the screen
+#                                        flagged
 #   sbfnk-bot-review now                 what the bot is doing: the job, and
 #                                        the latest steps of its session
 #   sbfnk-bot-review log                 the bot's recent activity, why its
@@ -447,9 +450,19 @@ case "$cmd" in
       decide "$id" approve
     fi ;;
   polish)
+    strip=false
+    [ "${1:-}" = --strip-flagged ] && { strip=true; shift; }
     id="$(resolve "${1:-}")" || exit 1
     shift 2>/dev/null
-    decide "$id" polish "$*" ;;
+    note="$*"
+    if $strip; then
+      [ "$(meta "$id" '.flags | length')" -gt 0 ] || die "#$(meta "$id" .seq) has no flags to strip"
+      # The flagged passages, quoted, as the instruction for the edit.
+      note="$(jq -r '"Remove each of these passages the screen flagged, and anything that only makes sense with them; keep everything else as it is:\n"
+        + ([.flags[] | "- \"\(.quote)\""] | join("\n"))' "$PENDING/$id/meta.json")${note:+
+$note}"
+    fi
+    decide "$id" polish "$note" ;;
   now) show_now ;;
   watch)
     show_now

@@ -1018,6 +1018,7 @@ $(cat "$HUMANIZER")
 $(jq -r '.replies[] | "<reply>\n\(.body)\n</reply>\n"' <<< "$result")
 $(jq -r '.description // empty | "<description>\n\(.)\n</description>"' \
   <<< "$result")
+$([ -n "${EDIT_NOTE:-}" ] && printf '\n%s asks for these changes to the text. They come before the rules\nabove:\n<changes>\n%s\n</changes>\n' "$OWNER_LOGIN" "$EDIT_NOTE")
 PROMPT
 )" --tools "" ${EDIT_MODEL:+--model "$EDIT_MODEL"} \
     --json-schema "$UPDATE_EDIT_SCHEMA" 2>/dev/null)"
@@ -1472,8 +1473,16 @@ act_on_decisions() {
           log "  $id: discarded"
           release_seq "$(jq -r '.seq // empty' "$meta" 2>/dev/null)"
           rm -rf "${PENDING:?}/$id" "$work" ;;
+        polish)
+          # A model run: heavy work waits its turn.
+          $DECISIONS_ONLY && continue
+          log "  $id: polishing the replies again"
+          echo "$sig" >> "$PENDING/$id/done"
+          EDIT_NOTE="$(sed '1d' "$decision")"
+          repolish_update "$id"
+          EDIT_NOTE="" ;;
         *)
-          log "  $id: '$verb' does not apply to a PR update (approve or discard)"
+          log "  $id: '$verb' does not apply to a PR update (approve, polish or discard)"
           echo "$sig" >> "$PENDING/$id/done" ;;
       esac
       continue
@@ -1924,6 +1933,37 @@ PROMPT
 }
 
 # Work on feedback to a PR: returns 0 when it did something heavy.
+# The text an update would put out, as the screens and sbfnk read it.
+update_text() {
+  jq -r '.replies[] | "## Reply to \(.kind) \(.id)\n\n\(.body)\n"' <<< "$1"
+  jq -r '.description // empty' <<< "$1" | sed '1s/^/## New description\n\n/'
+}
+
+# "polish" on a parked update: its replies and description rewritten by the
+# humanizer with sbfnk's instruction, then screened again. The commits stay
+# as they are, and so do flags about the files they change.
+repolish_update() {
+  local id="$1" dir="$PENDING/$1" run="$RUNS_DIR/$1" meta edit flags old
+  meta="$dir/meta.json"
+  edit="$(humanize_update "$(cat "$dir/update.json")" "$run/polish")"
+  if [ -z "$edit" ]; then
+    log "  $id: the edit gave nothing back; the text stays as it was"
+    return 0
+  fi
+  jq . <<< "$edit" > "$dir/update.json"
+  update_text "$edit" > "$dir/text.md"
+  old="$(jq -c '.flags' "$meta")"
+  flags="$(screen_all "$dir" "$run" "$(jq -r .work "$meta")" "$(jq -r .head "$meta")")"
+  flags="$(jq -c -n --argjson a "$flags" --argjson o "$old" \
+    '$a + [$o[] | select(.reason | startswith("changes a path"))]')"
+  jq --argjson f "$flags" --argjson o "$old" '.flags = $f | .edited = true
+    | .fixed = ((.fixed // []) + [$o[] | select(.quote as $q
+        | ($f | map(.quote) | index($q)) | not)])' "$meta" > "$meta.tmp" \
+    && mv "$meta.tmp" "$meta"
+  chmod -R go+rX "$dir"
+  log "  $id: replies polished; $(jq length <<< "$flags") flag(s)"
+}
+
 update_pr() {
   local repo="$1" n="$2" feedback="$3" started_at="$4"
   local pr head base title prbody id work run out result summary flags fix
@@ -1987,10 +2027,7 @@ update_pr() {
   fi
   # The text that would go out, and the new commits, for the screens.
   mkdir -p "$dir"
-  jq -r '.replies[] | "## Reply to \(.kind) \(.id)\n\n\(.body)\n"' \
-    <<< "$result" > "$dir/text.md"
-  jq -r '.description // empty' <<< "$result" \
-    | sed '1s/^/## New description\n\n/' >> "$dir/text.md"
+  update_text "$result" > "$dir/text.md"
   # After a merge of the base, the branch also carries everyone else's work
   # from it. The screens and the review see the bot's own: its commits, the
   # merge as its conflict resolutions (--cc), and only the files that differ
