@@ -105,6 +105,9 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     # Move workspace to another monitor
     alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 
+    # Move window to another monitor
+    ctrl-alt-tab = 'move-node-to-monitor --wrap-around --focus-follows-window next'
+
     # Fullscreen and float
     alt-f = 'fullscreen'
     alt-shift-space = 'layout floating tiling'
