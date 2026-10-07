@@ -18,6 +18,8 @@
 #                                        for a request, let the bot take it on
 #   sbfnk-bot-review approve --force [ID]
 #                                        publish despite the screen's flags
+#   sbfnk-bot-review approve --all       approve everything waiting that the
+#                                        screen did not flag; lists the rest
 #   sbfnk-bot-review answer [ID] [TEXT]  reply privately (TEXT, or stdin):
 #                                        answer its question, or say what to
 #                                        change in a PR; the bot runs again.
@@ -334,6 +336,23 @@ case "$cmd" in
       fi
     } | clean ;;
   approve)
+    # Everything waiting and unflagged. Flagged work needs reading first, and
+    # work stuck on a push or a discard needs that, so those are only listed.
+    if [ "${1:-}" = --all ]; then
+      n=0
+      for id in $(waiting); do
+        what="#$(meta "$id" '.seq // "-"') $(meta "$id" .repo)#$(meta "$id" .number)"
+        if [ -f "$PENDING/$id/stuck" ]; then
+          echo "skipped $what: $(state "$id")"
+        elif [ "$(meta "$id" '.flags | length')" -gt 0 ]; then
+          echo "skipped $what: flagged by the screen (sbr show, then approve --force)"
+        else
+          decide "$id" approve; n=$((n + 1))
+        fi
+      done
+      echo "approved $n"
+      exit 0
+    fi
     force=false
     [ "${1:-}" = --force ] && { force=true; shift; }
     id="$(resolve "${1:-}")" || exit 1
