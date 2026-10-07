@@ -15,6 +15,8 @@
       "Bash(sbfnk-bot-review answer:*)",
       "Bash(sbfnk-bot-review comment:*)",
       "Bash(sbfnk-bot-review push:*)",
+      "Bash(sbfnk-bot-review pause:*)",
+      "Bash(sbfnk-bot-review resume:*)",
       "Bash(sbfnk-bot-review discard:*)",
       "Bash(sbfnk-bot-review polish:*)"
     ]

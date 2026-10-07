@@ -2588,6 +2588,12 @@ if ! $LIST_ONLY && shlock -p $$ -f "$DECISIONS_LOCK"; then
   rm -f "$DECISIONS_LOCK"
 fi
 
+# Paused by sbfnk (sbr pause): nothing new starts. His decisions above still
+# go out, a job already running finishes, and --issue still runs by hand.
+if [ -f "$DECISIONS/.paused" ] && ! $LIST_ONLY && [ -z "$ONE_ISSUE" ]; then
+  exit 0
+fi
+
 # One heavy job per poll. PR work (feedback, review rounds) and new issues
 # take turns: after a PR job the next poll looks at issues first, so a busy
 # stretch of reviews cannot starve an issue waiting to be started.

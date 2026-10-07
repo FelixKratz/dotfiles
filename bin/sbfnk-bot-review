@@ -45,6 +45,9 @@
 #   sbfnk-bot-review log                 the bot's recent activity, why its
 #                                        latest failed run failed, and what
 #                                        the sandbox refused
+#   sbfnk-bot-review pause               start nothing new; your decisions
+#                                        still go out, a running job finishes
+#   sbfnk-bot-review resume              carry on
 #   sbfnk-bot-review watch               "now", then the bot's activity live,
 #                                        without the skips; [1] and [2] are
 #                                        the workers, [d] the decisions pass
@@ -67,7 +70,7 @@ die() { echo "sbfnk-bot-review: $*" >&2; exit 1; }
 refresh_bar() {
   local plugin="${XDG_CONFIG_HOME:-$HOME/.config}/sketchybar/plugins/bot.sh"
   case "$1" in
-    approve|force|answer|comment|push|discard|polish)
+    approve|force|answer|comment|push|discard|polish|pause|resume)
       [ -x "$plugin" ] && command -v sketchybar >/dev/null 2>&1 || return 0
       NAME=bot CONFIG_DIR="${plugin%/plugins/bot.sh}" "$plugin" \
         >/dev/null 2>&1 ;;
@@ -228,9 +231,16 @@ colour_log() {
     }'
 }
 
+# Said first wherever it matters: a paused bot starts nothing new.
+paused_note() {
+  [ -f "$DECISIONS/.paused" ] || return 0
+  echo "PAUSED since $(cat "$DECISIONS/.paused" 2>/dev/null | clean): nothing new starts until sbr resume"
+}
+
 # What each worker is on, from the status files the bot keeps per job.
 show_now() {
   local f shown=false
+  paused_note
   for f in "$SPOOL"/log/now/job*.txt; do
     [ -f "$f" ] || continue
     $shown && echo
@@ -245,6 +255,7 @@ cmd="${1:-list}"
 
 case "$cmd" in
   list)
+    paused_note
     ids="$(waiting)"
     # What the bot has stopped trying: nothing to decide here, but nothing
     # will happen without you either.
@@ -464,6 +475,18 @@ $note}"
     fi
     decide "$id" polish "$note" ;;
   now) show_now ;;
+  pause)
+    date '+%a %d %b %H:%M' > "$DECISIONS/.paused" && chmod 644 "$DECISIONS/.paused"
+    echo "paused: nothing new starts; your decisions still go out, and a job already running finishes"
+    refresh_bar pause ;;
+  resume)
+    if [ -f "$DECISIONS/.paused" ]; then
+      rm -f "$DECISIONS/.paused"
+      echo "resumed: new work starts from the next pass"
+    else
+      echo "not paused"
+    fi
+    refresh_bar resume ;;
   watch)
     show_now
     printf '\n== activity (Ctrl-C to stop) ==\n'
