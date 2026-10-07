@@ -148,6 +148,12 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   `~/org-roam` every 15 min (launchd on macOS, systemd timer on Linux). A rebase
   conflict, or a remote unreachable for four runs, raises a nudge (below);
   the next good sync clears it. Log: `~/.log/org-roam-sync.log`.
+- **phone inbox** - `bin/phone-inbox` files notes the phone drops into
+  `iCloud Drive/Inbox` (one `.txt` per note, from a Shortcut) under `* Notes`
+  in `~/org-roam/inbox.org` and deletes them. The first line is the heading, so
+  starting it with `TODO` makes a task; a filename starting `YYYY-MM-DD HHmm`
+  sets the timestamp. Runs from `launchagents/none.orgroam.phone-inbox.plist`
+  whenever the folder changes. Log: `~/.log/phone-inbox.log`.
 - **nudges** - `bin/nudge` collects the standing conditions a machine wants you
   to know about: a stalled sync, an overdue `claude-projects` backup, a pending
   restart (`/var/run/reboot-required` on Linux, macOS's own pending-update list).

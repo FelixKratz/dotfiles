@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# phone-inbox — file notes dropped into iCloud Drive/Inbox by the phone under
+# "* Notes" in ~/org-roam/inbox.org, then delete them.
+#
+# The phone's Shortcut saves one file per note, so the phone and this script
+# never edit the same file and iCloud has nothing to conflict over. The first
+# line becomes the heading (start it with "todo", in any case, for a task), the
+# rest the body.
+# A filename starting with the date and time ("YYYY-MM-DD HHmm"; any of
+# " T_-" between them and ".:-" inside the time also work) gives the
+# timestamp, so a note taken offline keeps the time it was written; otherwise
+# the file's mtime is used.
+# Override the folders with PHONE_INBOX_DIR / ORG_INBOX.
+set -uo pipefail
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export LC_ALL=C
+
+DROP="${PHONE_INBOX_DIR:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/Inbox}"
+INBOX="${ORG_INBOX:-$HOME/org-roam/inbox.org}"
+HEADING="* Notes"
+
+log() { echo "$(date '+%F %T') $*"; }
+
+mkdir -p "$DROP"
+
+# WatchPaths fires once per iCloud write, often several in a burst. A run
+# takes seconds, so a lock older than ten minutes was left by a killed run.
+LOCK="${TMPDIR:-/tmp}/phone-inbox.lock"
+find "$LOCK" -maxdepth 0 -mmin +10 -exec rmdir {} \; 2>/dev/null
+mkdir "$LOCK" 2>/dev/null || exit 0
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+
+# Notes iCloud has not downloaded yet show up as .name.txt.icloud; ask for
+# them now and pick them up on the run their arrival triggers.
+for stub in "$DROP"/.*.icloud; do
+  [ -e "$stub" ] && brctl download "$stub" 2>/dev/null
+done
+
+shopt -s nullglob
+notes=("$DROP"/*.txt)
+[ ${#notes[@]} -eq 0 ] && exit 0
+
+# iCloud can list a note before its contents arrive, as a dataless file that
+# reads as empty. Ask for it and give the download a little time.
+dataless() { (( $(stat -f %f "$1") & 0x40000000 )); }
+
+entries=""
+filed=()
+waiting=0
+for note in "${notes[@]}"; do
+  if dataless "$note"; then
+    brctl download "$note" 2>/dev/null
+    for _ in $(seq 30); do dataless "$note" || break; /bin/sleep 1; done
+  fi
+
+  name=$(basename "$note" .txt)
+  if [[ "$name" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})[\ T_-]?([0-9]{2})[.:-]?([0-9]{2}) ]]; then
+    stamp=$(date -j -f '%Y-%m-%d %H:%M' \
+      "${BASH_REMATCH[1]} ${BASH_REMATCH[2]}:${BASH_REMATCH[3]}" \
+      '+[%Y-%m-%d %a %H:%M]' 2>/dev/null)
+  fi
+  [ -n "${stamp:-}" ] || stamp=$(date -r "$note" '+[%Y-%m-%d %a %H:%M]')
+
+  # Drop leading blank lines and trailing whitespace; dictation adds both.
+  text=$(sed -e '/[^[:space:]]/,$!d' "$note" | sed -e 's/[[:space:]]*$//')
+  if [ -n "$text" ]; then
+    title=${text%%$'\n'*}
+    # The phone capitalises the first word, and dictation may add a colon;
+    # org only recognises a bare upper-case TODO.
+    if [[ "$title" =~ ^[Tt][Oo][Dd][Oo]:?([[:space:]]+(.*))?$ ]]; then
+      title="TODO${BASH_REMATCH[2]:+ ${BASH_REMATCH[2]}}"
+    fi
+    body=""
+    [[ "$text" == *$'\n'* ]] && body=${text#*$'\n'}
+    entries+="** ${title}"$'\n'"${stamp}"$'\n'
+    [ -n "$body" ] && entries+="${body}"$'\n'
+    filed+=("$note")
+  elif [ -n "$(find "$note" -mmin +60)" ]; then
+    # An hour on, an empty note was saved empty, not still downloading.
+    filed+=("$note")
+  else
+    waiting=$((waiting + 1))
+  fi
+  stamp=""
+done
+
+if [ -n "$entries" ]; then
+  [ -f "$INBOX" ] || : > "$INBOX"
+  grep -qxF "$HEADING" "$INBOX" || printf '%s\n' "$HEADING" >> "$INBOX"
+
+  # Insert at the end of the Notes subtree: before the next top-level
+  # heading, or at the end of the file.
+  tmp=$(mktemp "${INBOX}.XXXXXX") || exit 1
+  ENTRIES="$entries" HEADING="$HEADING" awk '
+    function flush() { if (!done) { printf "%s", ENVIRON["ENTRIES"]; done = 1 } }
+    in_notes && /^\* / { flush(); in_notes = 0 }
+    $0 == ENVIRON["HEADING"] { in_notes = 1 }
+    { print }
+    END { if (in_notes) flush() }
+  ' "$INBOX" > "$tmp" || { rm -f "$tmp"; log "failed to write $INBOX"; exit 1; }
+
+  # Write back through the original file so its inode, and anything holding
+  # it open, stays the same.
+  cat "$tmp" > "$INBOX" || { rm -f "$tmp"; log "failed to write $INBOX"; exit 1; }
+  rm -f "$tmp"
+fi
+
+[ ${#filed[@]} -gt 0 ] && rm -f "${filed[@]}"
+msg="filed ${#filed[@]} note(s)"
+[ "$waiting" -gt 0 ] && msg+=", $waiting still empty, retrying later"
+log "$msg"
