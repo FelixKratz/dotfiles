@@ -4,14 +4,19 @@
 
 source "$CONFIG_DIR/colors.sh"
 
-# Workspace ID from item name (space.1 -> 1)
-SID="${NAME#space.}"
+# Display and workspace ID from item name (space.2.1 -> display 2, workspace 1)
+DID="${NAME#space.}"
+DID="${DID%%.*}"
+SID="${NAME##*.}"
 
-# Get focused workspace (from event env var, or query if not set)
-FOCUSED="${FOCUSED_WORKSPACE:-$(aerospace list-workspaces --focused)}"
+# Workspace shown on this item's display. Sketchybar's arrangement id matches
+# the index of the screen in NSScreen.screens.
+SHOWN="$(aerospace list-workspaces --monitor all --visible \
+  --format '%{workspace} %{monitor-appkit-nsscreen-screens-id}' |
+  awk -v d="$DID" '$2 == d { print $1 }')"
 
-# Highlight active workspace
-if [ "$SID" = "$FOCUSED" ]; then
+# Highlight the workspace this display shows
+if [ "$SID" = "$SHOWN" ]; then
   COLOR=$GREY
   HIGHLIGHT=on
 else

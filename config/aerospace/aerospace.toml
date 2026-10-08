@@ -43,7 +43,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 [mode.main.binding]
 
     # Terminal
-    cmd-shift-semicolon = 'workspace 2'
+    cmd-shift-semicolon = 'summon-workspace 2'
     cmd-shift-enter = 'exec-and-forget kitty @ --to "unix:$(ls -t /tmp/kitty-* | head -1)" launch --type=os-window --cwd=~'
 
     # Layout
@@ -66,16 +66,18 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     alt-minus = 'resize smart -50'
     alt-equal = 'resize smart +50'
 
-    # Workspaces (ctrl to avoid stealing alt-3 = # on UK keyboard)
-    ctrl-1 = 'workspace 1'
-    ctrl-2 = 'workspace 2'
-    ctrl-3 = 'workspace 3'
-    ctrl-4 = 'workspace 4'
-    ctrl-5 = 'workspace 5'
-    ctrl-6 = 'workspace 6'
-    ctrl-7 = 'workspace 7'
-    ctrl-8 = 'workspace 8'
-    ctrl-9 = 'workspace 9'
+    # Workspaces (ctrl to avoid stealing alt-3 = # on UK keyboard). Workspaces
+    # are global, each living on one monitor; summon brings it to the focused
+    # monitor instead of jumping to wherever it sits.
+    ctrl-1 = 'summon-workspace 1'
+    ctrl-2 = 'summon-workspace 2'
+    ctrl-3 = 'summon-workspace 3'
+    ctrl-4 = 'summon-workspace 4'
+    ctrl-5 = 'summon-workspace 5'
+    ctrl-6 = 'summon-workspace 6'
+    ctrl-7 = 'summon-workspace 7'
+    ctrl-8 = 'summon-workspace 8'
+    ctrl-9 = 'summon-workspace 9'
 
     # Move window to workspace
     ctrl-shift-1 = 'move-node-to-workspace 1'
@@ -89,15 +91,15 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     ctrl-shift-9 = 'move-node-to-workspace 9'
 
     # Move window to workspace AND follow it there
-    ctrl-alt-1 = 'move-node-to-workspace --focus-follows-window 1'
-    ctrl-alt-2 = 'move-node-to-workspace --focus-follows-window 2'
-    ctrl-alt-3 = 'move-node-to-workspace --focus-follows-window 3'
-    ctrl-alt-4 = 'move-node-to-workspace --focus-follows-window 4'
-    ctrl-alt-5 = 'move-node-to-workspace --focus-follows-window 5'
-    ctrl-alt-6 = 'move-node-to-workspace --focus-follows-window 6'
-    ctrl-alt-7 = 'move-node-to-workspace --focus-follows-window 7'
-    ctrl-alt-8 = 'move-node-to-workspace --focus-follows-window 8'
-    ctrl-alt-9 = 'move-node-to-workspace --focus-follows-window 9'
+    ctrl-alt-1 = ['move-node-to-workspace 1', 'summon-workspace 1']
+    ctrl-alt-2 = ['move-node-to-workspace 2', 'summon-workspace 2']
+    ctrl-alt-3 = ['move-node-to-workspace 3', 'summon-workspace 3']
+    ctrl-alt-4 = ['move-node-to-workspace 4', 'summon-workspace 4']
+    ctrl-alt-5 = ['move-node-to-workspace 5', 'summon-workspace 5']
+    ctrl-alt-6 = ['move-node-to-workspace 6', 'summon-workspace 6']
+    ctrl-alt-7 = ['move-node-to-workspace 7', 'summon-workspace 7']
+    ctrl-alt-8 = ['move-node-to-workspace 8', 'summon-workspace 8']
+    ctrl-alt-9 = ['move-node-to-workspace 9', 'summon-workspace 9']
 
     # Toggle back to previous workspace
     alt-tab = 'workspace-back-and-forth'
