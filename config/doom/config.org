@@ -358,11 +358,23 @@ marked files can be attached with =C-c C-c=.
               ('org-msg-edit-mode (org-msg-attach-attach file))
               ('mu4e-compose-mode (mail-add-attachment file)))))))))
 
+(defun sf/org-msg-open-attachments ()
+  "Open each file in the draft's attachment list and report any missing."
+  (interactive)
+  (let* ((files (org-msg-get-prop "attachment"))
+         (missing (cl-remove-if #'file-exists-p files)))
+    (dolist (file (cl-set-difference files missing :test #'equal))
+      (call-process "open" nil 0 nil (expand-file-name file)))
+    (cond ((null files) (message "No attachments"))
+          (missing (message "Missing: %s" (string-join missing ", ")))
+          (t (message "Opened %d attachment(s)" (length files))))))
+
 (after! org-msg
   (map! :map (mu4e-compose-mode-map org-msg-edit-mode-map)
         "C-c C-a" #'sf/mu4e-attach-files
         :localleader
-        :desc "attach" "a" #'sf/mu4e-attach-files))
+        :desc "attach" "a" #'sf/mu4e-attach-files
+        :desc "open attachments" "o" #'sf/org-msg-open-attachments))
 #+end_src
 
 ** Search within viewed messages
@@ -1376,6 +1388,18 @@ own, =Q:= for a question to ask or chase up. Things to do afterwards go in as
    'append))
 
 (add-hook 'org-mode-hook #'sf/org-highlight-own-lines)
+#+end_src
+
+** Heading Key
+=Cmd+Return= inserts a heading in every evil state, including on a list item.
+Normal state already does this through evil-collection's outline binding. Insert
+state has no =<M-return>= binding of its own and falls back to =org-meta-return=,
+which adds a list item when point is in a list. =C-Return= stays the
+context-sensitive key for a new item, row or heading.
+#+begin_src emacs-lisp
+(map! :after org
+      :map org-mode-map
+      :i [M-return] #'org-ctrl-c-ret)
 #+end_src
 
 ** Vulpea Keybindings
