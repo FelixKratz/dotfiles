@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>none.mail.archive</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__HOME__/.local/bin/archive-old-mail.sh</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Day</key>
+		<integer>1</integer>
+		<key>Hour</key>
+		<integer>2</integer>
+		<key>Minute</key>
+		<integer>0</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>__HOME__/.local/log/archive-old-mail-launchd.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/.local/log/archive-old-mail-launchd.log</string>
+</dict>
+</plist>

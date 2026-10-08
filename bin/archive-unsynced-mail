@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+"""Copy mail from server folders that mbsync does not sync into the local archive.
+
+Exchange deletes mail once it is seven years old. archive-old-mail.sh moves
+ageing mail out of the folders mbsync syncs; every other folder on the server
+would expire without ever having had a local copy. This pulls those folders
+into ~/Maildir/local/Work/LSHTM/, one Maildir per server folder, where
+backup-mail.sh picks them up.
+
+The server is only ever read: folders are opened with EXAMINE and messages
+fetched with BODY.PEEK, so a run cannot delete or flag anything there. Local
+copies are never removed either, so mail the server later expires stays.
+
+Connection details and the folders mbsync already handles are read from
+~/.mbsyncrc.
+"""
+
+import argparse
+import fnmatch
+import imaplib
+import json
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+MBSYNCRC = Path.home() / ".mbsyncrc"
+MAILDIR = Path.home() / "Maildir"
+STATE_DIR = Path.home() / ".local" / "state" / "archive-unsynced-mail"
+NOTMUCH = shutil.which("notmuch", path="/opt/homebrew/bin") or "notmuch"
+
+# Folders with nothing worth keeping: mail already thrown away, and the
+# calendar, contacts and sync bookkeeping that Exchange exposes over IMAP.
+SKIP = [
+    "Deleted Items", "Deleted Messages", "Trash", "Junk Email", "Drafts",
+    "Outbox", "Calendar", "Calendar/*", "Contacts", "Contacts/*", "Journal",
+    "Notes", "Tasks", "Sync Issues", "Sync Issues/*", "RSS Feeds",
+]
+
+# Outlook drops the connection on large fetches, so keep each one small
+HEADER_BATCH = 100
+BODY_BATCH = 20
+IMAP_TIMEOUT = 300
+
+MESSAGE_ID = re.compile(rb"Message-ID:\s*<([^>]+)>", re.I | re.S)
+UID = re.compile(rb"UID (\d+)")
+
+
+def log(message):
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}", flush=True)
+
+
+def read_mbsyncrc(account):
+    """Return the IMAP settings of `account` and the patterns mbsync syncs."""
+    store = {}
+    channels = []
+    section = None
+    for line in MBSYNCRC.read_text().splitlines():
+        key, _, value = line.strip().partition(" ")
+        value = value.strip()
+        if key == "IMAPStore":
+            section = store if value == account else None
+        elif key == "Channel":
+            section = {}
+            channels.append(section)
+        elif not key:
+            section = None
+        elif section is not None:
+            section[key] = value
+    if not store:
+        sys.exit(f"archive-unsynced-mail: no IMAPStore {account} in {MBSYNCRC}")
+    synced = []
+    for channel in channels:
+        if channel.get("Far") == f":{account}:":
+            synced += shlex.split(channel.get("Patterns", "INBOX"))
+    return store, [p for p in synced if not p.startswith("!")]
+
+
+def connect(store):
+    command = shlex.split(store["PassCmd"].lstrip("+"))[0]
+    secret = subprocess.run(
+        command, shell=True, capture_output=True, text=True, timeout=120, check=True
+    ).stdout.strip().splitlines()[0]
+    imap = imaplib.IMAP4_SSL(store["Host"], timeout=IMAP_TIMEOUT)
+    if store.get("AuthMech") == "XOAUTH2":
+        user = store["User"]
+        imap.authenticate(
+            "XOAUTH2",
+            lambda _: f"user={user}\x01auth=Bearer {secret}\x01\x01".encode(),
+        )
+    else:
+        imap.login(store["User"], secret)
+    return imap
+
+
+def list_folders(imap):
+    names = []
+    for raw in imap.list()[1]:
+        match = re.match(rb'\(([^)]*)\) (?:"[^"]*"|NIL) (.*)', raw or b"")
+        if not match or b"\\Noselect" in match.group(1):
+            continue
+        name = match.group(2).decode().strip()
+        if name.startswith('"'):
+            name = name[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+        names.append(name)
+    return sorted(names)
+
+
+def matches(name, patterns):
+    # Case-sensitive, as mbsync is: a pattern that differs from the server's
+    # spelling syncs nothing, and that folder needs archiving here.
+    return any(fnmatch.fnmatchcase(name, p.replace("%", "*")) for p in patterns)
+
+
+def imap_quote(name):
+    return '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def batches(items, size):
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
+
+
+def fetch(imap, uids, what):
+    """Yield (uid, metadata, literal) per message of a UID FETCH.
+
+    Servers are free to report the UID before or after the literal, so look
+    for it on both sides.
+    """
+    _, response = imap.uid("FETCH", ",".join(map(str, uids)), what)
+    for index, part in enumerate(response):
+        if not isinstance(part, tuple):
+            continue
+        found = UID.search(part[0])
+        trailer = response[index + 1] if index + 1 < len(response) else b""
+        if not found and isinstance(trailer, bytes):
+            found = UID.search(trailer)
+        if found:
+            yield int(found.group(1)), part[0], part[1]
+
+
+def local_message_ids(account):
+    """Message-IDs already held under the archive or the synced account."""
+    out = subprocess.run(
+        [NOTMUCH, "search", "--output=messages",
+         f"path:local/** or path:{account}/**"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return {line[3:] for line in out.splitlines() if line.startswith("id:")}
+
+
+def archive_folder(imap, name, dest, state, known, dry_run):
+    """Copy the messages of server folder `name` that are absent locally."""
+    status, data = imap.select(imap_quote(name), readonly=True)
+    if status != "OK":
+        raise imaplib.IMAP4.error(f"cannot open folder: {data}")
+    if not int(data[0]):
+        return 0
+    validity = imap.response("UIDVALIDITY")[1][0].decode()
+    seen_validity, last_uid = state.get(name, [None, 0])
+    first = last_uid + 1 if seen_validity == validity else 1
+    _, found = imap.uid("SEARCH", None, f"UID {first}:*")
+    # "n:*" always matches the newest message, even when its UID is below n
+    uids = sorted(u for u in map(int, found[0].split()) if u >= first)
+    if not uids:
+        return 0
+
+    # The file name carries the UID, so a lost state file costs a header
+    # scan and never a second copy.
+    have = set()
+    if (dest / "cur").is_dir():
+        have = {f.name.split(":")[0] for f in (dest / "cur").iterdir()}
+    candidates = [u for u in uids if f"{validity}.{u}.unsynced" not in have]
+
+    wanted = []
+    for batch in batches(candidates, HEADER_BATCH):
+        absent = set(batch)
+        for uid, _, header in fetch(
+            imap, batch, "(UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])"
+        ):
+            mid = MESSAGE_ID.search(header)
+            if mid and mid.group(1).decode(errors="replace").strip() in known:
+                absent.discard(uid)
+        wanted += sorted(absent)
+
+    if dry_run:
+        return len(wanted)
+
+    if wanted:
+        for sub in ("cur", "new", "tmp"):
+            (dest / sub).mkdir(parents=True, exist_ok=True)
+        (dest / "maildirfolder").touch()
+    copied = 0
+    for batch in batches(wanted, BODY_BATCH):
+        for uid, meta, body in fetch(imap, batch, "(UID INTERNALDATE BODY.PEEK[])"):
+            # Flag S: archived mail should not turn up as unread
+            filename = f"{validity}.{uid}.unsynced:2,S"
+            tmp = dest / "tmp" / filename
+            tmp.write_bytes(body)
+            received = imaplib.Internaldate2tuple(meta)
+            if received:
+                stamp = time.mktime(received)
+                os.utime(tmp, (stamp, stamp))
+            tmp.rename(dest / "cur" / filename)
+            copied += 1
+    if copied != len(wanted):
+        raise imaplib.IMAP4.error(
+            f"server returned {copied} of {len(wanted)} messages"
+        )
+    state[name] = [validity, uids[-1]]
+    return copied
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--account", default="work",
+                        help="mbsync IMAPStore to read from (default: work)")
+    parser.add_argument("--dest", type=Path,
+                        default=MAILDIR / "local" / "Work" / "LSHTM",
+                        help="archive Maildir that receives one subfolder per "
+                             "server folder")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="report what would be copied without writing")
+    args = parser.parse_args()
+
+    store, synced = read_mbsyncrc(args.account)
+    state_file = STATE_DIR / f"{args.account}.json"
+    state = json.loads(state_file.read_text()) if state_file.exists() else {}
+    known = local_message_ids(args.account)
+
+    imap = connect(store)
+    folders = [f for f in list_folders(imap) if not matches(f, synced + SKIP)]
+    log(f"Checking {len(folders)} unsynced folders on {store['Host']}")
+
+    failed = 0
+    updated = []
+    for name in folders:
+        dest = args.dest / ("." + re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_"))
+        try:
+            count = archive_folder(imap, name, dest, state, known, args.dry_run)
+        except (imaplib.IMAP4.error, OSError) as error:
+            log(f"{name}: failed, will retry on the next run: {error}")
+            failed += 1
+            # A timed-out connection is dead, so carry on with a fresh one
+            try:
+                imap = connect(store)
+            except (imaplib.IMAP4.error, OSError, subprocess.SubprocessError) as e:
+                log(f"Cannot reconnect, giving up: {e}")
+                break
+            continue
+        if count:
+            verb = "would copy" if args.dry_run else "copied"
+            log(f"{name}: {verb} {count} messages to {dest.name}")
+            updated.append(dest)
+
+    if not args.dry_run:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        state_file.write_text(json.dumps(state, indent=1, sort_keys=True))
+        if updated:
+            # Keep the archive out of the inbox searches
+            query = " or ".join(
+                f'path:"{d.relative_to(MAILDIR)}/**"' for d in updated
+            )
+            for command in (["new", "--quiet"],
+                            ["tag", "-inbox", "-unread", "--", query]):
+                done = subprocess.run(
+                    [NOTMUCH] + command, stderr=subprocess.PIPE, text=True
+                )
+                # notmuch notes every mbsync state file it walks past
+                for line in done.stderr.splitlines():
+                    if not line.startswith("Note: Ignoring non-mail file:"):
+                        log(f"notmuch: {line}")
+                if done.returncode:
+                    log(f"notmuch {command[0]} failed; the mail is on disk "
+                        "and the next sync will index it")
+                    break
+    try:
+        imap.logout()
+    except (imaplib.IMAP4.error, OSError):
+        pass
+    log("Done" if not failed else f"Done, {failed} folders failed")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
