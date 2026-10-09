@@ -17,6 +17,18 @@ NOTMUCH=/opt/homebrew/bin/notmuch
 SYNC_TIMEOUT=600
 SYNC_GRACE=20
 NOTMUCH_ERR="$HOME/.log/getmail-notmuch.err"
+NUDGE="$HOME/.local/bin/nudge"
+# First failure time of each account that is currently failing. Kept apart from
+# STATE_DIR, whose contents mean "syncing" to the spinner.
+FAIL_DIR="$HOME/.cache/mail-sync-failing"
+# Raise a nudge only once an account has failed for this long, so a laptop
+# waking up offline doesn't raise one each time.
+FAIL_AFTER=1800
+
+# The XOAUTH2 plugin lives in its own keg, but libsasl2 only looks in the
+# cyrus-sasl keg, and any rebuild of that keg wipes a copied-in plugin. Point
+# libsasl2 at both directories instead.
+export SASL_PATH=/opt/homebrew/opt/cyrus-sasl/lib/sasl2:/opt/homebrew/opt/cyrus-sasl-xoauth2/lib/sasl2
 
 usage() {
   sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -158,9 +170,35 @@ run_sync() {
   return $rc
 }
 
+# Failures went only to the caller's log, which nobody reads: work mail once
+# stopped for hours with nothing to show for it. Raise a nudge while an account
+# keeps failing, and clear it on the first sync that succeeds.
+report() {
+  local account=$1 rc=$2 log=$3 since reason
+  if (( rc == 0 )); then
+    rm -f "$FAIL_DIR/$account"
+    [[ -x $NUDGE ]] && "$NUDGE" clear "mail-$account"
+    return 0
+  fi
+  mkdir -p "$FAIL_DIR"
+  [[ -s $FAIL_DIR/$account ]] || date +%s > "$FAIL_DIR/$account"
+  since=$(<"$FAIL_DIR/$account")
+  (( $(date +%s) - since >= FAIL_AFTER )) || return 0
+  reason=$(grep -m1 -iE 'error|fail|timed out' "$log")
+  reason=${reason:-mbsync exited $rc}
+  # nudge hands the message to osascript inside double quotes
+  reason=${reason//\"/}
+  [[ -x $NUDGE ]] && "$NUDGE" raise "mail-$account" -p 20 -k "$reason" \
+    "mail: $account not syncing: $reason"
+  return 0
+}
+
 for account in "${CLAIMED[@]}"; do
   (
-    run_sync "$account" | sed "s/^/[$account] /"
+    log=$(mktemp)
+    run_sync "$account" | tee "$log" | sed "s/^/[$account] /"
+    report "$account" "${PIPESTATUS[0]}" "$log"
+    rm -f "$log"
     # Drop the marker as soon as this account is done so the bar shrinks to
     # the accounts still running
     rm -f "$STATE_DIR/$account"
