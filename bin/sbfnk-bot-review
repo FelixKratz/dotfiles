@@ -48,6 +48,12 @@
 #   sbfnk-bot-review pause               start nothing new; your decisions
 #                                        still go out, a running job finishes
 #   sbfnk-bot-review resume              carry on
+#   sbfnk-bot-review accounts            the accounts the bot runs on, in the
+#                                        order it tries them, and their limits
+#   sbfnk-bot-review pause ACCOUNT       keep the bot off one account (to use
+#                                        it yourself); it carries on with the
+#                                        others, or waits if none has room
+#   sbfnk-bot-review resume ACCOUNT      let it use that account again
 #   sbfnk-bot-review watch               "now", then the bot's activity live,
 #                                        without the skips; [1] and [2] are
 #                                        the workers, [d] the decisions pass
@@ -233,8 +239,33 @@ colour_log() {
 
 # Said first wherever it matters: a paused bot starts nothing new.
 paused_note() {
+  local f
+  for f in "$DECISIONS"/.paused.*; do
+    [ -f "$f" ] && echo "account ${f##*/.paused.} paused since $(clean < "$f"): the bot keeps off it until sbr resume ${f##*/.paused.}"
+  done
   [ -f "$DECISIONS/.paused" ] || return 0
   echo "PAUSED since $(cat "$DECISIONS/.paused" 2>/dev/null | clean): nothing new starts until sbr resume"
+}
+
+# The accounts as the bot last listed them, in the order it tries them.
+show_accounts() {
+  local a until now
+  [ -s "$SPOOL/accounts" ] || die "the bot has not listed its accounts yet"
+  now=$(date +%s)
+  while IFS=$'\t' read -r a until; do
+    printf '%-12s ' "$a"
+    if [ -f "$DECISIONS/.paused.$a" ]; then
+      echo "paused since $(clean < "$DECISIONS/.paused.$a")"
+    elif [ -n "$until" ] && [ "$until" -gt "$now" ]; then
+      echo "limited until $(date -r "$until" '+%a %H:%M')"
+    else
+      echo "has room"
+    fi
+  done < "$SPOOL/accounts"
+}
+known_account() {
+  cut -f1 "$SPOOL/accounts" 2>/dev/null | grep -qxF "$1" \
+    || die "no account '$1'; sbr accounts lists them"
 }
 
 # What each worker is on, from the status files the bot keeps per job.
@@ -475,12 +506,26 @@ $note}"
     fi
     decide "$id" polish "$note" ;;
   now) show_now ;;
+  accounts) show_accounts ;;
   pause)
-    date '+%a %d %b %H:%M' > "$DECISIONS/.paused" && chmod 644 "$DECISIONS/.paused"
-    echo "paused: nothing new starts; your decisions still go out, and a job already running finishes"
+    if [ -n "${1:-}" ]; then
+      known_account "$1"
+      date '+%a %d %b %H:%M' > "$DECISIONS/.paused.$1" && chmod 644 "$DECISIONS/.paused.$1"
+      echo "the bot keeps off the $1 account from its next run; a run already on it finishes"
+    else
+      date '+%a %d %b %H:%M' > "$DECISIONS/.paused" && chmod 644 "$DECISIONS/.paused"
+      echo "paused: nothing new starts; your decisions still go out, and a job already running finishes"
+    fi
     refresh_bar pause ;;
   resume)
-    if [ -f "$DECISIONS/.paused" ]; then
+    if [ -n "${1:-}" ]; then
+      if [ -f "$DECISIONS/.paused.$1" ]; then
+        rm -f "$DECISIONS/.paused.$1"
+        echo "the bot uses the $1 account again from its next run"
+      else
+        echo "the $1 account is not paused"
+      fi
+    elif [ -f "$DECISIONS/.paused" ]; then
       rm -f "$DECISIONS/.paused"
       echo "resumed: new work starts from the next pass"
     else

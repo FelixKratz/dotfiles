@@ -23,6 +23,12 @@
 #                                spend their time on them
 #   gh auth token -u sbfnk-bot | sudo $S gh-token
 #   claude setup-token, then:  sudo $S claude-token   (paste the token)
+#   sudo $S claude-token NAME    another account's token, for when the others
+#                                are limited; accounts are tried in the order
+#                                they were added, the unnamed one last
+#   sudo $S claude-accounts NAME...
+#                                try the accounts in this order instead (the
+#                                unnamed one is "main")
 #   sudo $S review-key           give the bot sbfnk-review-bot's private key,
 #                                from ~/.config/sbfnk-review-bot/key.pem or stdin,
 #                                so it can review the PRs it opens
@@ -58,7 +64,7 @@ SECRETS=$BOT_HOME/.config/sbfnk-bot
 die() { echo "sbfnk-bot-setup: $*" >&2; exit 1; }
 say() { echo "- $*"; }
 
-case "${1:-}" in -h|--help|"") sed -n '2,33p' "$0"; exit 0 ;; esac
+case "${1:-}" in -h|--help|"") sed -n '2,46p' "$0"; exit 0 ;; esac
 # The checkout this script lives in, through the ~/.local/bin symlink.
 DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0")")")"
 
@@ -151,6 +157,19 @@ BOT_PATH="$BOT_PATH:$BOT_HOME/.juliaup/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 as_bot() {
   (cd "$BOT_HOME" && sudo -u "$BOT_USER" -H \
     /usr/bin/env "PATH=$BOT_PATH" /bin/bash -c "$1")
+}
+
+# Account names end up in file names and in sbr's commands.
+valid_account() {
+  [[ "$1" =~ ^[a-z0-9][a-z0-9-]*$ ]] \
+    || die "an account name is lower-case letters, digits and dashes"
+}
+has_claude_token() {
+  local f
+  for f in "$SECRETS/claude-token" "$SECRETS"/claude-token.*; do
+    [ -s "$f" ] && return 0
+  done
+  return 1
 }
 
 store_secret() {
@@ -362,9 +381,8 @@ RPROFILE
   write_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL" 120 --decisions
   say "wrote $PLIST and $DECISIONS_PLIST (not started)"
 
-  for s in gh-token claude-token; do
-    [ -s "$SECRETS/$s" ] || say "still needed: the $s (see --help)"
-  done
+  [ -s "$SECRETS/gh-token" ] || say "still needed: the gh-token (see --help)"
+  has_claude_token || say "still needed: a claude-token (see --help)"
   say "then: sudo $0 check, and sudo $0 enable"
 }
 
@@ -412,7 +430,29 @@ case "${1:-}" in
     fi
     grep -q 'PRIVATE KEY' "$SECRETS/review-key.pem" || die "that is not a private key"
     say "stored sbfnk-review-bot's key for $BOT_USER" ;;
-  claude-token) store_secret claude-token ;;
+  claude-token)
+    if [ -z "${2:-}" ] || [ "$2" = main ]; then
+      store_secret claude-token
+    else
+      valid_account "$2"
+      store_secret "claude-token.$2"
+      grep -qxF "$2" "$SECRETS/claude-accounts" 2>/dev/null \
+        || echo "$2" >> "$SECRETS/claude-accounts"
+      chown "$BOT_USER:staff" "$SECRETS/claude-accounts"
+      chmod 600 "$SECRETS/claude-accounts"
+    fi ;;
+  claude-accounts)
+    shift
+    [ $# -gt 0 ] || die "name the accounts in the order to try them"
+    for a in "$@"; do
+      valid_account "$a"
+      if [ "$a" = main ]; then f="$SECRETS/claude-token"; else f="$SECRETS/claude-token.$a"; fi
+      [ -s "$f" ] || die "no token stored for $a"
+    done
+    printf '%s\n' "$@" > "$SECRETS/claude-accounts"
+    chown "$BOT_USER:staff" "$SECRETS/claude-accounts"
+    chmod 600 "$SECRETS/claude-accounts"
+    say "accounts tried in this order: $*" ;;
   check) check ;;
   deps)
     say "installing shared dependencies as $BOT_USER; this takes a while"
@@ -443,9 +483,8 @@ case "${1:-}" in
     fi
     say "done; a run installs anything else it needs by itself" ;;
   enable)
-    for s in gh-token claude-token; do
-      [ -s "$SECRETS/$s" ] || die "no $s yet (see --help)"
-    done
+    [ -s "$SECRETS/gh-token" ] || die "no gh-token yet (see --help)"
+    has_claude_token || die "no claude-token yet (see --help)"
     [ -f "$PLIST" ] && [ -f "$DECISIONS_PLIST" ] || die "run install first"
     # The light pass first: restarting it never interrupts real work.
     restart_daemon "$DECISIONS_PLIST" "$DECISIONS_LABEL"

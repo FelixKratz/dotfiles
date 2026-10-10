@@ -111,7 +111,10 @@ SETTLE_SECS=300
 MAX_ATTEMPTS=2
 # When a run meets the plan's usage limit, all model work waits until this
 # time (epoch seconds), and the run does not count as a failed attempt.
-LIMIT_FILE="$STATE_DIR/limited-until"
+# Any number of accounts can carry the model work, each with its own limit
+# and reset, read from its own limit messages. A run goes to the first in
+# order that is neither limited nor paused by sbfnk (sbr pause ACCOUNT).
+limit_file() { echo "$STATE_DIR/limited-until.$1"; }
 
 mkdir -p "$STATE_DIR" "$RUNS_DIR" "$ANSWERS_DIR" "$CACHE_DIR/repos" \
   "$CACHE_DIR/work" "$PENDING" "$(dirname "$LOG_FILE")"
@@ -226,7 +229,7 @@ fi
 NOW_DIR="$SPOOL/log/now"
 NOW_FILE="$NOW_DIR/job${SLOT:-0}.txt"
 NOW_TITLE=""
-trap 'release_all; rm -f "$NOW_FILE" "$NOW_FILE.tmp"' EXIT
+trap 'release_all; rm -f "$NOW_FILE" "$NOW_FILE.tmp" "$STATE_DIR/run-started.$$"' EXIT
 
 # Each issue or PR is worked on by one job at a time.
 claim() {
@@ -239,13 +242,61 @@ unclaim() { rm -f "$CLAIMS_DIR/$1.lock"; }
 for cmd in gh jq git claude perl; do
   command -v "$cmd" >/dev/null || { log "missing $cmd, exiting"; exit 1; }
 done
-for f in "$ALLOW_FILE" "$SETTINGS_FILE" "$SECRETS_DIR/gh-token" \
-  "$SECRETS_DIR/claude-token"; do
+for f in "$ALLOW_FILE" "$SETTINGS_FILE" "$SECRETS_DIR/gh-token"; do
   [ -r "$f" ] || { log "missing $f (see sbfnk-bot-setup), exiting"; exit 1; }
 done
 
 BOT_TOKEN="$(tr -d '[:space:]' < "$SECRETS_DIR/gh-token")"
-CLAUDE_TOKEN="$(tr -d '[:space:]' < "$SECRETS_DIR/claude-token")"
+# The accounts in the order sbfnk-bot-setup keeps (claude-accounts), then
+# any other stored token; "main" is the one in claude-token itself.
+accounts() {
+  local a f
+  {
+    cat "$SECRETS_DIR/claude-accounts" 2>/dev/null
+    for f in "$SECRETS_DIR"/claude-token.*; do
+      [ -f "$f" ] && echo "${f##*/claude-token.}"
+    done
+    echo main
+  } | awk '!seen[$0]++' | while read -r a; do
+    [ -s "$(token_file "$a")" ] && echo "$a"
+  done
+}
+token_file() {
+  case "$1" in
+    main) echo "$SECRETS_DIR/claude-token" ;;
+    *) echo "$SECRETS_DIR/claude-token.$1" ;;
+  esac
+}
+token_of() { tr -d '[:space:]' < "$(token_file "$1")"; }
+[ -n "$(accounts)" ] || { log "no claude token (see sbfnk-bot-setup), exiting"; exit 1; }
+# The limit marker from before there were several accounts was the main's.
+[ -f "$STATE_DIR/limited-until" ] \
+  && mv "$STATE_DIR/limited-until" "$(limit_file main)" 2>/dev/null
+account_limited() {
+  local until
+  until="$(cat "$(limit_file "$1")" 2>/dev/null)"
+  [ -n "$until" ] && [ "$until" -gt "$(date +%s)" ]
+}
+account_paused() { [ -f "$DECISIONS/.paused.$1" ]; }
+# The account for the next model run: the first neither limited nor paused.
+current_account() {
+  local a
+  for a in $(accounts); do
+    account_limited "$a" || account_paused "$a" || { echo "$a"; return 0; }
+  done
+  return 1
+}
+account_name() { echo "the ${1:-main} account"; }
+# The accounts and their limits, for sbr, which cannot read the bot's state:
+# one line each, the name and the time its limit lifts (or nothing).
+show_accounts() {
+  local a
+  for a in $(accounts); do
+    printf '%s\t%s\n' "$a" "$(cat "$(limit_file "$a")" 2>/dev/null)"
+  done > "$SPOOL/accounts.tmp" 2>/dev/null \
+    && chmod 644 "$SPOOL/accounts.tmp" && mv "$SPOOL/accounts.tmp" "$SPOOL/accounts"
+}
+show_accounts
 # Nothing inherited should speak for another account.
 unset GH_TOKEN GITHUB_TOKEN CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY
 bot_gh() { GH_TOKEN="$BOT_TOKEN" gh "$@"; }
@@ -740,7 +791,7 @@ fi
 # read, waits an hour: a run refused at the limit costs nothing, so trying
 # again early only means pausing again.
 note_limit() {
-  local msg until at h m ampm
+  local msg until at h m ampm acct="${2:-main}"
   msg="$(jq -r 'select(.is_error == true) | .result // empty' "$1" 2>/dev/null)"
   grep -qiE 'usage limit|hit your ([a-z]+ )?limit|limit reached|out of extra usage' \
     <<< "$msg" || return 1
@@ -761,15 +812,42 @@ note_limit() {
   [ -n "$until" ] || until=$(( $(date +%s) + 3600 ))
   # A few minutes' grace: the reset is not always to the second.
   until=$((until + 300))
-  echo "$until" > "$LIMIT_FILE"
-  log "  usage limit reached; model work waits until $(date -r "$until" '+%a %H:%M')"
+  echo "$until" > "$(limit_file "$acct")"
+  show_accounts
+  if current_account >/dev/null; then
+    log "  $(account_name "$acct") reached its usage limit until $(date -r "$until" '+%a %H:%M'); $(account_name "$(current_account)") carries on"
+  else
+    log "  $(account_name "$acct") reached its usage limit; $(why_waiting)"
+  fi
 }
 
-# True while the usage limit holds.
-limited() {
-  local until
-  until="$(cat "$LIMIT_FILE" 2>/dev/null)"
-  [ -n "$until" ] && [ "$until" -gt "$(date +%s)" ]
+# True while no account has room.
+limited() { ! current_account >/dev/null; }
+# When the first limited account that is not paused comes back, if any.
+next_reset() {
+  local a u best=""
+  for a in $(accounts); do
+    account_paused "$a" && continue
+    u="$(cat "$(limit_file "$a")" 2>/dev/null)"
+    [ -n "$u" ] && { [ -z "$best" ] || [ "$u" -lt "$best" ]; } && best="$u"
+  done
+  echo "$best"
+}
+why_waiting() {
+  local r
+  r="$(next_reset)"
+  if [ -n "$r" ]; then
+    echo "model work waits until $(date -r "$r" '+%a %H:%M')"
+  else
+    echo "every account is paused or limited; model work waits until sbr resume"
+  fi
+}
+# Whether the run that just ended was the one to meet a limit: its result is
+# then no failure, and the work is taken up again on the next pass, on
+# whichever account has room.
+hit_limit() {
+  [ -n "$(find "$STATE_DIR" -maxdepth 1 -name 'limited-until.*' \
+    -newer "$STATE_DIR/run-started.$$" 2>/dev/null)" ]
 }
 
 now_watch() {
@@ -779,7 +857,8 @@ now_watch() {
   while kill -0 "$model" 2>/dev/null; do
     t="$(ls -t "$config"/projects/*/*.jsonl 2>/dev/null | head -1)"
     {
-      printf 'job %s: %s\n' "${SLOT:-0}" "${NOW_TITLE:-model work}"
+      printf 'job %s: %s (on %s)\n' "${SLOT:-0}" "${NOW_TITLE:-model work}" \
+        "$(account_name "$(cat "$config/account" 2>/dev/null)")"
       printf 'step: %s, %d min so far (of %d), updated %s\n\n' \
         "$(basename "$config")" $(( ($(date +%s) - started) / 60 )) \
         $(( TIMEOUT / 60 )) "$(date +%H:%M)"
@@ -797,7 +876,7 @@ now_watch() {
 }
 
 run_model() {
-  local config="$1" cache temp out rc model watcher; shift
+  local config="$1" cache temp out rc model watcher acct; shift
   mkdir -p "$config"
   # Apple's toolchain keeps its cache in the account's own cache and temp
   # folders under /var/folders, whatever TMPDIR says, so without them every
@@ -810,8 +889,13 @@ run_model() {
   # Julia sees only the project and the standard library: the depot's global
   # environment is shared by every job, and whatever one job added there
   # would otherwise stack under another's project.
+  # No account with room (a run by hand): a limited account refuses the run
+  # at once, costing nothing, and records the limit again.
+  acct="$(current_account)" || acct="$(accounts | head -1)"
+  echo "$acct" > "$config/account"
+  touch "$STATE_DIR/run-started.$$"
   env -u SSH_AUTH_SOCK \
-    CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_TOKEN" \
+    CLAUDE_CONFIG_DIR="$config" CLAUDE_CODE_OAUTH_TOKEN="$(token_of "$acct")" \
     LANG=en_GB.UTF-8 LC_ALL=en_GB.UTF-8 LANGUAGE=en \
     CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 MAKEFLAGS="-j$JOB_CORES" \
     JULIA_NUM_PRECOMPILE_TASKS="$JOB_CORES" JULIA_NUM_THREADS="$JOB_CORES" \
@@ -838,7 +922,7 @@ run_model() {
   wait "$model"
   rc=$?
   { kill "$watcher"; wait "$watcher"; } 2>/dev/null
-  note_limit "$config/out.json"
+  note_limit "$config/out.json" "$acct"
   cat "$config/out.json"
   return $rc
 }
@@ -1609,7 +1693,7 @@ work_on() {
     "$base" "$(cat "$run/issue.txt")")" "$out" "$run/claude"
   cost="$(jq -r '.total_cost_usd // empty' "$out" 2>/dev/null)"
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
-  if [ -z "$result" ] && limited; then
+  if [ -z "$result" ] && hit_limit; then
     log "  $repo#$n: stopped by the usage limit, taken up again after the reset"
     return 1
   fi
@@ -2003,7 +2087,7 @@ update_pr() {
     > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   summary="$(jq -r '.summary // ""' <<< "$result" 2>/dev/null)"
-  if [ -z "$result" ] && limited; then
+  if [ -z "$result" ] && hit_limit; then
     log "  $repo#$n: stopped by the usage limit, taken up again after the reset"
     return 0
   fi
@@ -2272,7 +2356,7 @@ review_pr() {
     ${MODEL:+--model "$MODEL"} --max-budget-usd "$RUN_BUDGET" \
     --json-schema "$REVIEW_SCHEMA" > "$out" 2> "$out.stderr")
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
-  if [ -z "$result" ] && limited; then
+  if [ -z "$result" ] && hit_limit; then
     log "  the review of $repo#$n was stopped by the usage limit"
     return 0
   fi
@@ -2579,7 +2663,7 @@ fi
 log "poll${SLOT:+ (job $SLOT)}"
 # Decisions that need no model still go out from the light pass.
 if ! $LIST_ONLY && limited; then
-  log "  usage limit: waiting until $(date -r "$(cat "$LIMIT_FILE")" '+%a %H:%M')"
+  log "  no account has room: $(why_waiting)"
   exit 0
 fi
 # The light pass may be mid-way through the same decisions; leave them to it.
