@@ -293,8 +293,8 @@ show_accounts() {
   local a
   for a in $(accounts); do
     printf '%s\t%s\n' "$a" "$(cat "$(limit_file "$a")" 2>/dev/null)"
-  done > "$SPOOL/accounts.tmp" 2>/dev/null \
-    && chmod 644 "$SPOOL/accounts.tmp" && mv "$SPOOL/accounts.tmp" "$SPOOL/accounts"
+  done > "$SPOOL/log/accounts.tmp" 2>/dev/null \
+    && chmod 644 "$SPOOL/log/accounts.tmp" && mv "$SPOOL/log/accounts.tmp" "$SPOOL/log/accounts"
 }
 show_accounts
 # Nothing inherited should speak for another account.

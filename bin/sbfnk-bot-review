@@ -250,7 +250,7 @@ paused_note() {
 # The accounts as the bot last listed them, in the order it tries them.
 show_accounts() {
   local a until now
-  [ -s "$SPOOL/accounts" ] || die "the bot has not listed its accounts yet"
+  [ -s "$SPOOL/log/accounts" ] || die "the bot has not listed its accounts yet"
   now=$(date +%s)
   while IFS=$'\t' read -r a until; do
     printf '%-12s ' "$a"
@@ -261,10 +261,10 @@ show_accounts() {
     else
       echo "has room"
     fi
-  done < "$SPOOL/accounts"
+  done < "$SPOOL/log/accounts"
 }
 known_account() {
-  cut -f1 "$SPOOL/accounts" 2>/dev/null | grep -qxF "$1" \
+  cut -f1 "$SPOOL/log/accounts" 2>/dev/null | grep -qxF "$1" \
     || die "no account '$1'; sbr accounts lists them"
 }
 
