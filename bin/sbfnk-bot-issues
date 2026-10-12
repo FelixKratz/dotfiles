@@ -59,6 +59,12 @@ OWNER_LOGIN=sbfnk
 CO_AUTHOR_EMAIL="sebastian.funk@lshtm.ac.uk"
 CO_AUTHOR="sbfnk <$CO_AUTHOR_EMAIL>"
 BOT_EMAIL="242615673+sbfnk-bot@users.noreply.github.com"
+# Every commit the script itself makes or rewrites (a documentation edit, a
+# rebase onto the current base) is the bot's: without these, git falls back
+# to the account's name at this machine's hostname, which GitHub links to no
+# one.
+export GIT_AUTHOR_NAME="$BOT" GIT_AUTHOR_EMAIL="$BOT_EMAIL"
+export GIT_COMMITTER_NAME="$BOT" GIT_COMMITTER_EMAIL="$BOT_EMAIL"
 
 # Installed copies sit beside their configuration in /opt/sbfnk-bot, which
 # only root can change, so the bot cannot rewrite its own rules.
