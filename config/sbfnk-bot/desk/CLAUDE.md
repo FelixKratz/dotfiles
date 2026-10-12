@@ -29,7 +29,8 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
   name, `pause ACCOUNT` keeps the bot off that one account while it carries
   on with the others, and `accounts` lists them. Run any of these only when
   he asks.
-- `sbfnk-bot-review now` shows what the bot is doing at the moment, and
+- `sbfnk-bot-review now` shows what the bot is doing at the moment,
+  `sbfnk-bot-review queue` what it would take up next, and
   `sbfnk-bot-review log` what it has been doing.
 - If sbfnk wants a rerun to have more time, put a line "bot-time: 3h" (or
   however long he says) at the end of the answer text.

@@ -29,7 +29,8 @@
 # Usage:
 #   sbfnk-bot-issues                   act on decisions, then work on at
 #                                      most one issue
-#   sbfnk-bot-issues --list            show what would be picked up
+#   sbfnk-bot-issues --list            show what would be picked up, all of
+#                                      it, without starting anything
 #   sbfnk-bot-issues --issue o/r#N     work on one issue now (gates apply)
 #   sbfnk-bot-issues --decisions       only carry out sbfnk's decisions (a
 #                                      light pass launchd runs every two
@@ -156,6 +157,8 @@ INTERACTIVE=false
 # pass), since jobs side by side write to the one log.
 log() {
   local tag=""
+  # A listing is read by whoever asked for it and is no activity.
+  $LIST_ONLY && { printf '%s\n' "$*"; return 0; }
   if $DECISIONS_ONLY; then tag="[d] "; elif [ -n "${SLOT:-}" ]; then tag="[$SLOT] "; fi
   printf '%s %s%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$tag" "$*" >> "$LOG_FILE"
   $INTERACTIVE && echo "$*" >&2
@@ -200,6 +203,9 @@ SLOT=""
 if $DECISIONS_ONLY; then
   shlock -p $$ -f "$DECISIONS_LOCK" || exit 0
   HELD+=("$DECISIONS_LOCK")
+elif $LIST_ONLY; then
+  # A listing starts no job, so it takes no job's slot.
+  :
 else
   for i in $(seq 1 "$MAX_JOBS"); do
     lock="$LOCK_FILE"; [ "$i" -gt 1 ] && lock="$STATE_DIR/lock.$i"
@@ -241,6 +247,8 @@ trap 'release_all; rm -f "$NOW_FILE" "$NOW_FILE.tmp" "$STATE_DIR/run-started.$$"
 claim() {
   local f="$CLAIMS_DIR/$1.lock"
   shlock -p $$ -f "$f" 2>/dev/null || return 1
+  # A listing only asks whether a job is on it, and keeps nobody out.
+  $LIST_ONLY && { rm -f "$f"; return 0; }
   HELD+=("$f")
 }
 unclaim() { rm -f "$CLAIMS_DIR/$1.lock"; }
@@ -2673,6 +2681,16 @@ if $DECISIONS_ONLY; then
   # Here, every two minutes, so a marker that no longer holds goes promptly
   # rather than after whatever long job a heavy pass is on.
   sweep_given_up
+  # What the workers would take up next, for sbr queue: every ten minutes,
+  # and on its asking (it touches decisions/.queue, which this account
+  # cannot remove, so the request counts while it is newer than the list).
+  queue="$SPOOL/log/queue"
+  if [ -z "$(find "$queue" -mmin -10 2>/dev/null)" ] \
+    || [ "$DECISIONS/.queue" -nt "$queue" ]; then
+    { echo "as of $(date '+%a %H:%M')"
+      "$0" --list 2>/dev/null | sed -n 's/^  would //p'
+    } > "$queue.tmp" && chmod 644 "$queue.tmp" && mv "$queue.tmp" "$queue"
+  fi
   exit 0
 fi
 
@@ -2706,6 +2724,7 @@ tend_prs() {
   while read -r -u 4 prepo pn; do
     [ -n "${prepo:-}" ] || continue
     if tend_pr "$prepo" "$pn"; then
+      $LIST_ONLY && continue
       busy=true
       return 0
     fi
@@ -2729,7 +2748,7 @@ while read -r -u 3 repo n; do
     continue
   fi
   reason="$(wants_work "$repo" "$n" "$event" "$actor")" || continue
-  if ! $LIST_ONLY && ! claim "issue-${repo//\//_}-$n"; then
+  if ! claim "issue-${repo//\//_}-$n"; then
     log "  skip $repo#$n: another job is on it"
     continue
   fi
