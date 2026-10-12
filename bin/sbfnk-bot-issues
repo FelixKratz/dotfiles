@@ -333,13 +333,23 @@ touches_workflows() {
     | grep -q '^\.github/workflows/'
 }
 hand_push() {
-  local id="$1" work="$2" from="$3" branch="$4" dir="$PENDING/$1"
+  local id="$1" work="$2" from="$3" branch="$4" dir="$PENDING/$1" files what
   git -C "$work" bundle create "$dir/branch.bundle" HEAD "^$from" \
     >/dev/null 2>&1 || return 1
   printf '%s\n%s\n' "$branch" "${from#origin/}" > "$dir/push-to"
   chmod -R go+rX "$dir"
-  publish_failed "$id" "the branch edits .github/workflows/, which the bot \
-may not push: run 'sbr push' on it, and it publishes the rest" "$5" give_up
+  files="$(git -C "$work" diff --name-only "$from..HEAD" -- .github/workflows \
+    | sed 's|^\.github/workflows/||' | paste -sd, - | sed 's/,/, /g')"
+  # GitHub refuses workflow changes that only come in with a merge of the
+  # base too, and those are invisible in the diff against it.
+  if [ -z "$(git -C "$work" log --first-parent --no-merges --format=%H "$from..HEAD" \
+    -- .github/workflows)" ]; then
+    what="merging the base brings in its changes to .github/workflows/ ($files)"
+  else
+    what="the branch edits .github/workflows/ ($files)"
+  fi
+  publish_failed "$id" "$what, which the bot may not push: run 'sbr push' on \
+it, and it publishes the rest" "$5" give_up
 }
 
 # The line of git's output that says why it failed: the rejected ref, or the
