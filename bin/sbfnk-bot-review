@@ -45,6 +45,9 @@
 #   sbfnk-bot-review queue [--fresh]     what it is on, and every issue and PR
 #                                        it would take up next; --fresh waits
 #                                        for a new list
+#   sbfnk-bot-review prs [--fresh]       every open PR the bot looks after,
+#                                        and where each stands; a PR missing
+#                                        here is one it never touches
 #   sbfnk-bot-review log                 the bot's recent activity, why its
 #                                        latest failed run failed, and what
 #                                        the sandbox refused
@@ -238,6 +241,22 @@ colour_log() {
       print (c ? c : "") line r
       fflush()
     }'
+}
+
+# The bot's latest listing: what it would take up next, and its open PRs.
+QUEUE="$SPOOL/log/queue"
+# A list over ten minutes old, or one asked to be fresh, is made again by the
+# next decisions pass, within a few minutes.
+fresh_queue() {
+  [ "$1" = --fresh ] || [ -z "$(find "$QUEUE" -mmin -10 2>/dev/null)" ]     || return 0
+  touch "$DECISIONS/.queue" && chmod 644 "$DECISIONS/.queue"
+  printf 'waiting for the bot to list its queue' >&2
+  for _ in $(seq 1 72); do
+    [ "$QUEUE" -nt "$DECISIONS/.queue" ] && break
+    printf . >&2; sleep 5
+  done
+  echo >&2
+  [ "$QUEUE" -nt "$DECISIONS/.queue" ]     || echo "(no new list yet; showing the last one)" >&2
 }
 
 # Said first wherever it matters: a paused bot starts nothing new.
@@ -510,29 +529,40 @@ $note}"
     decide "$id" polish "$note" ;;
   now) show_now ;;
   queue)
-    q="$SPOOL/log/queue"
-    # A list over ten minutes old, or one asked to be fresh, is made again by
-    # the next decisions pass, within about two minutes.
-    if [ "${1:-}" = --fresh ] || [ -z "$(find "$q" -mmin -10 2>/dev/null)" ]; then
-      touch "$DECISIONS/.queue" && chmod 644 "$DECISIONS/.queue"
-      printf 'waiting for the bot to list its queue' >&2
-      for _ in $(seq 1 36); do
-        [ "$q" -nt "$DECISIONS/.queue" ] && break
-        printf . >&2; sleep 5
-      done
-      echo >&2
-      [ "$q" -nt "$DECISIONS/.queue" ] \
-        || echo "(no new list yet; showing the last one)" >&2
-    fi
+    fresh_queue "${1:-}"
     show_now
     echo
-    if [ -s "$q" ]; then
-      echo "next up, $(head -1 "$q" | clean):"
-      tail -n +2 "$q" | clean | sed 's/^/  /'
-      [ "$(wc -l < "$q")" -gt 1 ] || echo "  nothing"
+    if [ -s "$QUEUE" ]; then
+      echo "next up, $(head -1 "$QUEUE" | clean):"
+      tail -n +2 "$QUEUE" | grep -v '^own ' | clean | sed 's/^/  /' | grep . \
+        || echo "  nothing"
     else
       echo "no queue listed yet"
     fi ;;
+  prs)
+    fresh_queue "${1:-}"
+    [ -s "$QUEUE" ] || die "no queue listed yet"
+    echo "open PRs the bot looks after, $(head -1 "$QUEUE" | clean):"
+    grep '^own ' "$QUEUE" | clean | while IFS=$'\t' read -r ref title; do
+      ref="${ref#own }"
+      # Where it stands: running, next up, waiting for you, left alone, or
+      # nothing to do until someone comments, CI finishes or main moves.
+      at="([^0-9]|$)"
+      if grep -qE "$ref$at" "$SPOOL"/log/now/job*.txt 2>/dev/null; then
+        where="running now"
+      elif w="$(tail -n +2 "$QUEUE" | grep -v '^own ' | grep -E "$ref$at" | head -1)" \
+        && [ -n "$w" ]; then
+        w="${w% $ref*}"
+        where="next: ${w% on}"
+      elif grep -qE "$ref$at" "$PENDING"/*/meta.json 2>/dev/null; then
+        where="waiting for you (sbr list)"
+      elif cut -f1 "$SPOOL"/log/given-up/* 2>/dev/null | grep -qxF "$ref"; then
+        where="left alone (see sbr list)"
+      else
+        where="nothing to do for now"
+      fi
+      printf '%-36s %-30s %s\n' "$ref" "$where" "$title"
+    done ;;
   accounts) show_accounts ;;
   pause)
     if [ -n "${1:-}" ]; then

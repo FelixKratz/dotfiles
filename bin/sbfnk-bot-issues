@@ -2528,6 +2528,8 @@ tend_pr() {
   local repo="$1" n="$2" pr
   pr="$(bot_gh api "repos/$repo/pulls/$n" 2>/dev/null)" || return 1
   [ "$(jq -r .state <<< "$pr")" = open ] || return 1
+  # A listing names every open PR the bot looks after, for sbr prs.
+  $LIST_ONLY && log "  own $repo#$n	$(jq -r '.title + (if .draft then " (draft)" else "" end)' <<< "$pr")"
   pending_for_pr "$repo" "$n" && return 1
   claim "pr-${repo//\//_}-$n" || return 1
   tend_pr_inner "$repo" "$n" "$pr" && return 0
@@ -2688,7 +2690,7 @@ if $DECISIONS_ONLY; then
   if [ -z "$(find "$queue" -mmin -10 2>/dev/null)" ] \
     || [ "$DECISIONS/.queue" -nt "$queue" ]; then
     { echo "as of $(date '+%a %H:%M')"
-      "$0" --list 2>/dev/null | sed -n 's/^  would //p'
+      "$0" --list 2>/dev/null | sed -n 's/^  would //p; s/^  own /own /p'
     } > "$queue.tmp" && chmod 644 "$queue.tmp" && mv "$queue.tmp" "$queue"
   fi
   exit 0
