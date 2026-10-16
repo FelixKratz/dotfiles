@@ -199,6 +199,12 @@ Allow Emacs to prompt for GPG passphrase in minibuffer.
 (setf epa-pinentry-mode 'loopback)
 #+end_src
 
+Encrypt =.gpg= org-roam notes to the notes key on save, without asking which
+recipient to use.
+#+begin_src emacs-lisp
+(setq epa-file-encrypt-to '("747C3D06F46D8253487FA1AA4FAB4425BEEF8F84"))
+#+end_src
+
 ** Completion
 Rebind =embark-select= from =C-SPC= (grabbed by yabai) to =C-;= so
 multi-selection works in Vertico. Move to the next candidate after selecting,
