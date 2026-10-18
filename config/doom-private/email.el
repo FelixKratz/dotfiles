@@ -530,7 +530,24 @@ toggled to a value that never fires in the body."
   ;; luminance/distance thresholds below to enforce minimum contrast.
   (setq shr-use-colors nil
         shr-color-visible-luminance-min 80
-        shr-color-visible-distance-min 10)
+        shr-color-visible-distance-min 10
+        ;; Variable-pitch fonts and pixel-based filling make table cells in
+        ;; newsletters ragged; a fixed-pitch column at reading width is calmer.
+        shr-use-fonts nil
+        shr-max-width 80
+        shr-max-image-proportion 0.5)
+
+  ;; Mail HTML uses nested tables for layout, not data, and shr squeezes each
+  ;; cell into its own narrow column. Rendering them as plain blocks gives
+  ;; one readable column of text. Scoped to mail so web pages in eww keep
+  ;; their tables.
+  (defun sf/shr-flatten-layout-tables (fn &rest args)
+    (let ((shr-external-rendering-functions
+           (append (mapcar (lambda (tag) (cons tag #'shr-tag-div))
+                           '(table thead tbody tfoot tr td th))
+                   shr-external-rendering-functions)))
+      (apply fn args)))
+  (advice-add 'mm-shr :around #'sf/shr-flatten-layout-tables)
 
   (defun sf/notmuch-toggle-html-preference ()
     "Toggle between preferring HTML and plain text in multipart emails."
