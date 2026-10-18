@@ -101,10 +101,28 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   [ -n "$host" ] || die "no review spool here and no host in $HOST_FILE"
   args=""
   for a in "$@"; do args="$args $(printf '%q' "$a")"; done
+  # ssh forwards every keystroke to the remote side, which swallows what was
+  # typed ahead for the next command. Only the pager and typed answers need
+  # the keyboard; everything else gets a pty for colour but no stdin.
   tty=()
-  [ -t 0 ] && [ -t 1 ] && tty=(-t)
-  ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
-    "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
+  needs_stdin=1
+  if [ -t 0 ] && [ -t 1 ]; then
+    tty=(-t)
+    case "${1:-}" in
+      diff|watch) ;;
+      show) [[ " $* " == *" --diff "* ]] || needs_stdin=0 ;;
+      answer|comment) [ "$#" -ge 3 ] && needs_stdin=0 ;;
+      *) needs_stdin=0 ;;
+    esac
+  fi
+  if [ "$needs_stdin" -eq 1 ]; then
+    ssh -q -o BatchMode=yes -o ConnectTimeout=5 "${tty[@]+"${tty[@]}"}" \
+      "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args"
+  else
+    ssh -q -tt -o BatchMode=yes -o ConnectTimeout=5 \
+      "$host" "SBFNK_BOT_REVIEW_HERE=1 ~/.local/bin/sbfnk-bot-review$args" \
+      < /dev/null
+  fi
   rc=$?
   if [ "$rc" -eq 255 ]; then
     # ssh's own failure, not the command's: say so rather than exit silently.
