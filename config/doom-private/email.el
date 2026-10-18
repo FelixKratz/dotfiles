@@ -543,7 +543,7 @@ Return nil if it could not be started."
                            nil ".html")
                         (make-temp-file "notmuch-" nil ".html"))))
       (with-temp-buffer
-        (call-process "notmuch" nil t nil "show" "--format=sexp" "--include-html" "--entire-thread=false" msg-id)
+        (call-process "notmuch" nil t nil "show" "--format=sexp" "--include-html" "--entire-thread=false" "--exclude=false" msg-id)
         (goto-char (point-min))
         (let* ((sexp (read (current-buffer)))
                (msg (sf/notmuch-find-message-plist sexp))
