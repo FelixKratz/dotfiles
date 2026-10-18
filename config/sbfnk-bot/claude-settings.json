@@ -28,7 +28,9 @@
         "*.githubusercontent.com",
         "registry.npmjs.org",
         "insp.cd",
-        "*.insp.cd"
+        "*.insp.cd",
+        "storage.julialang.net",
+        "*.storage.juliahub.com"
       ]
     },
     "filesystem": {
