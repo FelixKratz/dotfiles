@@ -168,7 +168,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   works on it, publishing nothing until you approve. It runs every 10 min as
   its own macOS account, which cannot read your home folder, and Claude works
   in a sandboxed clone with a fresh configuration, no GitHub access and
-  nothing but the issue and the repository. Your humanizer edits what it
+  nothing but the issue and the repository. Its network reaches only the
+  domains in `config/sbfnk-bot/claude-settings.json`: package registries,
+  GitHub and Zenodo, plus `insp.cd` for the Ebola situation reports that
+  BVDOutbreakSize reads, to be removed once that outbreak is over. Your humanizer edits what it
   publishes — the PR text, cut to what a reviewer needs, its questions, its
   replies to review feedback, and the prose it adds to the repository,
   including roxygen, docstrings and code comments — and follows your edits to the skill
