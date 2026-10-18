@@ -492,13 +492,56 @@ toggled to a value that never fires in the body."
           (let ((r (sf/notmuch-find-message-plist item)))
             (when r (throw 'found r))))))))
 
+  ;; Browser extensions such as Tridactyl do not run on file:// pages, so
+  ;; messages are served from a localhost-only server instead.
+  (defvar sf/notmuch-html-dir
+    (expand-file-name "notmuch-html/" temporary-file-directory)
+    "Directory the local mail HTML server serves from.")
+
+  (defvar sf/notmuch-html-server nil
+    "Process running the local mail HTML server.")
+
+  (defvar sf/notmuch-html-port nil
+    "Port the local mail HTML server listens on.")
+
+  (defun sf/notmuch-html-server-ensure ()
+    "Start the local mail HTML server if needed and return its port.
+Return nil if it could not be started."
+    (unless (process-live-p sf/notmuch-html-server)
+      (make-directory sf/notmuch-html-dir t)
+      (set-file-modes sf/notmuch-html-dir #o700)
+      (setq sf/notmuch-html-port nil)
+      (let ((default-directory sf/notmuch-html-dir))
+        (setq sf/notmuch-html-server
+              (make-process
+               :name "notmuch-html-server"
+               :buffer " *notmuch-html-server*"
+               :command (list "python3" "-u" "-m" "http.server"
+                              "--bind" "127.0.0.1" "0")
+               :noquery t
+               :filter (lambda (proc out)
+                         (when (string-match "port \\([0-9]+\\)" out)
+                           (setq sf/notmuch-html-port
+                                 (string-to-number (match-string 1 out))))
+                         (internal-default-process-filter proc out)))))
+      (with-timeout (10 nil)
+        (while (and (not sf/notmuch-html-port)
+                    (process-live-p sf/notmuch-html-server))
+          (accept-process-output sf/notmuch-html-server 0.1))))
+    sf/notmuch-html-port)
+
   (defun sf/notmuch-view-in-browser ()
     "View current message in external browser."
     (interactive)
     (let* ((msg-id (if (derived-mode-p 'notmuch-tree-mode)
                        (notmuch-tree-get-message-id)
                      (notmuch-show-get-message-id)))
-           (html-file (make-temp-file "notmuch-" nil ".html")))
+           (port (sf/notmuch-html-server-ensure))
+           (html-file (if port
+                          (make-temp-file
+                           (expand-file-name "msg-" sf/notmuch-html-dir)
+                           nil ".html")
+                        (make-temp-file "notmuch-" nil ".html"))))
       (with-temp-buffer
         (call-process "notmuch" nil t nil "show" "--format=sexp" "--include-html" "--entire-thread=false" msg-id)
         (goto-char (point-min))
@@ -508,7 +551,10 @@ toggled to a value that never fires in the body."
                (html-content (sf/notmuch-find-html-part body)))
           (with-temp-file html-file
             (insert (or html-content "<html><body><pre>No HTML content</pre></body></html>")))))
-      (browse-url (concat "file://" html-file))))
+      (browse-url (if port
+                      (format "http://127.0.0.1:%d/%s"
+                              port (file-name-nondirectory html-file))
+                    (concat "file://" html-file)))))
 
   (defun sf/notmuch-find-html-part (parts)
     "Recursively find HTML content in PARTS."
