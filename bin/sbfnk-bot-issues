@@ -2112,6 +2112,13 @@ update_pr() {
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   summary="$(jq -r '.summary // ""' <<< "$result" 2>/dev/null)"
   if [ -z "$result" ] && hit_limit; then
+    # Feedback comes round again by itself, but a conflict or CI item was
+    # marked tried before the run, and would never be taken up again.
+    jq -e 'any(.[]; .kind == "conflict")' <<< "$feedback" >/dev/null \
+      && set_pr_state "$repo" "$n" 'del(.conflict_tried)'
+    jq -e 'any(.[]; .kind == "ci")' <<< "$feedback" >/dev/null \
+      && set_pr_state "$repo" "$n" \
+        'del(.ci_tried) | .ci_rounds = ([(.ci_rounds // 1) - 1, 0] | max)'
     log "  $repo#$n: stopped by the usage limit, taken up again after the reset"
     return 0
   fi
