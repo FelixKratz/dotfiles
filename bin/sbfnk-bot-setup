@@ -150,6 +150,18 @@ PLISTEOF
     sleep 1; tries=$((tries + 1))
   done
   launchctl bootstrap "gui/$(id -u)" "$plist"
+  # A session that cannot sign in or connect dies within seconds, and
+  # launchd would quietly restart it every minute; say so instead.
+  tries=0
+  while [ ! -s "$log" ] && [ "$tries" -lt 20 ]; do
+    sleep 1; tries=$((tries + 1))
+  done
+  if [ -s "$log" ]; then
+    cat "$log" >&2
+    die "the desk did not start; see above (a sign-in error means claude" \
+      "must log in at this machine's own screen, not over ssh, as the" \
+      "desk reads the login keychain)"
+  fi
   say "desk running: open claude.ai/code or the Claude app and pick 'sbfnk-bot desk'"
 }
 
