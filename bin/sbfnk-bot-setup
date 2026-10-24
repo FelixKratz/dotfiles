@@ -75,14 +75,36 @@ DOTFILES="$(dirname "$(dirname "$(perl -MCwd -e 'print Cwd::abs_path shift' "$0"
 # standard output is a terminal display redrawn continually, so it goes
 # nowhere; errors still reach the log.
 DESK_LABEL=none.bots.desk
+# Remote Control refuses to start in a folder nobody has trusted in an
+# interactive session, and launchd would then respawn it every minute for
+# ever. Record the trust the dialog would, in ~/.claude.json, which Claude
+# rewrites as a whole, so the write is atomic.
+trust_folder() {
+  python3 -I - "$HOME/.claude.json" "$1" <<'PYEOF'
+import json, os, sys
+file, folder = sys.argv[1:]
+data = {}
+if os.path.exists(file):
+    with open(file) as f:
+        data = json.load(f)
+data.setdefault("projects", {}).setdefault(folder, {})["hasTrustDialogAccepted"] = True
+with open(file + ".tmp", "w") as f:
+    json.dump(data, f, indent=2)
+os.replace(file + ".tmp", file)
+PYEOF
+}
 desk() {
   local dir="$HOME/.local/share/sbfnk-bot-desk"
   local plist="$HOME/Library/LaunchAgents/$DESK_LABEL.plist"
+  local log="$HOME/.log/sbfnk-bot-desk.err"
   [ "$(id -u)" -ne 0 ] || die "run desk without sudo, as yourself"
   [ -x "$HOME/.local/bin/claude" ] || die "no claude in ~/.local/bin"
   mkdir -p "$dir/.claude" "$HOME/.log" "$(dirname "$plist")"
   cp "$DOTFILES/config/sbfnk-bot/desk/CLAUDE.md" "$dir/"
   cp "$DOTFILES/config/sbfnk-bot/desk/.claude/settings.json" "$dir/.claude/"
+  trust_folder "$dir"
+  # Each failed start appends to the log; a fresh setup begins a fresh one.
+  : > "$log"
   cat > "$plist" <<PLISTEOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -113,7 +135,7 @@ desk() {
 	<key>StandardOutPath</key>
 	<string>/dev/null</string>
 	<key>StandardErrorPath</key>
-	<string>$HOME/.log/sbfnk-bot-desk.err</string>
+	<string>$log</string>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
 </dict>
