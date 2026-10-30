@@ -422,11 +422,15 @@ set_job_timeout() {
 
 # The assignment this run would act on: "event_id actor created_at" of the
 # latest time sbfnk-bot was assigned. Its id keys the ledger, so assigning
-# again starts afresh.
+# again starts afresh. Fails, printing nothing, when the timeline cannot be
+# read: gh prints the error body on stdout, and its last line would pass for
+# an assignment by nobody, which is not sbfnk's and so parks as a request.
 assignment_event() {
-  bot_gh api "repos/$1/issues/$2/timeline" --paginate --jq \
+  local rows
+  rows="$(bot_gh api "repos/$1/issues/$2/timeline" --paginate --jq \
     ".[] | select(.event == \"assigned\" and .assignee.login == \"$BOT\")
-     | \"\(.id) \(.actor.login) \(.created_at)\"" | tail -1
+     | \"\(.id) \(.actor.login) \(.created_at)\"")" || return 1
+  printf '%s\n' "$rows" | tail -1
 }
 
 record() {
@@ -451,7 +455,7 @@ not_given_up() { rm -f "$GIVEN_UP_DIR/${1//[\/#]/_}"; }
 # A marker goes as soon as it no longer holds: an issue reassigned (a new
 # assignment starts afresh) or unassigned, a PR merged or closed.
 sweep_given_up() {
-  local f target kind repo n event fails
+  local f target kind repo n assigned event fails
   for f in "$GIVEN_UP_DIR"/*; do
     [ -f "$f" ] || continue
     IFS=$'\t' read -r target kind _ < "$f"
@@ -462,7 +466,8 @@ sweep_given_up() {
       continue
     fi
     [ "$kind" = issue ] || continue
-    read -r event _ <<< "$(assignment_event "$repo" "$n" 2>/dev/null)"
+    assigned="$(assignment_event "$repo" "$n" 2>/dev/null)" || continue
+    read -r event _ <<< "$assigned"
     fails="$(ledger_rows "$target" "${event:-none}" \
       | awk -F'\t' '$4 == "failed"' | wc -l)"
     [ "$((fails + 0))" -ge "$MAX_ATTEMPTS" ] || rm -f "$f"
@@ -2751,7 +2756,11 @@ $busy || list="$(candidates)" || { log "search failed, exiting"; exit 1; }
 # The list comes in on fd 3, so nothing in the loop can swallow it.
 while read -r -u 3 repo n; do
   [ -n "${repo:-}" ] || continue
-  read -r event actor _ <<< "$(assignment_event "$repo" "$n")"
+  if ! assigned="$(assignment_event "$repo" "$n")"; then
+    log "  skip $repo#$n: could not read its timeline"
+    continue
+  fi
+  read -r event actor _ <<< "$assigned"
   if [ -z "${event:-}" ]; then
     log "  skip $repo#$n: no assignment to $BOT found"
     continue
