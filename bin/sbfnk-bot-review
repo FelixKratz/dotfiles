@@ -141,6 +141,17 @@ DECISIONS="$SPOOL/decisions"
 # dropped so its text cannot drive the terminal.
 clean() { LC_ALL=C tr -d '\000-\010\013-\037\177'; }
 
+# owner/repo#N as a link the terminal opens on click (OSC 8), the text
+# unchanged. GitHub sends an issues/ URL on to the PR when N is one. Runs
+# after clean, which would drop the escapes.
+linkify() {
+  if [ -t 1 ]; then
+    LC_ALL=C sed -E $'s,([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([0-9]+),\033]8;;https://github.com/\\1/issues/\\2\033\\\\\\1#\\2\033]8;;\033\\\\,g'
+  else
+    cat
+  fi
+}
+
 # Decisions for work that is no longer waiting have been carried out.
 for f in "$DECISIONS"/*; do
   [ -f "$f" ] || continue
@@ -315,7 +326,7 @@ show_now() {
   for f in "$SPOOL"/log/now/job*.txt; do
     [ -f "$f" ] || continue
     $shown && echo
-    clean < "$f"
+    clean < "$f" | linkify
     shown=true
   done
   $shown || echo "the bot is idle"
@@ -334,7 +345,7 @@ case "$cmd" in
       | awk -F'\t' '{printf "     left alone: %s (%s, since %s): %s\n", $1, $2, $4, $3}')"
     if [ -z "$ids" ]; then
       echo "nothing waiting for review"
-      [ -z "$given_up" ] || printf '%s\n' "$given_up"
+      [ -z "$given_up" ] || printf '%s\n' "$given_up" | linkify
       exit 0
     fi
     # By number, since numbers are reused and no longer follow the order
@@ -349,8 +360,8 @@ case "$cmd" in
         "$(meta "$id" .repo)" "$(meta "$id" .number)" \
         "$(meta "$id" .title | clean)" \
         "$(state "$id")"
-    done
-    [ -z "$given_up" ] || printf '%s\n' "$given_up" ;;
+    done | linkify
+    [ -z "$given_up" ] || printf '%s\n' "$given_up" | linkify ;;
   count)
     # grep -c exits 1 on a count of 0, which is an answer, not a failure.
     waiting | grep -c . || true ;;
@@ -419,7 +430,7 @@ case "$cmd" in
                     printf "  %s  +%d -%d\n", files[i], add[i], del[i]}' \
           "$PENDING/$id/diff.patch"
       fi
-    } | clean ;;
+    } | clean | linkify ;;
   approve)
     # Everything waiting and unflagged. Flagged work needs reading first, and
     # work stuck on a push or a discard needs that, so those are only listed.
@@ -553,7 +564,7 @@ $note}"
     if [ -s "$QUEUE" ]; then
       echo "next up, $(head -1 "$QUEUE" | clean):"
       tail -n +2 "$QUEUE" | grep -v '^own ' | clean | sed 's/^/  /' | grep . \
-        || echo "  nothing"
+        | linkify || echo "  nothing"
     else
       echo "no queue listed yet"
     fi ;;
@@ -580,7 +591,7 @@ $note}"
         where="nothing to do for now"
       fi
       printf '%-36s %-30s %s\n' "$ref" "$where" "$title"
-    done ;;
+    done | linkify ;;
   accounts) show_accounts ;;
   pause)
     if [ -n "${1:-}" ]; then
@@ -614,10 +625,10 @@ $note}"
       | grep --line-buffered -vE '^[^ ]+ [^ ]+ (\[[0-9d]\] )?  skip ' \
       | colour_log ;;
   log)
-    tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean
+    tail -30 "$SPOOL/log/activity.log" 2>/dev/null | clean | linkify
     if [ -s "$SPOOL/log/blocked.tsv" ]; then
       printf '\n== refused by the sandbox (latest last) ==\n'
-      tail -15 "$SPOOL/log/blocked.tsv" | awk -F'\t' '{print $1, $2 ": " $3}' | clean
+      tail -15 "$SPOOL/log/blocked.tsv" | awk -F'\t' '{print $1, $2 ": " $3}' | clean | linkify
     fi
     latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"
     if [ -n "$latest" ]; then
