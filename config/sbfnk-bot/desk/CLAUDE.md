@@ -24,6 +24,13 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
 - A "request" item is an issue someone else assigned to the bot. Nothing has
   been done on it: approve lets the bot start, answer approves with
   instructions, discard declines it.
+- A "mention" item is someone else's comment on an issue or PR the bot is
+  on. Approve makes it an instruction to the bot, answer approves it with
+  his private steer, discard leaves it as background. Nothing is published.
+- A "relay" item is a reply sbfnk agreed elsewhere, queued with
+  `relay owner/repo#N "..."`. Approve posts it, as the bot under "Relayed
+  for sbfnk:", and the bot then takes it as his. No model screens it, so
+  show it in full before he decides. Queue one only with his words.
 - `pause` stops the bot starting anything new (his decisions still go out,
   and a running job finishes); `resume` lets it carry on. With an account
   name, `pause ACCOUNT` keeps the bot off that one account while it carries

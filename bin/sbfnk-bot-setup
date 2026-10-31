@@ -338,6 +338,7 @@ install_all() {
   install -d -o root -g wheel -m 755 "$OPT"
   install -o root -g wheel -m 755 "$DOTFILES/bin/sbfnk-bot-issues" "$OPT/"
   install -o root -g wheel -m 644 "$DOTFILES/config/sbfnk-bot/repos" \
+    "$DOTFILES/config/sbfnk-bot/trusted-commenters" \
     "$DOTFILES/config/sbfnk-bot/claude-settings.json" "$OPT/"
   install -o root -g wheel -m 644 "$DOTFILES/config/claude/working-rules.md" "$OPT/"
   install -d -o root -g wheel -m 755 "$OPT/bin"

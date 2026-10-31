@@ -70,3 +70,13 @@ CLAUDE.md; the bot has it in every prompt.
   ready and sbfnk is asked to review. In interactive sessions,
   /wait-for-review does this.
 - Never merge a pull request.
+
+## Replying to sbfnk-bot
+
+- A reply sbfnk has agreed for an issue or pull request the bot works on
+  goes through `sbr relay owner/repo#N "..."`, never `gh`. Posted from the
+  bot's account it reads as the bot answering itself and is ignored; posted
+  from sbfnk's it passes for words he typed. The relay waits for his
+  approval, then goes out as "Relayed for sbfnk".
+- Never run `sbr approve` (or `sbfnk-bot-review approve`) for him: the
+  approval is his own check.

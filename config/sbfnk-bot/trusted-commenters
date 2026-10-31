@@ -1,0 +1,5 @@
+# Whose comments sbfnk-bot takes as instructions without asking sbfnk first,
+# on issues whose question it waits on and on PRs it looks after. Everyone
+# else's comments wait in the review spool for him to approve ("mention").
+# One login per line for every repository, or "owner/repo login" for one.
+# An edit to a comment after it was trusted makes it background again.

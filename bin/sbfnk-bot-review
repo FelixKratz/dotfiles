@@ -29,11 +29,22 @@
 #                                        (or stdin) on the PR, publicly and as
 #                                        you, and drop the parked update; the
 #                                        bot then answers your comment
+#   sbfnk-bot-review relay owner/repo#N [TEXT]
+#                                        a reply you agreed elsewhere (TEXT, or
+#                                        stdin), for the bot to post under
+#                                        "Relayed for sbfnk"; it is parked
+#                                        like any other work and goes out only
+#                                        once you approve it, and the bot then
+#                                        takes it as yours
 #   sbfnk-bot-review push [ID]           push the bot's commits from your own
 #                                        account, when they edit CI files its
 #                                        token may not push; the bot then
 #                                        publishes the rest
 #   sbfnk-bot-review discard [ID]        drop the work
+#
+# A "mention" is someone else's comment on an issue whose question the bot
+# waits on, or on a PR it looks after: approve makes it an instruction,
+# answer approves it with a private steer, discard leaves it as background.
 #   sbfnk-bot-review polish [ID] [TEXT]  edit, screen and fix its text again,
 #                                        following TEXT if given; the work
 #                                        itself is not redone
@@ -111,7 +122,7 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
     case "${1:-}" in
       diff|watch) ;;
       show) [[ " $* " == *" --diff "* ]] || needs_stdin=0 ;;
-      answer|comment) [ "$#" -ge 3 ] && needs_stdin=0 ;;
+      answer|comment|relay) [ "$#" -ge 3 ] && needs_stdin=0 ;;
       *) needs_stdin=0 ;;
     esac
   fi
@@ -156,6 +167,12 @@ linkify() {
 for f in "$DECISIONS"/*; do
   [ -f "$f" ] || continue
   [ -d "$PENDING/$(basename "$f")" ] || rm -f "$f"
+done
+# Relays the bot has taken in are parked work now, or done.
+for f in "$DECISIONS"/relay/*; do
+  [ -f "$f" ] || continue
+  grep -qxF "$(basename "$f")" "$SPOOL/log/relays-taken" 2>/dev/null \
+    && rm -f "$f"
 done
 
 # A decision the bot has not yet carried out. One it has, on work that stays
@@ -381,7 +398,8 @@ case "$cmd" in
         "$(meta "$id" .outcome)" "$(meta "$id" .repo)" \
         "$(meta "$id" .number)" "$(meta "$id" .title)"
       printf 'https://github.com/%s/%s/%s\n' "$(meta "$id" .repo)" \
-        "$(if [ "$(meta "$id" .outcome)" = update ]; then echo pull; \
+        "$(if [ "$(meta "$id" .outcome)" = update ] \
+              || [ "$(meta "$id" '.kind // ""')" = pr ]; then echo pull; \
            else echo issues; fi)" "$(meta "$id" .number)"
       printf 'parked %s, cost $%s\n\n' "$(meta "$id" .created)" \
         "$(meta "$id" '.cost_usd // "?"')"
@@ -395,7 +413,11 @@ case "$cmd" in
         echo "== FLAGGED by the screen: read these before approving =="
         jq -r '.flags[] | "- \(.reason): \(.quote)"' "$PENDING/$id/meta.json"
         echo
-      elif [ "$(meta "$id" .outcome)" != request ]; then
+      elif [ "$(meta "$id" .outcome)" = relay ]; then
+        echo "== not screened by a model: you are its only check =="
+        echo
+      elif [ "$(meta "$id" .outcome)" != request ] \
+        && [ "$(meta "$id" .outcome)" != mention ]; then
         echo "== the screen found nothing to flag =="
         echo
       fi
@@ -416,7 +438,11 @@ case "$cmd" in
         echo "== refused by the sandbox on this issue (not published) =="
         printf '%s\n\n' "$blocked"
       fi
-      echo "== text to publish =="
+      case "$(meta "$id" .outcome)" in
+        mention) echo "== the comment (not yours: nothing is published) ==" ;;
+        relay) echo "== text to post, under \"Relayed for sbfnk:\" ==" ;;
+        *) echo "== text to publish ==" ;;
+      esac
       cat "$PENDING/$id/text.md"
       if [ -s "$PENDING/$id/diff.patch" ]; then
         echo
@@ -458,6 +484,8 @@ case "$cmd" in
     if $force; then decide "$id" force; else decide "$id" approve; fi ;;
   answer)
     id="$(resolve "${1:-}")" || exit 1
+    [ "$(meta "$id" .outcome)" != relay ] \
+      || die "#$(meta "$id" .seq) is a relay: approve or discard it, or relay a new text"
     [ "$(meta "$id" .outcome)" != update ] \
       || die "#$(meta "$id" .seq) is an update to an open PR: answers are private, so use 'comment', which posts on the PR"
     shift 2>/dev/null
@@ -493,6 +521,28 @@ case "$cmd" in
   discard)
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
+  relay)
+    target="${1:-}"
+    [[ "$target" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]] \
+      || die "usage: relay owner/repo#N [TEXT]"
+    shift
+    text="$*"
+    if [ -z "$text" ]; then
+      [ -t 0 ] && echo "Type the reply (public once approved), then Ctrl-D:" >&2
+      text="$(cat)"
+    fi
+    [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ] || die "empty reply"
+    mkdir -p "$DECISIONS/relay" && chmod 755 "$DECISIONS/relay" \
+      || die "cannot write to $DECISIONS/relay"
+    repo="${target%#*}"
+    name="${repo//\//_}-${target##*#}-relay-$(date +%Y%m%d-%H%M%S)"
+    tmp="$(mktemp "$DECISIONS/relay/.relay.XXXXXX")" \
+      || die "cannot write to $DECISIONS/relay"
+    printf '%s\n%s\n' "$target" "$text" > "$tmp"
+    chmod 644 "$tmp"
+    mv "$tmp" "$DECISIONS/relay/$name"
+    echo "relay for $target queued. The bot parks it within two minutes;"
+    echo "nothing is posted until you approve it (sbr lists it)." ;;
   push)
     id="$(resolve "${1:-}")" || exit 1
     dir="$PENDING/$id"
@@ -546,6 +596,10 @@ case "$cmd" in
     strip=false
     [ "${1:-}" = --strip-flagged ] && { strip=true; shift; }
     id="$(resolve "${1:-}")" || exit 1
+    case "$(meta "$id" .outcome)" in
+      mention|relay|request)
+        die "#$(meta "$id" .seq) has no text of the bot's to polish" ;;
+    esac
     shift 2>/dev/null
     note="$*"
     if $strip; then
