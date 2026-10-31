@@ -55,6 +55,9 @@
 #   sbfnk-bot-review polish --strip-flagged [ID]
 #                                        the same, removing what the screen
 #                                        flagged
+#   sbfnk-bot-review mirror [on|off]     whether waiting work is mirrored as
+#                                        issues in the inbox repository, for
+#                                        GitHub's site and app (on by default)
 #   sbfnk-bot-review now                 what the bot is doing: the job, and
 #                                        the latest steps of its session
 #   sbfnk-bot-review queue [--fresh]     what it is on, and every issue and PR
@@ -611,6 +614,14 @@ case "$cmd" in
 $note}"
     fi
     decide "$id" polish "$note" ;;
+  mirror)
+    case "${1:-}" in
+      off) touch "$DECISIONS/.no-mirror" && chmod 644 "$DECISIONS/.no-mirror"
+           echo "mirroring off: nothing new goes to the inbox; open mirrors close as their items go" ;;
+      on) rm -f "$DECISIONS/.no-mirror"; echo "mirroring on: waiting work appears in the inbox within two minutes" ;;
+      "") if [ -f "$DECISIONS/.no-mirror" ]; then echo "mirroring is off"; else echo "mirroring is on"; fi ;;
+      *) die "usage: mirror [on|off]" ;;
+    esac ;;
   now) show_now ;;
   queue)
     fresh_queue "${1:-}"

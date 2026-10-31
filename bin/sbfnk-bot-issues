@@ -31,6 +31,8 @@
 # and for a mention: approve, answer (approve with a private steer), discard.
 #
 # It also looks after the PRs it opened: see "pull requests it opened" below.
+# Everything waiting in the spool is mirrored as an issue in the inbox
+# repository, for GitHub's site and app; see "the spool, mirrored" below.
 #
 # A poll with nothing to do costs a few API requests and no model tokens.
 #
@@ -1691,6 +1693,97 @@ take_relays() {
   done
 }
 
+# ------------------------------------------------------- the spool, mirrored
+#
+# Each item waiting in the spool has an issue in the inbox, so sbfnk sees the
+# queue, and is notified of it, on GitHub's site and app. The issue carries
+# the text to publish and the files changed, or for work the screen flagged
+# only a summary: flagged text stays on this machine. It is rewritten when
+# the item changes (a polish) and closed once it no longer waits. Nothing
+# goes up unless GitHub says the inbox is private, and nothing new goes up
+# while sbfnk has mirroring off (sbr mirror off).
+MIRRORS="$STATE_DIR/mirrors"
+mkdir -p "$MIRRORS"
+
+inbox_private() {
+  [ "$(bot_gh api "repos/$INBOX_REPO" --jq .private 2>/dev/null)" = true ]
+}
+
+# Text in a fence GitHub will not end early, and in which nothing becomes a
+# mention or a link to an inbox issue.
+fenced() {
+  printf '~~~~~text\n'
+  sed 's/~~~~~/~~~~ ~/g'
+  printf '\n~~~~~\n'
+}
+
+mirror_body() {
+  local id="$1" dir="$PENDING/$1" meta="$PENDING/$1/meta.json" flags
+  flags="$(jq '.flags | length' "$meta")"
+  printf '<!-- sbfnk-bot mirror: %s -->\n' "$id"
+  # The title is the issue's own, where nothing in it becomes a mention.
+  jq -r '"**#\(.seq // "-")** · \(.outcome) · `\(.repo)#\(.number)` · parked \(.created)"' \
+    "$meta"
+  if [ "$flags" -gt 0 ]; then
+    printf '\nThe screen flagged %s passage(s), so the text stays on the bot'"'"'s\n' "$flags"
+    printf 'machine: read it with `sbr show %s`.\n' "$(jq -r '.seq // ""' "$meta")"
+  else
+    echo
+    head -c 30000 "$dir/text.md" | fenced
+    if [ -s "$dir/diff.patch" ]; then
+      printf '\nFiles changed:\n'
+      awk '/^diff --git /{f=$3; sub(/^a\//, "", f); files[++n]=f}
+           /^\+[^+]/{add[n]++} /^-[^-]/{del[n]++}
+           END {for (i = 1; i <= n; i++)
+                  printf "%s  +%d -%d\n", files[i], add[i], del[i]}' \
+        "$dir/diff.patch" | head -100 | fenced
+    fi
+  fi
+  printf '\nDecide with `sbr approve %s` (or `answer`, `discard`, `polish`) or on the\n' \
+    "$(jq -r '.seq // ""' "$meta")"
+  printf 'desk.\n'
+}
+
+mirror_sync() {
+  local d id f k body sum title verb
+  # Closing needs no new text on GitHub, so it carries on with mirroring off.
+  for f in "$MIRRORS"/*.issue; do
+    [ -f "$f" ] || continue
+    id="$(basename "$f" .issue)"
+    [ -d "$PENDING/$id" ] && continue
+    k="$(head -1 "$f")"
+    verb="$(cat "$MIRRORS/$id.verb" 2>/dev/null)"
+    bot_gh issue close "$k" -R "$INBOX_REPO" \
+      --comment "No longer waiting${verb:+: $verb}." >/dev/null 2>&1 || continue
+    rm -f "$f" "$MIRRORS/$id.verb"
+  done
+  [ -f "$DECISIONS/.no-mirror" ] && return 0
+  ls "$PENDING"/*/meta.json >/dev/null 2>&1 || return 0
+  inbox_private || return 0
+  for d in "$PENDING"/*/; do
+    id="$(basename "$d")"
+    [ -f "$d/meta.json" ] || continue
+    body="$(mirror_body "$id")"
+    sum="$(printf '%s' "$body" | shasum | cut -c1-40)"
+    f="$MIRRORS/$id.issue"
+    [ "$(sed -n 2p "$f" 2>/dev/null)" = "$sum" ] && continue
+    title="$(jq -r '"#\(.seq // "-") \(.outcome): \(.title)"' "$d/meta.json" \
+      | head -c 200)"
+    if [ -f "$f" ]; then
+      k="$(head -1 "$f")"
+      bot_gh api -X PATCH "repos/$INBOX_REPO/issues/$k" -f title="$title" \
+        -f body="$body" >/dev/null 2>&1 || continue
+    else
+      k="$(bot_gh api -X POST "repos/$INBOX_REPO/issues" -f title="$title" \
+        -f body="$body" --jq .number 2>/dev/null)"
+      [ -n "$k" ] || continue
+      log "  mirrored $id as $INBOX_REPO#$k"
+    fi
+    # The time it was written, so a reply counts only for text already shown.
+    printf '%s\n%s\n%s\n' "$k" "$sum" "$(now_iso)" > "$f"
+  done
+}
+
 # Park the result for review. Everything sbfnk needs to decide is in the
 # spool; the commits stay in the bot's own clone until then.
 park() {
@@ -1826,6 +1919,7 @@ act_on_decisions() {
       rm -f "$PENDING/$id/stuck" "$PENDING/$id/tries"
     fi
     verb="$(head -1 "$decision" | tr -d '[:space:]')"
+    [ -f "$MIRRORS/$id.issue" ] && echo "$verb" > "$MIRRORS/$id.verb"
     repo="$(jq -r .repo "$meta")"; n="$(jq -r .number "$meta")"
     event="$(jq -r .event "$meta")"; outcome="$(jq -r .outcome "$meta")"
     work="$(jq -r .work "$meta")"; base="$(jq -r .base "$meta")"
@@ -3121,6 +3215,7 @@ candidates() {
 
 if $DECISIONS_ONLY; then
   act_on_decisions
+  mirror_sync
   # Here, every two minutes, so a marker that no longer holds goes promptly
   # rather than after whatever long job a heavy pass is on.
   sweep_given_up
