@@ -79,7 +79,7 @@ CLAUDE.md; the bot has it in every prompt.
   with the text as its body. Never post it on the issue or pull request
   itself: from the bot's account it reads as the bot answering itself and is
   ignored, and from sbfnk's it passes for words he typed. The relay waits
-  for his approval, then goes out as "Relayed for sbfnk".
+  for his approval, then goes out as "Relayed for @sbfnk".
 - Work for the bot that should have no public issue goes in the same inbox:
   an issue titled `owner/repo: what to do`, assigned to sbfnk-bot. Assigned
   by anyone but sbfnk, it waits for his approval.

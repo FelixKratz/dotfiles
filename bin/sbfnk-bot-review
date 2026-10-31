@@ -32,7 +32,7 @@
 #   sbfnk-bot-review relay owner/repo#N [TEXT]
 #                                        a reply you agreed elsewhere (TEXT, or
 #                                        stdin), for the bot to post under
-#                                        "Relayed for sbfnk"; it is parked
+#                                        "Relayed for @sbfnk"; it is parked
 #                                        like any other work and goes out only
 #                                        once you approve it, and the bot then
 #                                        takes it as yours. It is an issue in
@@ -478,7 +478,7 @@ case "$cmd" in
       fi
       case "$(meta "$id" .outcome)" in
         mention) echo "== the comment (not yours: nothing is published) ==" ;;
-        relay) echo "== text to post, under \"Relayed for sbfnk:\" ==" ;;
+        relay) echo "== text to post, under \"Relayed for @sbfnk:\" ==" ;;
         *) echo "== text to publish ==" ;;
       esac
       cat "$PENDING/$id/text.md"

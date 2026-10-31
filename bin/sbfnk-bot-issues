@@ -14,7 +14,7 @@
 # kinds of comment count as his without his account having written them,
 # each by its id in the ledger and only while nobody has edited it since:
 #   relay     a reply he agreed elsewhere and queued with "sbr relay", which
-#             the bot posts under "Relayed for sbfnk:" once he approves it
+#             the bot posts under "Relayed for @sbfnk:" once he approves it
 #   mention   someone else's comment, on an issue whose question the bot
 #             waits on or a PR it looks after, which he approved; one by a
 #             login in trusted-commenters needs no approval
@@ -1620,7 +1620,7 @@ park_mentions() {
 # under RELAY_LABEL and trusted by its id. The inbox issue is closed once
 # the reply is parked.
 RELAYS_TAKEN="$STATE_DIR/relays-taken"
-RELAY_LABEL="*Relayed for $OWNER_LOGIN:*"
+RELAY_LABEL="*Relayed for @$OWNER_LOGIN:*"
 
 # Park one relay: its name (the pending id), owner/repo#N, and a file with
 # the text. Fails, to be tried again, only when GitHub does not answer.
