@@ -45,6 +45,10 @@
         "~/Library/Caches",
         "~/.npm"
       ],
+      "denyWrite": [
+        "~/.config/sbfnk-bot",
+        "~/.local/share/sbfnk-bot-issues"
+      ],
       "denyRead": [
         "~/.config/sbfnk-bot",
         "~/.local/share/sbfnk-bot-issues",
@@ -85,6 +89,8 @@
       "WebFetch(domain:en.wikipedia.org)"
     ],
     "deny": [
+      "Edit(~/.config/sbfnk-bot/**)",
+      "Edit(~/.local/share/sbfnk-bot-issues/**)",
       "Read(~/.config/sbfnk-bot/**)",
       "Read(~/.local/share/sbfnk-bot-issues/**)",
       "Read(~/.ssh/**)",
