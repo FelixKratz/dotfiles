@@ -33,7 +33,9 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
   show it in full before he decides. Queue one only with his words.
 - Waiting work is also mirrored as issues in the inbox repository, so sbfnk
   sees it on GitHub. `mirror off` stops new mirrors and `mirror on` starts
-  them again; run either only when he asks.
+  them again; run either only when he asks. A reply of his on a mirror
+  issue (`discard`, or `answer` and his answer) counts as that decision;
+  approving stays here and with sbr.
 - `pause` stops the bot starting anything new (his decisions still go out,
   and a running job finishes); `resume` lets it carry on. With an account
   name, `pause ACCOUNT` keeps the bot off that one account while it carries

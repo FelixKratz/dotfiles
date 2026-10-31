@@ -200,10 +200,24 @@ done
 
 # A decision the bot has not yet carried out. One it has, on work that stays
 # parked (polish), is listed by mtime in the item's done file.
+# The decision that counts: the newer of yours here and one you made by
+# replying on the item's inbox issue.
+decision_of() {
+  local f="$DECISIONS/$1" g="$PENDING/$1/gh-decision"
+  if [ -f "$g" ] && { [ ! -f "$f" ] || [ "$g" -nt "$f" ]; }; then
+    echo "$g"
+  else
+    echo "$f"
+  fi
+}
+
 undecided() {
-  local f="$DECISIONS/$1"
+  local f sig
+  f="$(decision_of "$1")"
   [ -f "$f" ] || return 0
-  grep -qx "$(stat -f %m "$f")" "$PENDING/$1/done" 2>/dev/null
+  sig="$(stat -f %m "$f")"
+  [ "$f" = "$DECISIONS/$1" ] || sig="gh:$sig"
+  grep -qx "$sig" "$PENDING/$1/done" 2>/dev/null
 }
 
 waiting() {
@@ -255,7 +269,8 @@ meta() { jq -r "$2" "$PENDING/$1/meta.json"; }
 # Where an item stands, for list: a decision on its way, what it needs from
 # you, or the screen's flags.
 state() {
-  local d="$DECISIONS/$1" verb
+  local d verb
+  d="$(decision_of "$1")"
   if [ -f "$d" ] && ! undecided "$1" \
     && { [ ! -f "$PENDING/$1/stuck" ] || [ "$d" -nt "$PENDING/$1/stuck" ]; }; then
     verb="$(head -1 "$d" | tr -d '[:space:]')"

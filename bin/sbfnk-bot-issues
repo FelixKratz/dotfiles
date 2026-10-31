@@ -1741,7 +1741,7 @@ mirror_body() {
   fi
   printf '\nDecide with `sbr approve %s` (or `answer`, `discard`, `polish`) or on the\n' \
     "$(jq -r '.seq // ""' "$meta")"
-  printf 'desk.\n'
+  printf 'desk. A reply here of `discard`, or `answer` and your answer, also counts.\n'
 }
 
 mirror_sync() {
@@ -1782,6 +1782,69 @@ mirror_sync() {
     # The time it was written, so a reply counts only for text already shown.
     printf '%s\n%s\n%s\n' "$k" "$sum" "$(now_iso)" > "$f"
   done
+}
+
+# Replies sbfnk writes on a mirror issue: "discard", or "answer" and his
+# answer. Neither publishes anything. Approving and polishing stay with sbr
+# and the desk: on GitHub, a reply from his account is only as safe as every
+# place that holds his token. A reply counts once, only unedited, and only
+# for the text the mirror already showed when he wrote it. It is written
+# beside the item as gh-decision, which act_on_decisions reads like a file
+# of his in decisions/.
+INBOX_SINCE="$STATE_DIR/inbox-since"
+inbox_reply() {
+  bot_gh api -X POST "repos/$INBOX_REPO/issues/$1/comments" -f body="$2" \
+    >/dev/null 2>&1
+}
+inbox_decisions() {
+  local started since list c k cid id f verb text outcome
+  ls "$MIRRORS"/*.issue >/dev/null 2>&1 || return 0
+  started="$(now_iso)"
+  since="$(cat "$INBOX_SINCE" 2>/dev/null)"
+  [ -n "$since" ] || since="$started"
+  list="$(bot_gh api "repos/$INBOX_REPO/issues/comments?since=$since&per_page=100" \
+    2>/dev/null)" || return 0
+  echo "$started" > "$INBOX_SINCE"
+  while read -r c; do
+    [ -n "$c" ] || continue
+    k="$(jq -r .issue <<< "$c")"; cid="$(jq -r .id <<< "$c")"
+    id=""
+    for f in "$MIRRORS"/*.issue; do
+      [ "$(head -1 "$f")" = "$k" ] && id="$(basename "$f" .issue)"
+    done
+    [ -n "$id" ] && [ -d "$PENDING/$id" ] || continue
+    verb="$(jq -r '.body | sub("^\\s+"; "") | split("\n")[0] | split(" ")[0]
+      | ascii_downcase' <<< "$c")"
+    text="$(jq -r '.body | sub("^\\s*\\S+\\s*"; "")' <<< "$c")"
+    outcome="$(jq -r .outcome "$PENDING/$id/meta.json")"
+    case "$verb" in
+      discard) text="" ;;
+      answer)
+        case "$outcome" in
+          pr|comment|request|mention) ;;
+          *) inbox_reply "$k" "\`answer\` does not apply to a $outcome; decide with sbr or the desk."
+             continue ;;
+        esac
+        [ -n "$(tr -d '[:space:]' <<< "$text")" ] \
+          || { inbox_reply "$k" "Nothing recorded: put your answer after \`answer\`."; continue; } ;;
+      approve|force|polish|push|comment)
+        inbox_reply "$k" "Nothing recorded: \`$verb\` is for sbr or the desk. Here only \`discard\` and \`answer\` count."
+        continue ;;
+      *) continue ;;
+    esac
+    if ! [[ "$(jq -r .created <<< "$c")" > "$(sed -n 3p "$MIRRORS/$id.issue")" ]]; then
+      inbox_reply "$k" "Nothing recorded: the text above changed after you wrote that. Read it again, then reply again."
+      continue
+    fi
+    printf '%s\n%s' "$verb" "$text" > "$PENDING/$id/gh-decision"
+    chmod 644 "$PENDING/$id/gh-decision"
+    bot_gh api -X POST "repos/$INBOX_REPO/issues/comments/$cid/reactions" \
+      -f content=+1 >/dev/null 2>&1
+    log "  $id: $verb recorded from $INBOX_REPO#$k"
+  done <<< "$(jq -c --arg o "$OWNER_LOGIN" '.[]
+    | select(.user.login == $o and .created_at == .updated_at)
+    | {id, issue: (.issue_url | sub(".*/"; "")), created: .created_at,
+       body: (.body // "")}' <<< "$list" 2>/dev/null)"
 }
 
 # Park the result for review. Everything sbfnk needs to decide is in the
@@ -1903,14 +1966,21 @@ act_on_decisions() {
   local meta id repo n event outcome work base branch title body verb
   local flagged cost url decision sig err node f
   take_relays
+  inbox_decisions
   for meta in "$PENDING"/*/meta.json; do
     [ -f "$meta" ] || continue
     id="$(jq -r .id "$meta")"
     decision="$DECISIONS/$id"
+    # One made on GitHub counts when it is the newer.
+    if [ -f "$PENDING/$id/gh-decision" ] && { [ ! -f "$decision" ] \
+      || [ "$PENDING/$id/gh-decision" -nt "$decision" ]; }; then
+      decision="$PENDING/$id/gh-decision"
+    fi
     [ -f "$decision" ] || continue
     # sbfnk's decision files are his to delete, so ones already carried out
     # on work that stays parked (polish) are remembered by their mtime.
     sig="$(stat -f %m "$decision")"
+    [ "$decision" = "$DECISIONS/$id" ] || sig="gh:$sig"
     grep -qx "$sig" "$PENDING/$id/done" 2>/dev/null && continue
     # Given up on: only a decision made since then starts it again, with a
     # clean slate.
