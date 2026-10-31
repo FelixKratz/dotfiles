@@ -28,7 +28,7 @@ through Remote Control when he has no ssh connection. `sbfnk-bot-review`
   on. Approve makes it an instruction to the bot, answer approves it with
   his private steer, discard leaves it as background. Nothing is published.
 - A "relay" item is a reply sbfnk agreed elsewhere, queued with
-  `relay owner/repo#N "..."`. Approve posts it, as the bot under "Relayed
+  `relay owner/repo#N "..."` (which opens an issue in the inbox repository). Approve posts it, as the bot under "Relayed
   for sbfnk:", and the bot then takes it as his. No model screens it, so
   show it in full before he decides. Queue one only with his words.
 - `pause` stops the bot starting anything new (his decisions still go out,

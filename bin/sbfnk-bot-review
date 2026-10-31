@@ -35,7 +35,11 @@
 #                                        "Relayed for sbfnk"; it is parked
 #                                        like any other work and goes out only
 #                                        once you approve it, and the bot then
-#                                        takes it as yours
+#                                        takes it as yours. It is an issue in
+#                                        the inbox repository titled "relay
+#                                        owner/repo#N", so it works from any
+#                                        machine, and any session with GitHub
+#                                        can open one by hand
 #   sbfnk-bot-review push [ID]           push the bot's commits from your own
 #                                        account, when they edit CI files its
 #                                        token may not push; the bot then
@@ -106,6 +110,28 @@ case "${1:-}" in
   -h|--help|help) awk 'NR > 1 && !/^#/ {exit} NR > 1' "$0"; exit 0 ;;
 esac
 
+INBOX_REPO="${SBFNK_BOT_INBOX:-sbfnk/sbfnk-bot-inbox}"
+
+# A relay is an issue in the inbox, opened from wherever this runs: it needs
+# GitHub, not the bot's machine.
+if [ "${1:-}" = relay ]; then
+  target="${2:-}"
+  [[ "$target" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]] \
+    || die "usage: relay owner/repo#N [TEXT]"
+  shift 2
+  text="$*"
+  if [ -z "$text" ]; then
+    [ -t 0 ] && echo "Type the reply (public once approved), then Ctrl-D:" >&2
+    text="$(cat)"
+  fi
+  [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ] || die "empty reply"
+  url="$(gh issue create -R "$INBOX_REPO" --title "relay $target" \
+    --body "$text")" || die "could not open the relay in $INBOX_REPO"
+  echo "relay for $target queued: $url"
+  echo "The bot parks it within two minutes; nothing is posted until you approve it."
+  exit 0
+fi
+
 # Not the bot's machine: run the same command there.
 if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
   host="$(sed -e 's/#.*//' "$HOST_FILE" 2>/dev/null | tr -d '[:space:]')"
@@ -122,7 +148,7 @@ if [ ! -d "$SPOOL/pending" ] && [ -z "${SBFNK_BOT_REVIEW_HERE:-}" ]; then
     case "${1:-}" in
       diff|watch) ;;
       show) [[ " $* " == *" --diff "* ]] || needs_stdin=0 ;;
-      answer|comment|relay) [ "$#" -ge 3 ] && needs_stdin=0 ;;
+      answer|comment) [ "$#" -ge 3 ] && needs_stdin=0 ;;
       *) needs_stdin=0 ;;
     esac
   fi
@@ -167,12 +193,6 @@ linkify() {
 for f in "$DECISIONS"/*; do
   [ -f "$f" ] || continue
   [ -d "$PENDING/$(basename "$f")" ] || rm -f "$f"
-done
-# Relays the bot has taken in are parked work now, or done.
-for f in "$DECISIONS"/relay/*; do
-  [ -f "$f" ] || continue
-  grep -qxF "$(basename "$f")" "$SPOOL/log/relays-taken" 2>/dev/null \
-    && rm -f "$f"
 done
 
 # A decision the bot has not yet carried out. One it has, on work that stays
@@ -521,28 +541,6 @@ case "$cmd" in
   discard)
     id="$(resolve "${1:-}")" || exit 1
     decide "$id" discard ;;
-  relay)
-    target="${1:-}"
-    [[ "$target" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]] \
-      || die "usage: relay owner/repo#N [TEXT]"
-    shift
-    text="$*"
-    if [ -z "$text" ]; then
-      [ -t 0 ] && echo "Type the reply (public once approved), then Ctrl-D:" >&2
-      text="$(cat)"
-    fi
-    [ -n "$(printf '%s' "$text" | tr -d '[:space:]')" ] || die "empty reply"
-    mkdir -p "$DECISIONS/relay" && chmod 755 "$DECISIONS/relay" \
-      || die "cannot write to $DECISIONS/relay"
-    repo="${target%#*}"
-    name="${repo//\//_}-${target##*#}-relay-$(date +%Y%m%d-%H%M%S)"
-    tmp="$(mktemp "$DECISIONS/relay/.relay.XXXXXX")" \
-      || die "cannot write to $DECISIONS/relay"
-    printf '%s\n%s\n' "$target" "$text" > "$tmp"
-    chmod 644 "$tmp"
-    mv "$tmp" "$DECISIONS/relay/$name"
-    echo "relay for $target queued. The bot parks it within two minutes;"
-    echo "nothing is posted until you approve it (sbr lists it)." ;;
   push)
     id="$(resolve "${1:-}")" || exit 1
     dir="$PENDING/$id"
@@ -560,6 +558,9 @@ case "$cmd" in
     branch="$(sed -n 1p "$dir/push-to")"; from="$(sed -n 2p "$dir/push-to")"
     token="$(gh auth token -u sbfnk 2>/dev/null)" \
       || die "no gh login for sbfnk here (gh auth login)"
+    # An inbox task's commits go to the repository it works on.
+    repo="$(meta "$id" '.code_repo // empty')"
+    [ -n "$repo" ] || repo="$(meta "$id" .repo)"
     url="https://github.com/$repo.git"
     # Your token in a header set through the environment, as the bot does.
     as_you() {

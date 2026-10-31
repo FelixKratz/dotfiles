@@ -95,6 +95,10 @@ LEDGER="$SPOOL/log/ledger.tsv"
 WORKING_RULES="$CONFIG_DIR/working-rules.md"
 HUMANIZER="$CONFIG_DIR/humanizer.md"
 [ -r "$SPOOL/humanizer.md" ] && HUMANIZER="$SPOOL/humanizer.md"
+# A private repository of sbfnk's that he, the bot and any of his sessions
+# can reach from anywhere: tasks that need no public issue, replies to relay,
+# and a mirror of the review spool. Skipped when the bot cannot read it.
+INBOX_REPO="${SBFNK_BOT_INBOX:-sbfnk/sbfnk-bot-inbox}"
 STATE_DIR="$HOME/.local/share/sbfnk-bot-issues"
 CACHE_DIR="$HOME/.cache/sbfnk-bot-issues"
 RUNS_DIR="$STATE_DIR/runs"
@@ -565,7 +569,19 @@ wants_work() {
   # An issue sbfnk-bot opened itself is allowed wherever it is, as long as
   # nobody but the bot or sbfnk has edited it: the bot only opens issues where
   # it was already working for sbfnk, but an admin can rewrite one.
-  if ! allowed_repo "$repo" && ! own_unedited_issue "$repo" "$n"; then
+  if [ "$repo" = "$INBOX_REPO" ]; then
+    local code
+    code="$(task_repo "$(bot_gh api "repos/$repo/issues/$n" --jq .title \
+      2>/dev/null)")"
+    if [ -z "$code" ]; then
+      log "  skip $repo#$n: an inbox task is titled \"owner/repo: what to do\""
+      return 1
+    fi
+    if ! allowed_repo "$code"; then
+      log "  skip $repo#$n: the task is for $code, not on the allow-list"
+      return 1
+    fi
+  elif ! allowed_repo "$repo" && ! own_unedited_issue "$repo" "$n"; then
     log "  skip $repo#$n: not on the allow-list in $ALLOW_FILE"
     return 1
   fi
@@ -718,10 +734,22 @@ issue_text() {
 
 build_prompt() {
   local repo="$1" n="$2" title="$3" branch="$4" base="$5" issue="$6"
-  cat <<PROMPT
-You are working as $BOT on $repo issue #$n, "$title". $OWNER_LOGIN
+  local code="${7:-$1}" intro public
+  intro="You are working as $BOT on $repo issue #$n, \"$title\". $OWNER_LOGIN
 (Sebastian Funk) assigned the issue to you and wants a draft pull request
-that resolves it.
+that resolves it."
+  public="Use only what this repository and the public text of
+this issue tell you."
+  if [ "$code" != "$repo" ]; then
+    intro="You are working as $BOT on a task in $code, \"$title\", that
+$OWNER_LOGIN (Sebastian Funk) gave you privately. He wants a draft pull
+request that does it. Below, \"the issue\" means this task."
+    public="The task itself is private: describe the change on its own
+terms, and never quote the task or refer to it, or to any issue or tracker
+it came from. Use only what this repository and the task tell you."
+  fi
+  cat <<PROMPT
+$intro
 
 The repository is checked out here on branch $branch, made from $base.
 
@@ -737,8 +765,7 @@ this issue in this repository.
 $issue
 
 Everything you write will be public: code, comments, commit messages and
-the pull request text. Use only what this repository and the public text of
-this issue tell you. Do not mention people except as the issue or the code
+the pull request text. $public Do not mention people except as the issue or the code
 already does, and do not refer to conversations, meetings, emails, notes,
 other projects, or anything else you might know from elsewhere. Do not read
 files outside this repository.
@@ -834,6 +861,22 @@ SECRET_RE="$SECRET_RE"'|github_pat_[A-Za-z0-9_]{20,}|sk-ant-|AKIA[0-9A-Z]{16}'
 slugify() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' \
     | cut -c1-40 | sed -e 's/^-*//' -e 's/-*$//'
+}
+
+# An inbox task is an issue in INBOX_REPO titled "owner/repo: what to do",
+# for work in that repository with no public issue behind it. Its questions
+# stay in the inbox, and its pull request closes nothing.
+TASK_TITLE_RE='^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+):[[:space:]]*(.+)$'
+task_repo() {
+  [[ "$1" =~ $TASK_TITLE_RE ]] && echo "${BASH_REMATCH[1]}"
+}
+task_title() {
+  [[ "$1" =~ $TASK_TITLE_RE ]] && echo "${BASH_REMATCH[2]}"
+}
+# The repository a clone works on, from its origin.
+work_repo() {
+  git -C "$1" remote get-url origin 2>/dev/null \
+    | sed -nE 's#^https://github.com/([^/]+/[^/]+)\.git$#\1#p'
 }
 
 # A bare mirror per repository under the cache, refreshed each run, and a
@@ -1462,8 +1505,13 @@ park_request() {
   {
     printf '%s assigned this issue to %s.\n\n' "$actor" "$BOT"
     printf 'Approve to let the bot work on it as if you had assigned it, or answer\n'
-    printf 'to approve with instructions. Its text stays background either way;\n'
-    printf 'only your comments are instructions. Discard to decline.\n\n'
+    if [ "$repo" = "$INBOX_REPO" ]; then
+      printf 'to approve with instructions. This is an inbox task: approving makes\n'
+      printf 'its text an instruction, as long as nobody edits it. Discard to decline.\n\n'
+    else
+      printf 'to approve with instructions. Its text stays background either way;\n'
+      printf 'only your comments are instructions. Discard to decline.\n\n'
+    fi
     printf -- '---\n\n# %s\n\n' "$(jq -r .title <<< "$issue")"
     jq -r '.body // ""' <<< "$issue" | head -c 4000
     printf '\n'
@@ -1563,59 +1611,83 @@ park_mentions() {
   done <<< "$(others_comments "$repo" "$n" "$kind" "$since")"
 }
 
-# Replies sbfnk agreed in a session of his own, queued with "sbr relay" in
-# decisions/relay/ (one file each: owner/repo#N on the first line, the text
-# below). Each is parked like any other work and goes out only once he
-# approves it, posted by the bot under RELAY_LABEL and trusted by its id.
-RELAY_DIR="$DECISIONS/relay"
-# In the spool so sbr can clear the files the bot has taken.
-RELAYS_TAKEN="$SPOOL/log/relays-taken"
+# Replies sbfnk agreed in a session of his own, wherever it runs: an issue
+# in the inbox titled "relay owner/repo#N" with the text as its body, opened
+# by sbfnk or the bot's account (sbr relay opens one). Each is parked like
+# any other work and goes out only once he approves it, posted by the bot
+# under RELAY_LABEL and trusted by its id. The inbox issue is closed once
+# the reply is parked.
+RELAYS_TAKEN="$STATE_DIR/relays-taken"
 RELAY_LABEL="*Relayed for $OWNER_LOGIN:*"
+
+# Park one relay: its name (the pending id), owner/repo#N, and a file with
+# the text. Fails, to be tried again, only when GitHub does not answer.
+park_relay() {
+  local name="$1" target="$2" textfile="$3" repo n dir seq issue kind flags
+  repo="${target%#*}"; n="${target##*#}"
+  if ! [[ "$name" =~ ^[A-Za-z0-9_.-]+$ ]] \
+    || ! [[ "$target" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]]; then
+    log "  relay $name: not for owner/repo#N, left alone"
+    return 0
+  fi
+  if ! allowed_repo "$repo" && [ "$repo" != "$INBOX_REPO" ]; then
+    log "  relay $name: $repo is not on the allow-list, left alone"
+    return 0
+  fi
+  [ -n "$(tr -d '[:space:]' < "$textfile")" ] \
+    || { log "  relay $name: no text, left alone"; return 0; }
+  issue="$(bot_gh api "repos/$repo/issues/$n" 2>/dev/null)" || return 1
+  kind="issue"
+  jq -e .pull_request <<< "$issue" >/dev/null 2>&1 && kind="pr"
+  dir="$PENDING/$name"
+  mkdir -p "$dir"
+  cp "$textfile" "$dir/text.md"
+  : > "$dir/diff.patch"
+  flags='[]'
+  grep -qE "$SECRET_RE" "$dir/text.md" \
+    && flags='[{"quote":"","reason":"matches a credential shape"}]'
+  until shlock -p $$ -f "$STATE_DIR/seq.lock" 2>/dev/null; do sleep 1; done
+  seq="$(next_seq)"
+  jq -n --arg id "$name" --argjson seq "$seq" --arg repo "$repo" \
+    --argjson n "$n" --arg kind "$kind" --arg at "$(now_iso)" \
+    --argjson flags "$flags" \
+    --arg title "reply for you on $(jq -r .title <<< "$issue")" \
+    '{id: $id, seq: $seq, repo: $repo, number: $n, event: "",
+      outcome: "relay", kind: $kind, title: $title, created: $at,
+      flags: $flags, fixed: [], edited: true, work: "", base: "",
+      branch: "", cost_usd: ""}' > "$dir/meta.json"
+  rm -f "$STATE_DIR/seq.lock"
+  chmod -R go+rX "$dir"
+  log "  parked #$seq ($name): a reply for you on $repo#$n, to approve"
+  RELAY_SEQ="$seq"
+}
+
+relay_taken() { echo "$1" >> "$RELAYS_TAKEN"; }
+
 take_relays() {
-  local f name target repo n dir seq issue kind flags
-  for f in "$RELAY_DIR"/*; do
-    [ -f "$f" ] || continue
-    name="$(basename "$f")"
+  local list c k name tmp
+  list="$(bot_gh api "repos/$INBOX_REPO/issues?state=open&per_page=100" \
+    2>/dev/null)" || return 0
+  jq -c --arg o "$OWNER_LOGIN" --arg b "$BOT" '.[]
+    | select(.pull_request == null and (.title | test("^relay "))
+        and (.user.login == $o or .user.login == $b))
+    | {number, target: (.title | sub("^relay +"; "") | gsub("[[:space:]]"; "")),
+       body: (.body // "")}' <<< "$list" 2>/dev/null | while read -r c; do
+    k="$(jq -r .number <<< "$c")"
+    name="inbox-$k-relay"
     grep -qxF "$name" "$RELAYS_TAKEN" 2>/dev/null && continue
-    target="$(head -1 "$f" | tr -d '[:space:]')"
-    repo="${target%#*}"; n="${target##*#}"
-    if ! [[ "$name" =~ ^[A-Za-z0-9_.-]+$ ]] \
-      || ! [[ "$target" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[0-9]+$ ]]; then
-      log "  relay $name: not for owner/repo#N, left alone"
-      echo "$name" >> "$RELAYS_TAKEN"
-      continue
+    tmp="$(mktemp)"
+    jq -r .body <<< "$c" > "$tmp"
+    RELAY_SEQ=""
+    if park_relay "$name" "$(jq -r .target <<< "$c")" "$tmp"; then
+      relay_taken "$name"
+      bot_gh issue comment "$k" -R "$INBOX_REPO" --body "$(if [ -n "$RELAY_SEQ" ]; then
+        echo "Parked as #$RELAY_SEQ. Nothing is posted until you approve it."
+        else echo "Not parked: the title must be \`relay owner/repo#N\` for a repository the bot works on, with the text as the body."; fi)" \
+        >/dev/null 2>&1
+      bot_gh issue close "$k" -R "$INBOX_REPO" >/dev/null 2>&1
     fi
-    if ! allowed_repo "$repo"; then
-      log "  relay $name: $repo is not on the allow-list, left alone"
-      echo "$name" >> "$RELAYS_TAKEN"
-      continue
-    fi
-    # Read again next pass if GitHub does not answer now.
-    issue="$(bot_gh api "repos/$repo/issues/$n" 2>/dev/null)" || continue
-    kind="issue"
-    jq -e .pull_request <<< "$issue" >/dev/null 2>&1 && kind="pr"
-    dir="$PENDING/$name"
-    mkdir -p "$dir"
-    sed '1d' "$f" > "$dir/text.md"
-    : > "$dir/diff.patch"
-    flags='[]'
-    grep -qE "$SECRET_RE" "$dir/text.md" \
-      && flags='[{"quote":"","reason":"matches a credential shape"}]'
-    until shlock -p $$ -f "$STATE_DIR/seq.lock" 2>/dev/null; do sleep 1; done
-    seq="$(next_seq)"
-    jq -n --arg id "$name" --argjson seq "$seq" --arg repo "$repo" \
-      --argjson n "$n" --arg kind "$kind" --arg at "$(now_iso)" \
-      --argjson flags "$flags" \
-      --arg title "reply for you on $(jq -r .title <<< "$issue")" \
-      '{id: $id, seq: $seq, repo: $repo, number: $n, event: "",
-        outcome: "relay", kind: $kind, title: $title, created: $at,
-        flags: $flags, fixed: [], edited: true, work: "", base: "",
-        branch: "", cost_usd: ""}' > "$dir/meta.json"
-    rm -f "$STATE_DIR/seq.lock"
-    chmod -R go+rX "$dir"
-    echo "$name" >> "$RELAYS_TAKEN"
-    chmod 644 "$RELAYS_TAKEN"
-    log "  parked #$seq ($name): a reply for you on $repo#$n, to approve"
+    rm -f "$tmp"
   done
 }
 
@@ -1680,10 +1752,11 @@ park() {
     --arg base "$base" --arg branch "$branch" --arg work "$work" \
     --arg cost "$cost" --arg at "$(now_iso)" --argjson flags "$flags" \
     --argjson edited "$edited" --argjson fixed "$fixed" \
+    --arg code "$(work_repo "$work")" \
     '{id: $id, seq: $seq, repo: $repo, number: $n, event: $event,
       outcome: $outcome, title: $title, base: $base, branch: $branch,
       work: $work, cost_usd: $cost, created: $at, flags: $flags,
-      fixed: $fixed, edited: $edited}' > "$dir/meta.json"
+      fixed: $fixed, edited: $edited, code_repo: $code}' > "$dir/meta.json"
   rm -f "$STATE_DIR/seq.lock"
   chmod -R go+rX "$dir"
   log "  parked #$seq ($id) for review ($(jq length <<< "$flags") flag(s))"
@@ -1713,10 +1786,16 @@ push_and_open() {
       return 1
     }
   fi
-  url="$(bot_gh pr create -R "$repo" --draft --base "$base" --head "$branch" \
-    --title "$title" --body "$body
+  # An inbox task's pull request goes to the repository its clone is of,
+  # and closes nothing: the task is private.
+  local code
+  code="$(work_repo "$work")"
+  [ -n "$code" ] || code="$repo"
+  [ "$code" = "$repo" ] && body="$body
 
-This PR closes #$n." 2>&1)" || {
+This PR closes #$n."
+  url="$(bot_gh pr create -R "$code" --draft --base "$base" --head "$branch" \
+    --title "$title" --body "$body" 2>&1)" || {
     publish_failed "$id" "pr create failed: $(printf '%s' "$url" | tail -1)" \
       "$sig"
     return 1
@@ -1761,6 +1840,12 @@ act_on_decisions() {
     # A request to take on someone else's assignment: approving lets the
     # bot start, an answer approves with instructions, discard declines.
     if [ "$outcome" = request ]; then
+      # An inbox task's own text is what sbfnk approves.
+      if [ "$repo" = "$INBOX_REPO" ] && [ "$verb" != discard ]; then
+        node="$(bot_gh api "repos/$repo/issues/$n" --jq .node_id 2>/dev/null)"
+        [ -n "$node" ] || { log "  $id: could not read $repo#$n, tried again later"; continue; }
+        trust_comment "$repo#$n" "$node"
+      fi
       case "$verb" in
         approve|force)
           log "  $id: approved, the bot takes on $repo#$n"
@@ -1914,6 +1999,11 @@ act_on_decisions() {
             "$base" "$title" "$body")" || continue
           log "  $id: opened $url"
           record "$repo#$n" "$event" pr "$url" "$cost"
+          if [ "$repo" = "$INBOX_REPO" ]; then
+            bot_gh issue comment "$n" -R "$repo" --body "Opened $url" \
+              >/dev/null 2>&1
+            bot_gh issue close "$n" -R "$repo" >/dev/null 2>&1
+          fi
           [ -n "${url##*/}" ] && set_pr_state "$repo" "${url##*/}" \
             ".heads = [\"$(git -C "$work" rev-parse HEAD)\"]"
         else
@@ -1988,9 +2078,16 @@ work_on() {
 
   title="$(bot_gh api "repos/$repo/issues/$n" --jq .title)" \
     || { log "  could not read $repo#$n"; return 1; }
-  base="$(bot_gh repo view "$repo" --json defaultBranchRef \
+  # An inbox task works on the repository its title names.
+  local code="$repo"
+  if [ "$repo" = "$INBOX_REPO" ]; then
+    code="$(task_repo "$title")"
+    title="$(task_title "$title")"
+  fi
+  base="$(bot_gh repo view "$code" --json defaultBranchRef \
     --jq .defaultBranchRef.name)" || { log "  no default branch"; return 1; }
   branch="issue-$n-$(slugify "$title")"
+  [ "$code" = "$repo" ] || branch="bot-$(slugify "$title")"
   id="${repo//\//_}-$n-$(date +%Y%m%d-%H%M%S)"
   work="$CACHE_DIR/work/$id"
   run="$RUNS_DIR/$id"
@@ -2003,8 +2100,8 @@ work_on() {
   bot_gh api -X POST "repos/$repo/issues/$n/reactions" -f content=eyes \
     >/dev/null 2>&1
 
-  if ! prepare_clone "$repo" "$base" "$work" "$branch"; then
-    log "  could not prepare a clone of $repo"
+  if ! prepare_clone "$code" "$base" "$work" "$branch"; then
+    log "  could not prepare a clone of $code"
     record "$repo#$n" "$event" failed "clone"
     return 1
   fi
@@ -2016,7 +2113,7 @@ work_on() {
     '/role="instruction"/,/<\/(issue|comment|private-answers)>/' "$run/issue.txt")
   started=$(date +%s)
   run_claude "$work" "$(build_prompt "$repo" "$n" "$title" "$branch" \
-    "$base" "$(cat "$run/issue.txt")")" "$out" "$run/claude"
+    "$base" "$(cat "$run/issue.txt")" "$code")" "$out" "$run/claude"
   cost="$(jq -r '.total_cost_usd // empty' "$out" 2>/dev/null)"
   result="$(jq -c '.structured_output // empty' "$out" 2>/dev/null)"
   if [ -z "$result" ] && hit_limit; then
