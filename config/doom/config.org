@@ -71,6 +71,7 @@ org-roam and one without =mail= does not build the mail clients. See
 ** Development
 #+begin_src emacs-lisp
 (package! quarto-mode)             ; Quarto documents
+(package! typst-ts-mode)           ; Typst documents
 (package! eglot-jl)                ; Julia LSP via eglot
 (package! code-review
   :recipe (:host github :repo "doomelpa/code-review"))
@@ -649,6 +650,21 @@ Ensure Julia REPL window is displayed when evaluating code (it was staying hidde
 #+begin_src emacs-lisp
 (setq python-interpreter "~/.venv/bin/python")
 (setq python-shell-interpreter "~/.venv/bin/python")
+#+end_src
+
+* Typst
+Tree-sitter mode for Typst, with tinymist (=brew install tinymist=) as the
+language server through lsp-mode.  The grammar is not bundled: install it once
+with =M-x treesit-install-language-grammar RET typst=.
+#+begin_src emacs-lisp
+(use-package! typst-ts-mode
+  :mode "\\.typ\\'"
+  :init
+  (after! treesit
+    (add-to-list 'treesit-language-source-alist
+                 '(typst "https://github.com/uben0/tree-sitter-typst")))
+  :config
+  (add-hook 'typst-ts-mode-local-vars-hook #'lsp! 'append))
 #+end_src
 
 * Polymode
