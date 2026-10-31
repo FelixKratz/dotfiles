@@ -3,7 +3,7 @@
 #
 # sbfnk-bot-issues publishes nothing on its own. Each result waits in the
 # review spool until you approve it here. Approvals and discards are carried
-# out within two minutes; reruns and polish wait for any job in progress.
+# out within two minutes; polish and answers wait for the next job to start.
 #
 # Works on the machine the bot runs on, or anywhere else once that
 # machine's ssh alias is the one line of ~/.config/dotfiles/bot-host.
@@ -257,8 +257,8 @@ decide() {
   chmod 644 "$tmp"
   mv "$tmp" "$DECISIONS/$id"
   case "$verb" in
-    polish) echo "polish recorded for $id; it runs when no other job is running" ;;
-    answer) echo "answer recorded for $id; the bot starts on it when no other job is running" ;;
+    polish) echo "polish recorded for $id; it runs when the bot next starts a job" ;;
+    answer) echo "answer recorded for $id; the bot starts on it when it next starts a job" ;;
     *) echo "$verb recorded for $id; carried out within two minutes" ;;
   esac
   refresh_bar "$verb"
@@ -713,7 +713,9 @@ $note}"
     fi
     latest="$(ls -t "$SPOOL"/log/failures/*.txt 2>/dev/null | head -1)"
     if [ -n "$latest" ]; then
-      printf '\n== latest failure: %s ==\n' "$(basename "$latest" .txt)"
+      printf '\n== latest failure, %s: %s ==\n' \
+        "$(date -r "$(stat -f %m "$latest")" '+%a %d %b %H:%M')" \
+        "$(basename "$latest" .txt)"
       clean < "$latest"
     fi ;;
   *)
