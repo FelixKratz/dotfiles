@@ -1909,13 +1909,24 @@ park() {
     --arg cost "$cost" --arg at "$(now_iso)" --argjson flags "$flags" \
     --argjson edited "$edited" --argjson fixed "$fixed" \
     --arg code "$(work_repo "$work")" \
+    --arg head "$(git -C "$work" rev-parse HEAD 2>/dev/null)" \
     '{id: $id, seq: $seq, repo: $repo, number: $n, event: $event,
       outcome: $outcome, title: $title, base: $base, branch: $branch,
       work: $work, cost_usd: $cost, created: $at, flags: $flags,
-      fixed: $fixed, edited: $edited, code_repo: $code}' > "$dir/meta.json"
+      fixed: $fixed, edited: $edited, code_repo: $code, head: $head}' \
+    > "$dir/meta.json"
   rm -f "$STATE_DIR/seq.lock"
   chmod -R go+rX "$dir"
   log "  parked #$seq ($id) for review ($(jq length <<< "$flags") flag(s))"
+}
+
+# Parked clones sit where every sandboxed run may write, so what goes out
+# must be the commits sbfnk was shown: the HEAD recorded when the work was
+# parked.
+clone_moved() {
+  local meta="$1" work="$2" want
+  want="$(jq -r "${3:-.head} // empty" "$meta")"
+  [ -n "$want" ] && [ "$(git -C "$work" rev-parse HEAD 2>/dev/null)" != "$want" ]
 }
 
 push_and_open() {
@@ -2156,6 +2167,11 @@ act_on_decisions() {
         if grep -qE "$SECRET_RE" "$PENDING/$id/text.md" \
           "$PENDING/$id/diff.patch"; then
           log "  $id: refused, the text matched a credential shape"
+          continue
+        fi
+        if [ "$outcome" = pr ] && clone_moved "$meta" "$work"; then
+          publish_failed "$id" "its clone changed after it was parked, so it is not what you reviewed" \
+            "$sig" give_up
           continue
         fi
         if [ "$outcome" = pr ]; then
@@ -2761,9 +2777,11 @@ update_pr() {
     --arg upto "$started_at" --argjson commits "${commits:-0}" \
     --argjson edited "$edited" \
     --arg head_sha "$head_sha" \
+    --arg work_head "$(git -C "$work" rev-parse HEAD 2>/dev/null)" \
     '{id: $id, repo: $repo, number: $pr, pr: $pr, outcome: "update",
       title: ("update to #" + ($pr | tostring) + ": " + $title),
-      head: $head, head_sha: $head_sha, base: $base, work: $work,
+      head: $head, head_sha: $head_sha, work_head: $work_head, base: $base,
+      work: $work,
       created: $at, flags: $flags,
       fixed: [], edited: $edited, handled_until: $upto, commits: $commits}' \
     > "$dir/meta.json"
@@ -2817,6 +2835,11 @@ publish_update() {
 
   if grep -qE "$SECRET_RE" "$dir/text.md" "$dir/diff.patch"; then
     log "  $id: refused, the text matched a credential shape"
+    return 1
+  fi
+  if clone_moved "$meta" "$work" .work_head; then
+    publish_failed "$id" "its clone changed after it was prepared, so it is not what was screened" \
+      "${2:-}" give_up
     return 1
   fi
   # A PR merged or closed since the work was parked takes no more commits.
