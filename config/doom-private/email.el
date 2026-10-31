@@ -1246,6 +1246,15 @@ Return nil if it could not be started."
         "C-c C-s" #'sf/insert-signature)
   (map! :map org-msg-edit-mode-map
         "C-c TAB" #'notmuch-address-expand-name)
+  ;; `org-mode-map' binds C-c C-f to `org-forward-heading-same-level', which
+  ;; swallows the prefix the identity keys use in `notmuch-message-mode-map'.
+  ;; Shadow it here, and offer the same two commands on the local leader.
+  (map! :map org-msg-edit-mode-map
+        "C-c C-f f" #'sf/notmuch-set-identity
+        "C-c C-f F" #'sf/notmuch-cycle-identity
+        :localleader
+        :desc "pick From identity" "f" #'sf/notmuch-set-identity
+        :desc "cycle From identity" "F" #'sf/notmuch-cycle-identity)
   (map! :map org-msg-edit-mode-map
         [remap save-buffer] #'sf/notmuch-compose-save)
   (map! :map message-mode-map

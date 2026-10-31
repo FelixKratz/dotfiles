@@ -457,13 +457,13 @@ TODO in =~/org-roam/mail.org= and clears the flag.
 | =U=                     | Toggle threaded / unthreaded           |
 | =V=                     | View in browser                        |
 
-| Key (compose) | Action                             |
-|---------------+------------------------------------|
-| =C-c C-f f=   | Pick the From identity             |
-| =C-c C-f F=   | Cycle the From identity            |
-| =C-c TAB=     | Expand address                     |
-| =C-c C-s=     | Insert signature                   |
-| =C-x C-s=     | Save draft (resume with =SPC e r=) |
+| Key (compose)           | Action                             |
+|-------------------------+------------------------------------|
+| =C-c C-f f= / =SPC m f= | Pick the From identity             |
+| =C-c C-f F= / =SPC m F= | Cycle the From identity            |
+| =C-c TAB=               | Expand address                     |
+| =C-c C-s=               | Insert signature                   |
+| =C-x C-s=               | Save draft (resume with =SPC e r=) |
 
 * Bluesky
 Credentials stored in =~/.authinfo.gpg= as:
