@@ -1,15 +1,18 @@
 #!/bin/zsh
-# Daily snapshot of ~/.claude/projects/ to pCloud.
-# Additive backups (no --delete) with 14-day rotation, so an accidental
-# rm -rf cannot propagate to the latest snapshot for at least a day.
+# Daily snapshot of the Claude Code memory folders to pCloud.
+# Only memory is kept: it lives in ~/.claude/projects/*/memory, outside any
+# git repository, so this is its only copy. Transcripts are left out on
+# purpose, as Claude Code expires them after 30 days and they are not worth
+# archiving. Snapshots are additive with rotation, so an accidental rm -rf
+# cannot propagate to every snapshot at once.
 
 set -euo pipefail
 
 SRC="$HOME/.claude/projects"
-DEST="$HOME/pCloud Drive/Backups/claude-projects"
-KEEP_DAYS=14
+DEST="$HOME/pCloud Drive/Backups/claude-memory"
+KEEP_DAYS=90
 DATE=$(date +%Y-%m-%d)
-OUT="$DEST/claude-projects-$DATE.tar.gz"
+OUT="$DEST/claude-memory-$DATE.tar.gz"
 
 if [ ! -d "$SRC" ]; then
   echo "Source missing: $SRC" >&2
@@ -27,12 +30,18 @@ mkdir -p "$DEST"
 if [ -f "$OUT" ]; then
   echo "Today's snapshot already exists: $OUT"
 else
-  tar -czf "$OUT.tmp" -C "$(dirname "$SRC")" "$(basename "$SRC")"
+  memory_dirs=("$SRC"/*/memory(N/))
+  memory_dirs=("${memory_dirs[@]#$HOME/.claude/}")
+  if (( ${#memory_dirs} == 0 )); then
+    echo "No memory folders under $SRC" >&2
+    exit 1
+  fi
+  tar -czf "$OUT.tmp" -C "$HOME/.claude" "${memory_dirs[@]}"
   mv "$OUT.tmp" "$OUT"
   echo "Snapshot written: $OUT ($(du -h "$OUT" | awk '{print $1}'))"
 fi
 
-find "$DEST" -name 'claude-projects-*.tar.gz' -type f -mtime +"$KEEP_DAYS" -print -delete
+find "$DEST" -name 'claude-memory-*.tar.gz' -type f -mtime +"$KEEP_DAYS" -print -delete
 
 # The hourly check can run while tar is still writing and flag the previous
 # snapshot as overdue; clear that now the fresh one is in place.

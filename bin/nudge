@@ -259,12 +259,12 @@ check_reboot() {
 }
 
 check_claude_backup() {
-  local dir="$HOME/pCloud Drive/Backups/claude-projects" newest mtime age
+  local dir="$HOME/pCloud Drive/Backups/claude-memory" newest mtime age
   [ -d "$dir" ] || { cmd_clear claude-backup; return; }
-  newest=$(ls -t "$dir"/claude-projects-*.tar.gz 2>/dev/null | head -1)
+  newest=$(ls -t "$dir"/claude-memory-*.tar.gz 2>/dev/null | head -1)
   if [ -z "$newest" ]; then
     cmd_raise claude-backup -p 40 -k claude-backup-missing \
-      "no claude-projects backup yet — run backup-claude-projects"
+      "no claude-memory backup yet — run backup-claude-projects"
     return
   fi
   mtime=$(stat -f %m "$newest" 2>/dev/null || stat -c %Y "$newest" 2>/dev/null)
@@ -272,7 +272,7 @@ check_claude_backup() {
   age=$(( (NOW - mtime) / 86400 ))
   if [ "$age" -gt 7 ]; then
     cmd_raise claude-backup -p 40 -k claude-backup-overdue \
-      "claude-projects backup is ${age}d old — run backup-claude-projects"
+      "claude-memory backup is ${age}d old — run backup-claude-projects"
   else
     cmd_clear claude-backup
   fi
