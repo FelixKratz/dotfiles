@@ -7,7 +7,8 @@
 #   getmail.sh all              sync every account that has IMAP
 #
 # While a sync runs the account is listed in ~/.cache/mail-sync/, which both
-# locks it against a second run and drives the sketchybar spinner.
+# locks it against a second run and drives the sketchybar spinner. A request
+# for an account that is already syncing makes that sync run once more.
 
 ACCOUNTS_YAML="$HOME/.config/email/accounts.yaml"
 STATE_DIR="$HOME/.cache/mail-sync"
@@ -21,6 +22,10 @@ NUDGE="$HOME/.local/bin/nudge"
 # First failure time of each account that is currently failing. Kept apart from
 # STATE_DIR, whose contents mean "syncing" to the spinner.
 FAIL_DIR="$HOME/.cache/mail-sync-failing"
+# Accounts asked for while already syncing. An IDLE event that arrives during a
+# sync names mail the running sync may already have missed, so it must not be
+# dropped: the running sync sees the flag and goes round again.
+AGAIN_DIR="$HOME/.cache/mail-sync-again"
 # Raise a nudge only once an account has failed for this long, so a laptop
 # waking up offline doesn't raise one each time.
 FAIL_AFTER=1800
@@ -112,7 +117,7 @@ bar_update() {
 
 # One marker file per running account, holding the pid that claimed it. A
 # marker whose process is gone is stale and gets taken over.
-mkdir -p "$STATE_DIR"
+mkdir -p "$STATE_DIR" "$AGAIN_DIR"
 claim() {
   local marker="$STATE_DIR/$1" owner
   if (set -o noclobber; echo $$ > "$marker") 2>/dev/null; then
@@ -126,11 +131,14 @@ claim() {
 }
 
 CLAIMED=()
+# The flag goes down before the claim is tried, so a sync finishing in between
+# either sees the flag or has released the account for this run to claim.
 for account in "${TARGETS[@]}"; do
+  touch "$AGAIN_DIR/$account"
   if claim "$account"; then
     CLAIMED+=("$account")
   else
-    echo "[$account] already syncing, skipped"
+    echo "[$account] already syncing, queued another pass"
   fi
 done
 
@@ -196,8 +204,11 @@ report() {
 for account in "${CLAIMED[@]}"; do
   (
     log=$(mktemp)
-    run_sync "$account" | tee "$log" | sed "s/^/[$account] /"
-    report "$account" "${PIPESTATUS[0]}" "$log"
+    while [[ -e $AGAIN_DIR/$account ]]; do
+      rm -f "$AGAIN_DIR/$account"
+      run_sync "$account" | tee "$log" | sed "s/^/[$account] /"
+      report "$account" "${PIPESTATUS[0]}" "$log"
+    done
     rm -f "$log"
     # Drop the marker as soon as this account is done so the bar shrinks to
     # the accounts still running

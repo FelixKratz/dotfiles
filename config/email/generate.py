@@ -251,15 +251,17 @@ def _mu4e_bookmark_lines(acc):
 def generate_mail_launchagents(config):
     """Return {filename: plist content} for each non-smtp-only account.
 
-    These launchagents poll the account every 15 minutes via
-    `getmail.sh <account>`, as a backstop for the goimapnotify IMAP IDLE
-    agent, which only watches INBOX. The account name is the canonical key.
+    These launchagents poll the account every `poll_interval` seconds
+    (default 900) via `getmail.sh <account>`, as a backstop for the
+    goimapnotify IMAP IDLE agent, which only watches INBOX and misses mail
+    that arrives while it reconnects. The account name is the canonical key.
     """
     home = str(Path.home())
     out = {}
     for acc in _mail_accounts(config):
         name = acc["name"]
         label = f"none.mail.{name}"
+        interval = int(acc.get("poll_interval", 900))
         out[f"{label}.plist"] = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computers//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -279,7 +281,7 @@ def generate_mail_launchagents(config):
     <key>StandardErrorPath</key>
     <string>{home}/.log/getmail.err</string>
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>{interval}</integer>
     <key>LimitLoadToSessionType</key>
     <string>Aqua</string>
 </dict>

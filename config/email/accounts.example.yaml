@@ -27,6 +27,8 @@ accounts:
     trash_folder: Trash
     search_key: p
     default: true
+    # Seconds between backstop polls alongside IMAP IDLE (default 900)
+    # poll_interval: 300
 
   # XOAUTH2 account example (Office365, Gmail):
   # - name: work
