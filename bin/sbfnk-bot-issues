@@ -615,6 +615,16 @@ wants_work() {
       log "  skip $repo#$n: $detail is waiting for review"
       return 1 ;;
     pr)
+      # A PR closed unmerged is not the end of the issue when sbfnk says to
+      # go on after it closed, in a comment of his or one relayed for him.
+      local closed
+      closed="$(bot_gh api "repos/$repo/pulls/${detail##*/}" \
+        --jq 'select(.merged_at == null) | .closed_at // empty' 2>/dev/null)"
+      if [ -n "$closed" ] \
+        && [[ "$(owner_last_comment "$repo" "$n")" > "$closed" ]]; then
+        echo "answered after ${detail##*/} was closed"
+        return 0
+      fi
       log "  skip $repo#$n: already opened $detail"
       return 1 ;;
     discarded)
@@ -3208,7 +3218,7 @@ tend_pr_inner() {
       ".[] | select(.user.login == \"$OWNER_LOGIN\"
                     and .created_at > \"$(pr_state "$repo" "$n" \
                       | jq -r .handed_off_at)\"
-                    and (.body | test(\"bot: resume\"; \"i\"))) | .id" \
+                    and (.body | test(\"bot: *resume\"; \"i\"))) | .id" \
       2>/dev/null)" ]; then
       log "  $repo#$n: handed back, taking it on again at ${sha:0:7}"
       set_pr_state "$repo" "$n" \
