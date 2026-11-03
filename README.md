@@ -170,56 +170,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   that expires early if the condition changes, and anything standing for a week
   drops out of the bar into `nudge list`. Polled checks run hourly from
   `launchagents/none.nudge.check.plist` or `systemd/nudge-check.timer`.
-- **sbfnk-bot issues** - assign an issue to `sbfnk-bot` and `bin/sbfnk-bot-issues`
-  works on it, publishing nothing until you approve. It runs every 10 min as
-  its own macOS account, which cannot read your home folder, and Claude works
-  in a sandboxed clone with a fresh configuration, no GitHub access and
-  nothing but the issue and the repository. Its network reaches only the
-  domains in `config/sbfnk-bot/claude-settings.json`: package registries,
-  GitHub and Zenodo, plus `insp.cd` for the Ebola situation reports that
-  BVDOutbreakSize reads, to be removed once that outbreak is over. Your humanizer edits what it
-  publishes — the PR text, cut to what a reviewer needs, its questions, its
-  replies to review feedback, and the prose it adds to the repository,
-  including roxygen, docstrings and code comments — and follows your edits to the skill
-  through an agent of your own. A second model with no tools
-  screens text and every commit for anything the issue and the repository do
-  not account for; anything flagged gets one round of fixing and a second
-  screen. The work then waits for `bin/sbfnk-bot-review`: `approve`
-  opens the draft PR (or posts the question), `answer` replies
-  privately (an answer to its question, or what to change), `discard` drops
-  it, `polish` reruns the editing and screening; items are numbered, so
-  `sbfnk-bot-review show 3`. A menu-bar item (click to review), a banner and a
-  nudge say when something waits. Up to three jobs run side by side: a second
-  or third starts only while the load average is under 60% of the cores, and
-  each issue or PR is worked on by one job at a time. Approvals go out within
-  two minutes, even during a long job. A job gets 90 minutes, or `timeout=` minutes set per
-  repository in `config/sbfnk-bot/repos`, or what a "bot-time: 3h" line in
-  your comment or answer asks for (up to six hours). A run stopped by the
-  plan's usage limit does not count as a failure: model work waits for the
-  reset and takes the job up again, while approvals keep going out. Work
-  that cannot go out after all — the PR was merged while it waited — comes
-  back into `sbr` with the reason rather than being retried for ever. A PR opens as a draft
-  with no reviewer, and a fresh reviewer goes over it as `sbfnk-review-bot`;
-  the bot answers the findings, and so on for up to ten rounds. A clean pass
-  marks the PR ready and requests your review; if the rounds run out, it
-  stays a draft and you are asked anyway. Your reviews and comments are
-  instructions throughout: it answers with new commits and replies, pushed
-  straight away when the screen is clean, and the new head is reviewed again
-  before you are asked again. A PR that conflicts with its base gets the
-  base merged in (never a rebase), once per head. Once something else pushes to one of its PRs,
-  such as one of your own sessions, the bot leaves that PR alone, and `sbr`
-  lists it, until you comment `bot: resume` on it. Branches that edit
-  `.github/workflows/` go out from your account with `sbr push`. Away from ssh, `sbfnk-bot-setup desk` on the bot's machine
-  runs a Remote Control session as you for doing the same from claude.ai or
-  the Claude app; it asks before recording any decision. When
-  someone else assigns an issue to the bot, it waits in `sbr` as a request
-  until you approve it, with no work done before then. Only sbfnk's comments
-  are instructions, and only while nobody else has edited them (repository
-  admins can edit anyone's text; edited text drops to background, and
-  edited feedback on a PR is ignored),
-  and only repositories in `config/sbfnk-bot/repos` are worked on. Set up a
-  machine with `sudo ~/.local/bin/sbfnk-bot-setup install` (see its `--help`); elsewhere,
-  put that machine's ssh alias in `~/.config/dotfiles/bot-host`.
+- **sbfnk-bot issues** - assign an issue to `sbfnk-bot` and it works on it,
+  publishing nothing until you approve with `sbr`. It lives in the private
+  repository `sbfnk/sbfnk-bot`, cloned to `~/code/sbfnk-bot`, whose `bin/`
+  `link.sh` links and `repo-sync` keeps current; its README has the rest.
 - **Email** - `config/doom-private/email.el` (notmuch + mu4e + org-msg).
   Account-specific data is generated from `config/email/accounts.yaml` into
   `email-accounts.el` by `config/email/generate.py`; signatures live in

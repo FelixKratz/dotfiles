@@ -422,10 +422,11 @@ if [[ "$OS" == "Linux" ]] && command -v systemctl >/dev/null 2>&1; then
 fi
 
 # Link scripts to ~/.local/bin, from the public repo and from dotfiles_private
-# for anything that should not be published. Same dotfiles* glob the config
-# loop uses, so a machine without the private repo carries on regardless.
+# for anything that should not be published, and from the private sbfnk-bot
+# repo. Same dotfiles* glob the config loop uses, so a machine without the
+# private repos carries on regardless.
 mkdir -p ~/.local/bin ~/.msmtpq
-for dir in $CODE_DIR/dotfiles*/bin; do
+for dir in $CODE_DIR/dotfiles*/bin $CODE_DIR/sbfnk-bot/bin; do
   [ -d "$dir" ] || continue
   for file in $dir/*; do
     [ -e "$file" ] || continue

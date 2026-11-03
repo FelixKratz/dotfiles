@@ -17,11 +17,13 @@ REPOS=(
   "$CODE_DIR/dotfiles"
   "$CODE_DIR/dotfiles_private"
   "$CODE_DIR/skills"
+  "$CODE_DIR/sbfnk-bot"
   "$HOME/.claude/skills/humanizer"
 )
 # A move in these can add or remove things link.sh puts in place (skills,
 # scripts, agents), so a pull that changes them is followed by a relink.
-RELINK_REPOS=("$CODE_DIR/dotfiles" "$CODE_DIR/dotfiles_private" "$CODE_DIR/skills")
+RELINK_REPOS=("$CODE_DIR/dotfiles" "$CODE_DIR/dotfiles_private" "$CODE_DIR/skills"
+  "$CODE_DIR/sbfnk-bot")
 LINK_LOG="$HOME/.log/repo-sync-link.log"
 
 log() { echo "$(date '+%F %T') $*"; }
