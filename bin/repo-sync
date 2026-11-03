@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# repo-sync — fast-forward the config repos every machine shares, then relink
+# if any of them moved. Cross-platform; scheduled by launchd on macOS
+# (launchagents/none.repos.sync.plist) and a systemd user timer on Linux
+# (systemd/repo-sync.timer).
+#
+# Never commits, merges or rebases: a repo that is on another branch, has
+# diverged from its remote, or has local edits in the way is left alone and
+# raised through `nudge`, since only a person can say which side wins.
+set -uo pipefail
+
+# Schedulers start with a minimal PATH; make sure git and friends are found.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+CODE_DIR="$HOME/code"
+REPOS=(
+  "$CODE_DIR/dotfiles"
+  "$CODE_DIR/dotfiles_private"
+  "$CODE_DIR/skills"
+  "$HOME/.claude/skills/humanizer"
+)
+# A move in these can add or remove things link.sh puts in place (skills,
+# scripts, agents), so a pull that changes them is followed by a relink.
+RELINK_REPOS=("$CODE_DIR/dotfiles" "$CODE_DIR/dotfiles_private" "$CODE_DIR/skills")
+LINK_LOG="$HOME/.log/repo-sync-link.log"
+
+log() { echo "$(date '+%F %T') $*"; }
+
+raise() {
+  local repo="$1" reason="$2"
+  log "$repo: $reason"
+  command -v nudge >/dev/null 2>&1 &&
+    nudge raise "repo-sync-${repo##*/}" -p 30 -k "$reason" "${repo/#$HOME/~}: $reason"
+}
+
+clear_raise() {
+  command -v nudge >/dev/null 2>&1 && nudge clear "repo-sync-${1##*/}"
+  return 0
+}
+
+# Single-instance lock: flock on Linux, mkdir fallback on macOS (no flock).
+LOCK="${TMPDIR:-/tmp}/repo-sync.lock"
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK"
+  flock -n 9 || { log "another sync is running, skipping"; exit 0; }
+else
+  mkdir "$LOCK" 2>/dev/null || { log "another sync is running, skipping"; exit 0; }
+  trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+fi
+
+relink=0
+for repo in "${REPOS[@]}"; do
+  [ -d "$repo/.git" ] || continue
+  g() { git -C "$repo" "$@"; }
+
+  branch=$(g symbolic-ref --quiet --short HEAD) \
+    || { log "$repo: detached HEAD, skipped"; continue; }
+  default=$(g symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
+  default=${default#origin/}
+  default=${default:-main}
+  # A feature branch is work in progress; pulling main into it is not ours to do.
+  [ "$branch" = "$default" ] \
+    || { log "$repo: on $branch, not $default, skipped"; continue; }
+  # Compare with origin by name rather than the tracking branch: a fork such
+  # as humanizer tracks the project it was forked from.
+  remote="origin/$default"
+
+  # Network trouble is routine on a laptop; the next run will catch up.
+  g fetch --quiet origin 2>/dev/null \
+    || { log "$repo: fetch failed"; continue; }
+
+  before=$(g rev-parse HEAD)
+  if ! err=$(g merge --ff-only --quiet "$remote" 2>&1); then
+    if [ "$(g rev-list --count "HEAD..$remote")" -gt 0 ] \
+      && [ "$(g rev-list --count "$remote..HEAD")" -gt 0 ]; then
+      raise "$repo" "diverged from $remote"
+    else
+      raise "$repo" "local changes block the pull: ${err%%$'\n'*}"
+    fi
+    continue
+  fi
+  clear_raise "$repo"
+
+  after=$(g rev-parse HEAD)
+  [ "$before" = "$after" ] && continue
+  log "$repo: ${before:0:7} → ${after:0:7}"
+  for r in "${RELINK_REPOS[@]}"; do
+    [ "$r" = "$repo" ] && relink=1
+  done
+done
+
+if [ "$relink" = 1 ] && [ -x "$CODE_DIR/dotfiles/link.sh" ]; then
+  mkdir -p "${LINK_LOG%/*}"
+  if "$CODE_DIR/dotfiles/link.sh" >"$LINK_LOG" 2>&1; then
+    log "relinked (see $LINK_LOG)"
+  else
+    log "link.sh failed (see $LINK_LOG)"
+  fi
+fi

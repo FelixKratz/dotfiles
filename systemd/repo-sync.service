@@ -1,0 +1,6 @@
+[Unit]
+Description=Fast-forward the shared config repos and relink
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/repo-sync

@@ -148,6 +148,12 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   `~/org-roam` every 15 min (launchd on macOS, systemd timer on Linux). A rebase
   conflict, or a remote unreachable for four runs, raises a nudge (below);
   the next good sync clears it. Log: `~/.log/org-roam-sync.log`.
+- **repo sync** - `bin/repo-sync` fast-forwards `dotfiles`, `dotfiles_private`,
+  `skills` and the humanizer clone once a day and at login, then reruns
+  `link.sh` if any of the first three moved (launchd on macOS, systemd timer on
+  Linux). It never merges or commits: a repo on another branch is skipped, and
+  one that has diverged or has local edits in the way raises a nudge. Logs:
+  `~/.log/repo-sync.log`, and `~/.log/repo-sync-link.log` for the relink.
 - **phone inbox** - `bin/phone-inbox` files notes the phone drops into
   `iCloud Drive/Inbox` (one `.txt` per note, from a Shortcut) under `* Notes`
   in `~/org-roam/inbox.org` and deletes them. The first line is the heading, so
@@ -235,7 +241,10 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   Codex reads); `link.sh` links them entry-by-entry, so they reach every machine
   by `git pull`. A skill tracking an upstream stays its own clone instead —
   `humanizer` is a fork we merge releases into, cloned by `install.sh` and kept
-  current by a hook in the private Claude settings. Skills needing Python
+  current by `bin/repo-sync`. Skills needing Python
   packages declare them in a `requirements.txt` beside `SKILL.md`.
+  Published skills live in [sbfnk/skills](https://github.com/sbfnk/skills),
+  cloned to `~/code/skills` by `install.sh` and linked into each agent's skills
+  folder by `link.sh`, ahead of any same-named skill in the dotfiles repos.
 - **kitty** - `config/kitty/`
 - **Alfred workflows** - `config/alfred/workflows/`

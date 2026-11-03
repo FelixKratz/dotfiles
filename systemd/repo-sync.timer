@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily sync of the shared config repos
+
+[Timer]
+OnBootSec=5min
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target

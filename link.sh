@@ -279,6 +279,23 @@ for dir in $CODE_DIR/dotfiles*; do
   fi
 done
 
+# Published skills (github.com/sbfnk/skills), linked into every agent's skills
+# folder after the dotfiles ones, so the published copy of a skill that also
+# lives in a dotfiles repo wins.
+for skill in $CODE_DIR/skills/*(N/); do
+  [ -f "$skill/SKILL.md" ] || continue
+  for target in "$HOME/.claude/skills" "$HOME/.codex/skills" \
+      "$HOME/.gemini/antigravity-cli/skills"; do
+    mkdir -p "$target"
+    if [[ -e "$target/${skill:t}" && ! -L "$target/${skill:t}" ]]; then
+      echo "Skipped $skill → $target/${skill:t} (a local skill of that name exists)"
+      continue
+    fi
+    ln $LN_FLAG "$skill" "$target/"
+    echo "Linked $skill → $target/${skill:t}"
+  done
+done
+
 if (( ${#CODEX_GUIDANCE[@]} )); then
   # Do not write through a legacy symlink from an earlier configuration.
   [ -L "$HOME/.codex/AGENTS.md" ] && rm "$HOME/.codex/AGENTS.md"
@@ -397,6 +414,8 @@ if [[ "$OS" == "Linux" ]] && command -v systemctl >/dev/null 2>&1; then
   fi
   systemctl --user enable --now nudge-check.timer 2>/dev/null && \
     echo "Enabled nudge-check.timer"
+  systemctl --user enable --now repo-sync.timer 2>/dev/null && \
+    echo "Enabled repo-sync.timer"
   # Keep per-project Claude memory unified across the macOS/Linux path variants.
   systemctl --user enable --now claude-memory-union.timer 2>/dev/null && \
     echo "Enabled claude-memory-union.timer"

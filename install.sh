@@ -190,6 +190,9 @@ echo "Cloning dotfiles..."
 [ ! -d "$CODE_DIR/dotfiles_private" ] && \
   git clone git@github.com:sbfnk/dotfiles_private.git $CODE_DIR/dotfiles_private \
     2>/dev/null || true
+[ ! -d "$CODE_DIR/skills" ] && \
+  git clone git@github.com:sbfnk/skills.git $CODE_DIR/skills \
+    2>/dev/null || true
 [[ "$PROFILE" != "minimal" ]] && [ ! -d "$CODE_DIR/email-config" ] && \
   git clone git@github.com:sbfnk/email-config.git $CODE_DIR/email-config \
     2>/dev/null || true
@@ -218,8 +221,8 @@ fi
 $CODE_DIR/dotfiles/link.sh
 
 # humanizer is a fork we merge upstream releases into, so it stays its own clone
-# rather than being vendored here; a hook in the private Claude settings keeps it
-# current once it exists. link.sh links skills entry-by-entry, so this sits
+# rather than being vendored here; bin/repo-sync keeps it current once it
+# exists. link.sh links skills entry-by-entry, so this sits
 # happily beside the symlinked ones.
 if [ ! -d "$HOME/.claude/skills/humanizer/.git" ]; then
   echo "Cloning humanizer skill..."
