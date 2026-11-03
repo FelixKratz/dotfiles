@@ -81,6 +81,15 @@ if [[ "$OS" == "Darwin" ]]; then
        "$(brew --prefix cyrus-sasl)"/lib/sasl2/
     pipx install m365auth
 
+    # libsasl2 looks up the machine's own hostname at every login. macOS does
+    # not resolve a HostName without a domain, so each mbsync login stalls
+    # 5s on the lookup timeout (see docs/email-xoauth2.md)
+    if ! grep -qw "$(hostname)" /etc/hosts; then
+      echo "Adding $(hostname) to /etc/hosts (needs sudo)..."
+      printf '127.0.0.1\t%s\n::1\t%s\n' "$(hostname)" "$(hostname)" \
+        | sudo tee -a /etc/hosts >/dev/null
+    fi
+
     # Touch ID for sudo, the native way (macOS Sonoma+): a single PAM line in
     # sudo_local, which survives OS updates and needs no third-party tap or
     # root daemon. Replaces the old sudo-touchid formula.

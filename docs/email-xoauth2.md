@@ -41,6 +41,10 @@ good sync.
   — libsasl2 cannot find the plugin: mbsync ran without the `SASL_PATH`
   from `getmail.sh`, or the cyrus-sasl-xoauth2 keg is missing
   (`brew install sbfnk/formulae/cyrus-sasl-xoauth2`).
+- Every sync spends 5s on `Logging in...` before `Authenticating with
+  SASL mechanism` (visible with `mbsync -D`) — libsasl2 is looking up the
+  machine's hostname, which does not resolve. `install.sh` adds it to
+  `/etc/hosts`; after renaming the machine, run that step again.
 - Token errors from the work account — run `~/.local/bin/refresh-token`
   manually to see the m365auth error; re-authenticate if the refresh token
   has expired.
