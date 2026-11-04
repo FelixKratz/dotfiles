@@ -18,6 +18,7 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nudges"
 DECAY_DAYS="${NUDGE_DECAY_DAYS:-7}"
 DEFAULT_SNOOZE="${NUDGE_DEFAULT_SNOOZE:-4h}"
 BAR_WIDTH="${NUDGE_BAR_WIDTH:-44}"
+SHELL_REPEAT=$(( ${NUDGE_SHELL_REPEAT_HOURS:-4} * 3600 ))
 
 NOW=$(date +%s)
 
@@ -187,19 +188,41 @@ cmd_bar() {
   return 0
 }
 
+# Every new shell and tmux pane runs this, so the full list is shown only when
+# it has changed or SHELL_REPEAT has passed since it last was; in between, one
+# dim line says it still stands.
 cmd_shell() {
   scan
-  local line quiet=0
+  local line quiet=0 current=0 sig="" body=""
+  local seen_file="$STATE_DIR/shell.seen" seen_at=0 seen_sig="" key value
   local yellow=$'\033[33m' dim=$'\033[2m' reset=$'\033[0m'
   [ -t 1 ] || { yellow=""; dim=""; reset=""; }
   for line in ${NUDGES[@]+"${NUDGES[@]}"}; do
     case "$line" in
       current\|*)
         split "$line"
-        printf '%s⚠ %s%s %s(nudge snooze %s)%s\n' "$yellow" "$n_message" "$reset" "$dim" "$n_name" "$reset" ;;
+        current=$((current + 1))
+        sig="$sig$n_name:$n_message;"
+        printf -v line '%s⚠ %s%s %s(nudge snooze %s)%s\n' "$yellow" "$n_message" "$reset" "$dim" "$n_name" "$reset"
+        body="$body$line" ;;
       *) quiet=$((quiet + 1)) ;;
     esac
   done
+  if [ "$current" -eq 0 ]; then
+    rm -f "$seen_file"
+  else
+    if [ -f "$seen_file" ]; then
+      while IFS='=' read -r key value; do
+        case "$key" in at) seen_at="$value" ;; sig) seen_sig="$value" ;; esac
+      done < "$seen_file"
+    fi
+    if [ "$sig" = "$seen_sig" ] && [ $((NOW - seen_at)) -lt "$SHELL_REPEAT" ]; then
+      printf '%s⚠ %s nudge(s) standing — nudge list%s\n' "$dim" "$current" "$reset"
+    else
+      printf '%s' "$body"
+      mkdir -p "$STATE_DIR" && printf 'at=%s\nsig=%s\n' "$NOW" "$sig" > "$seen_file"
+    fi
+  fi
   [ "$quiet" -gt 0 ] && printf '%s(%s snoozed or set aside — nudge list)%s\n' "$dim" "$quiet" "$reset"
   return 0
 }
