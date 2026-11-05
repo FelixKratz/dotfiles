@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish the claude-review verdict on a PR head, as sbfnk-review-bot[bot].
+# Publish the bot-review verdict on a PR head, as sbfnk-review-bot[bot].
 #
 # The check is red until a review has cleared that exact commit. An absent check
 # is invisible, and "nobody has reviewed this commit" is the state worth
@@ -64,14 +64,14 @@ export GITHUB_TOKEN=$token
 # A failed lookup still prints a JSON error body, which --jq happily passes
 # through; only a bare integer is a usable check-run id.
 existing=$(gh api "repos/$repo/commits/$sha/check-runs" \
-  --jq '.check_runs[] | select(.name == "claude-review") | .id' 2>/dev/null | head -1 || true)
+  --jq '.check_runs[] | select(.name == "bot-review") | .id' 2>/dev/null | head -1 || true)
 [[ $existing =~ ^[0-9]+$ ]] || existing=
 
 run() {
   if ! out=$(gh api "$@" 2>&1); then
     case $out in
       *"can only be modified by the GitHub App that created it"*)
-        echo "claude-review on $sha belongs to another app, so this cannot update it." >&2
+        echo "bot-review on $sha belongs to another app, so this cannot update it." >&2
         echo "A CI workflow is publishing the same check name; drop one of the two lanes." >&2
         exit 5
         ;;
@@ -93,10 +93,10 @@ if [[ -n $existing ]]; then
     --jq '.conclusion'
 else
   run --method POST "repos/$repo/check-runs" \
-    -f name=claude-review -f head_sha="$sha" \
+    -f name=bot-review -f head_sha="$sha" \
     -f status=completed -f conclusion="$conclusion" \
     -f 'output[title]'="$title" -f 'output[summary]'="$summary" \
     --jq '.conclusion'
 fi
 
-echo "claude-review on $sha: $conclusion — $title"
+echo "bot-review on $sha: $conclusion — $title"

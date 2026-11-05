@@ -3,7 +3,7 @@
 # carrying an overall body plus its inline comments, so a round arrives as a
 # single notification rather than one per line.
 #
-# Refuses unless the claude-review check on the PR head is currently red. A
+# Refuses unless the bot-review check on the PR head is currently red. A
 # round publishes that check before it starts and clears it when it ends, so
 # this can only post while a review is genuinely open on that exact commit.
 #
@@ -37,11 +37,14 @@ jq -e '.comments | type == "array"' "$findings" >/dev/null ||
 
 head_sha=$(gh api "repos/$repo/pulls/$pr" --jq .head.sha)
 
-# The interlock: only post while a round is open on this exact head.
-verdict=$(gh api "repos/$repo/commits/$head_sha/check-runs" \
-  --jq '.check_runs[] | select(.name == "claude-review") | .conclusion' 2>/dev/null | head -1 || true)
+# The interlock: only post while a round is open on this exact head. Heads
+# reviewed before the check was renamed carry claude-review instead.
+checks=$(gh api "repos/$repo/commits/$head_sha/check-runs" \
+  --jq '.check_runs[] | "\(.name) \(.conclusion)"' 2>/dev/null || true)
+verdict=$(awk '$1 == "bot-review" { print $2; exit }' <<< "$checks")
+[[ -n $verdict ]] || verdict=$(awk '$1 == "claude-review" { print $2; exit }' <<< "$checks")
 if [[ $verdict != failure ]]; then
-  echo "no review round is open on $head_sha (claude-review: ${verdict:-absent})" >&2
+  echo "no review round is open on $head_sha (bot-review: ${verdict:-absent})" >&2
   echo "publish the red verdict first: gh-publish-review-check $repo $head_sha not-reviewed" >&2
   exit 4
 fi

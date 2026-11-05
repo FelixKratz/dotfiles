@@ -68,7 +68,7 @@ Stop only when **both** lookups fail. Then stop the whole command immediately: d
 not resolve the watch list, enter the per-PR loop, spawn a reviewer, or schedule
 a wake-up. Report that there is no review spec anywhere, so PRs cannot be driven
 to a verified review, and offer to write the org spec. That is worth stopping for
-because `/review-loop` would publish no `claude-review` check (Step 1b), so the
+because `/review-loop` would publish no `bot-review` check (Step 1b), so the
 Step 5 stopping condition could never be met and the loop would reschedule for
 ever without saying why.
 
@@ -100,8 +100,10 @@ There is no CI review lane. Reviews happen locally, on demand, via
 one commit at a time, and repeats until a full pass is clean.
 
 Work out whether this PR has had one **against its current head**: look for a
-`claude-review` check run on the head SHA, published by `/review-loop` when it
-finishes. Read it from `statusCheckRollup`, already fetched in Step 1.
+`bot-review` check run on the head SHA, published by `/review-loop` when it
+finishes. Read it from `statusCheckRollup`, already fetched in Step 1. A head
+reviewed before the check was renamed carries `claude-review` instead; read
+that the same way.
 
 The check is bound to the SHA it was published against, so there is nothing to
 reason about: a new commit simply has no check yet.
@@ -125,7 +127,7 @@ Then:
   anyone. It pushes its own commits, which moves the head; re-read the state
   afterwards rather than reasoning from what you fetched in Step 1.
 
-**Handing the PR to the human.** A green `claude-review` is the signal that the
+**Handing the PR to the human.** A green `bot-review` is the signal that the
 PR is worth sbfnk's time, so PRs are opened as drafts with no reviewer and wait
 for it. On `SUCCESS`, on a PR you authored:
 
@@ -182,7 +184,7 @@ After addressing all current unaddressed trusted comments, go back to Step 1 —
 
 ## Step 3b — attempt to fix failing checks
 
-**Skip `claude-review`.** It is red whenever the current head has not been
+**Skip `bot-review`.** It is red whenever the current head has not been
 reviewed clean, which is a verdict rather than a broken build. It clears by
 reviewing (Step 1b) or by addressing the findings (Step 3) — never by debugging.
 Do not open its run log, and never commit a `fix ci:` against it.
@@ -217,7 +219,7 @@ Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review (comments from `sbfnk-bot` — this loop's own output — do not count towards this, and neither does anything `/review-loop` produced).
 - If the repo uses CodeRabbit: CodeRabbit has posted a review, OR more than 60 minutes have passed since the PR's head commit was pushed without one (its free tier queues reviews when rate-limited, so a review that hasn't arrived within the hourly window isn't coming). Judge this from the head commit's committer timestamp. When proceeding without CodeRabbit, note it in the summary.
-- The `claude-review` check on the current head SHA is `SUCCESS`, or is `FAILURE` with a title naming findings left open at the round cap (Step 1b). `FAILURE` with `Not reviewed yet`, or no check at all, means not done. Never treat this check as CI to fix in Step 3b — it is a review verdict, and it clears by reviewing, not by debugging. On a PR you did not author, treat the condition as not applicable and say so in the summary.
+- The `bot-review` check on the current head SHA is `SUCCESS`, or is `FAILURE` with a title naming findings left open at the round cap (Step 1b). `FAILURE` with `Not reviewed yet`, or no check at all, means not done. Never treat this check as CI to fix in Step 3b — it is a review verdict, and it clears by reviewing, not by debugging. On a PR you did not author, treat the condition as not applicable and say so in the summary.
 - All unaddressed trusted comments have been addressed, including findings in trusted review bodies (Step 3).
 - No unresolved merge conflict (Step 4).
 - No unaddressable failing checks and no checks still in progress (Step 3b). If checks are still running, keep polling.

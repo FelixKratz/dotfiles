@@ -167,8 +167,10 @@ a fix that moved code around, and resolving it would bury a live point.
 
 ## The verdict check
 
-The PR carries a `claude-review` check run on its head SHA, published under the
-app token. It is **red until a review has cleared that exact commit**:
+The PR carries a `bot-review` check run on its head SHA, published under the
+app token (heads reviewed before the rename carry `claude-review`, which a new
+verdict leaves alone). It is **red until a review has cleared that exact
+commit**:
 
 - **Before round one**, as the very first thing the loop does — publish
   `conclusion=failure`, title **`Review in progress`**, against the current head.
@@ -198,7 +200,7 @@ Publish:
 
     GITHUB_TOKEN=$(gh-review-bot-token <owner>/<repo>) gh api \
       repos/{owner}/{repo}/check-runs -X POST \
-      -f name=claude-review -f head_sha="<head sha>" \
+      -f name=bot-review -f head_sha="<head sha>" \
       -f status=completed -f conclusion=failure \
       -f 'output[title]'="Not reviewed yet" \
       -f 'output[summary]'="No review has cleared <head sha>."
@@ -219,7 +221,7 @@ same head on every wake-up, which costs money and looks like nothing is wrong.
 
 ### PRs this loop never runs on
 
-A PR that is never handed to this command has no `claude-review` check at all —
+A PR that is never handed to this command has no `bot-review` check at all —
 absent rather than red, which is the invisible state the red verdict exists to
 remove. Nothing else can publish it: there is no CI watching the branch.
 
