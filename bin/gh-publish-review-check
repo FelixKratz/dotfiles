@@ -103,11 +103,14 @@ fi
 # it takes the same verdict, so no stale red check is left beside this one.
 old=$(gh api "repos/$repo/commits/$sha/check-runs" \
   --jq '.check_runs[] | select(.name == "claude-review") | .id' 2>/dev/null | head -1 || true)
+# Best effort: bot-review is the verdict, so an old check that cannot be
+# updated (another app made it) is only worth a warning.
 if [[ $old =~ ^[0-9]+$ ]]; then
-  run --method PATCH "repos/$repo/check-runs/$old" \
+  gh api --method PATCH "repos/$repo/check-runs/$old" \
     -f status=completed -f conclusion="$conclusion" \
     -f 'output[title]'="$title" -f 'output[summary]'="$summary" \
-    --jq '.conclusion' >/dev/null
+    >/dev/null 2>&1 \
+    || echo "could not update the old claude-review check on $sha" >&2
 fi
 
 echo "bot-review on $sha: $conclusion — $title"
