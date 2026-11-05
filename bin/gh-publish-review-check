@@ -62,9 +62,13 @@ token=$(gh-review-bot-token "$repo") || exit 2
 export GITHUB_TOKEN=$token
 
 # A failed lookup still prints a JSON error body, which --jq happily passes
-# through; only a bare integer is a usable check-run id.
-existing=$(gh api "repos/$repo/commits/$sha/check-runs" \
-  --jq '.check_runs[] | select(.name == "bot-review") | .id' 2>/dev/null | head -1 || true)
+# through; only a bare integer is a usable check-run id. Asking for the one
+# name keeps it in the first page however many other checks the head has.
+check_id() {
+  gh api -X GET "repos/$repo/commits/$sha/check-runs" -f check_name="$1" \
+    --jq '.check_runs[0].id // empty' 2>/dev/null || true
+}
+existing=$(check_id bot-review)
 [[ $existing =~ ^[0-9]+$ ]] || existing=
 
 run() {
@@ -101,8 +105,7 @@ fi
 
 # A head reviewed before the check was renamed carries claude-review as well;
 # it takes the same verdict, so no stale red check is left beside this one.
-old=$(gh api "repos/$repo/commits/$sha/check-runs" \
-  --jq '.check_runs[] | select(.name == "claude-review") | .id' 2>/dev/null | head -1 || true)
+old=$(check_id claude-review)
 # Best effort: bot-review is the verdict, so an old check that cannot be
 # updated (another app made it) is only worth a warning.
 if [[ $old =~ ^[0-9]+$ ]]; then
