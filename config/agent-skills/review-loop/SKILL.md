@@ -168,9 +168,10 @@ a fix that moved code around, and resolving it would bury a live point.
 ## The verdict check
 
 The PR carries a `bot-review` check run on its head SHA, published under the
-app token (heads reviewed before the rename carry `claude-review`, which a new
-verdict leaves alone). It is **red until a review has cleared that exact
-commit**:
+app token. A head reviewed before the check was renamed carries `claude-review`
+as well; give it the same verdict whenever you write `bot-review`, so no stale
+red check is left beside the new one. It is **red until a review has cleared
+that exact commit**:
 
 - **Before round one**, as the very first thing the loop does — publish
   `conclusion=failure`, title **`Review in progress`**, against the current head.

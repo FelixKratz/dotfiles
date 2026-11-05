@@ -103,7 +103,7 @@ Work out whether this PR has had one **against its current head**: look for a
 `bot-review` check run on the head SHA, published by `/review-loop` when it
 finishes. Read it from `statusCheckRollup`, already fetched in Step 1. A head
 reviewed before the check was renamed carries `claude-review` instead; read
-that the same way.
+that the same way. When a head carries both, `bot-review` is the verdict.
 
 The check is bound to the SHA it was published against, so there is nothing to
 reason about: a new commit simply has no check yet.
@@ -184,7 +184,7 @@ After addressing all current unaddressed trusted comments, go back to Step 1 —
 
 ## Step 3b — attempt to fix failing checks
 
-**Skip `bot-review`.** It is red whenever the current head has not been
+**Skip `bot-review`, and `claude-review`, its old name.** It is red whenever the current head has not been
 reviewed clean, which is a verdict rather than a broken build. It clears by
 reviewing (Step 1b) or by addressing the findings (Step 3) — never by debugging.
 Do not open its run log, and never commit a `fix ci:` against it.
@@ -219,7 +219,7 @@ Evaluate this **per PR**. A single PR is done when all of these are true:
 
 - `sbfnk` has posted a review (comments from `sbfnk-bot` — this loop's own output — do not count towards this, and neither does anything `/review-loop` produced).
 - If the repo uses CodeRabbit: CodeRabbit has posted a review, OR more than 60 minutes have passed since the PR's head commit was pushed without one (its free tier queues reviews when rate-limited, so a review that hasn't arrived within the hourly window isn't coming). Judge this from the head commit's committer timestamp. When proceeding without CodeRabbit, note it in the summary.
-- The `bot-review` check on the current head SHA is `SUCCESS`, or is `FAILURE` with a title naming findings left open at the round cap (Step 1b). `FAILURE` with `Not reviewed yet`, or no check at all, means not done. Never treat this check as CI to fix in Step 3b — it is a review verdict, and it clears by reviewing, not by debugging. On a PR you did not author, treat the condition as not applicable and say so in the summary.
+- The `bot-review` check (or, on an older head without one, `claude-review`) on the current head SHA is `SUCCESS`, or is `FAILURE` with a title naming findings left open at the round cap (Step 1b). `FAILURE` with `Not reviewed yet`, or no check at all, means not done. Never treat this check as CI to fix in Step 3b — it is a review verdict, and it clears by reviewing, not by debugging. On a PR you did not author, treat the condition as not applicable and say so in the summary.
 - All unaddressed trusted comments have been addressed, including findings in trusted review bodies (Step 3).
 - No unresolved merge conflict (Step 4).
 - No unaddressable failing checks and no checks still in progress (Step 3b). If checks are still running, keep polling.

@@ -99,4 +99,15 @@ else
     --jq '.conclusion'
 fi
 
+# A head reviewed before the check was renamed carries claude-review as well;
+# it takes the same verdict, so no stale red check is left beside this one.
+old=$(gh api "repos/$repo/commits/$sha/check-runs" \
+  --jq '.check_runs[] | select(.name == "claude-review") | .id' 2>/dev/null | head -1 || true)
+if [[ $old =~ ^[0-9]+$ ]]; then
+  run --method PATCH "repos/$repo/check-runs/$old" \
+    -f status=completed -f conclusion="$conclusion" \
+    -f 'output[title]'="$title" -f 'output[summary]'="$summary" \
+    --jq '.conclusion' >/dev/null
+fi
+
 echo "bot-review on $sha: $conclusion — $title"
