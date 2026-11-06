@@ -275,7 +275,7 @@ if.app-name-regex-substring = '^Microsoft Teams$'
 run = 'layout floating'
 
 [[on-window-detected]]
-if.app-name-regex-substring = '^zoom.us$'
+if.app-name-regex-substring = '^(zoom.us|Zoom)$'
 run = 'layout floating'
 
 [[on-window-detected]]
