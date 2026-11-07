@@ -735,6 +735,14 @@ Return nil if it could not be started."
     (notmuch-search-tag '("+deleted" "-inbox" "-unread"))
     (notmuch-search-next-thread))
 
+  ;; evil-collection's `d' in tree view only toggles +deleted, which leaves
+  ;; the message in the inbox and unread.
+  (defun sf/notmuch-tree-delete ()
+    "Tag message as deleted, out of the inbox and read, and advance."
+    (interactive)
+    (notmuch-tree-tag '("+deleted" "-inbox" "-unread"))
+    (notmuch-tree-next-message))
+
   (defun sf/notmuch-search-toggle-flag ()
     "Toggle flagged tag in search mode."
     (interactive)
@@ -896,6 +904,7 @@ Return nil if it could not be started."
     "C" #'sf/notmuch-capture
     "V" #'sf/notmuch-view-in-browser
     (kbd "*") #'sf/notmuch-tree-tag-all
+    "d" #'sf/notmuch-tree-delete
     "U" #'sf/notmuch-toggle-threading)
 
   ;; Light themes such as doom-nord-light colour the sender line barely darker
