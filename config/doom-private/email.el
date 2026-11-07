@@ -344,6 +344,29 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
       :before #'notmuch-unthreaded
       (sf/notmuch-kill-stale-buffers 'notmuch-tree-mode))
 
+    ;; Some senders (LinkedIn) put line breaks in encoded subjects, which
+    ;; would split one result over several lines of the list.
+    (defun sf/notmuch-flatten-subject (subject)
+      "Collapse runs of whitespace, newlines included, in SUBJECT."
+      (if (stringp subject)
+          (string-trim (replace-regexp-in-string "[ \t\n\r]+" " " subject))
+        subject))
+    (defadvice! sf/notmuch-tree-flatten-subject (args)
+      :filter-args #'notmuch-tree-insert-msg
+      (let* ((msg (copy-sequence (car args)))
+             (headers (copy-sequence (plist-get msg :headers))))
+        (list (plist-put msg :headers
+                         (plist-put headers :Subject
+                                    (sf/notmuch-flatten-subject
+                                     (plist-get headers :Subject)))))))
+    (defadvice! sf/notmuch-search-flatten-subject (args)
+      :filter-args #'notmuch-search-show-result
+      (let ((result (copy-sequence (car args))))
+        (cons (plist-put result :subject
+                         (sf/notmuch-flatten-subject
+                          (plist-get result :subject)))
+              (cdr args))))
+
     ;; Fix +notmuch/quit error when no dedicated workspace is used
     (defun +notmuch/quit ()
       "Kill all notmuch buffers."
