@@ -314,8 +314,16 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
 
   ;; Saved searches — generic ones here, per-account inboxes from email-accounts.el
   (setq notmuch-search-oldest-first nil)
+  ;; `notmuch-jump' otherwise takes the hide-excluded setting from the buffer
+  ;; it is called in, so one stray `i' in a list leaves deleted mail showing
+  ;; in every search jumped to from there.
   (setq notmuch-saved-searches
-        (append
+        (mapcar
+         (lambda (search)
+           (if (plist-member search :excluded)
+               search
+             (append search '(:excluded hide))))
+         (append
          '((:name "new work"     :query "tag:unread AND folder:work/INBOX"   :sort-order newest-first   :key "n" :search-type unthreaded)
            (:name "new not-work" :query "tag:unread AND (folder:/INBOX/ OR folder:/inbox/) AND NOT folder:work/INBOX AND NOT tag:spam AND NOT tag:junk"   :sort-order newest-first   :key "N" :search-type unthreaded)
            (:name "github"       :query "folder:work/GitHub"   :sort-order newest-first   :key "g" :search-type unthreaded)
@@ -325,7 +333,7 @@ them.  Saving the resumed buffer stores it as a notmuch draft as well."
            (:name "sent"         :query "tag:sent"   :key "s" :search-type unthreaded)
            (:name "drafts"       :query "tag:draft"   :key "d" :search-type unthreaded)
            (:name "all"          :query "*"   :count-query "tag:unread"   :key "a" :search-type unthreaded))
-         sf/notmuch-account-saved-searches))
+         sf/notmuch-account-saved-searches)))
 
     ;; Kill stale notmuch buffers when opening new ones
     (defun sf/notmuch-kill-stale-buffers (mode &rest _)
