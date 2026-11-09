@@ -17,6 +17,10 @@ CLAUDE.md; the bot has it in every prompt.
   write, chat included, and run the humanizer on anything published (issues,
   pull request text, documentation, vignettes, README and NEWS entries,
   roxygen, docstrings, comments) before it is final.
+- In Markdown (`.md`) and Quarto (`.qmd`) files, put each paragraph and each
+  list item on one line. Do not hard-wrap prose at a fixed width: the
+  rendering joins the lines anyway, and the breaks make the text harder to
+  edit. Code blocks and existing nested structure stay as they are.
 
 ## Issues
 
