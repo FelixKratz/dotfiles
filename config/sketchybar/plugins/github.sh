@@ -4,6 +4,13 @@ update() {
   source "$CONFIG_DIR/colors.sh"
   source "$CONFIG_DIR/icons.sh"
 
+  # gh's own login is sbfnk-bot. sbfnk's notifications come through a
+  # classic token with the notifications scope alone, kept in the Keychain:
+  #   security add-generic-password -U -s github-notifications -a sbfnk -w
+  local token
+  token="$(security find-generic-password -s github-notifications -a sbfnk -w 2>/dev/null)"
+  [ -n "$token" ] && export GH_TOKEN="$token"
+
   NOTIFICATIONS="$(gh api notifications)"
   COUNT="$(echo "$NOTIFICATIONS" | jq 'length')"
   args=()

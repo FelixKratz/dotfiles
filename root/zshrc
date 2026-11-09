@@ -175,6 +175,11 @@ alias la="ls -al"
 alias r="radian"
 alias nv="nvim"
 
+# gh's keyring holds sbfnk-bot alone; typed at a terminal, gh acts as sbfnk
+# through 1Password. Coding agents' shells keep the bot (dotfiles_private docs/github-identity.md).
+if [[ -z $CLAUDECODE ]] && (( $+commands[op] )) && (( $+commands[gh-me] )); then
+  gh() { gh-me "$@"; }
+fi
 
 
 # ssh configs

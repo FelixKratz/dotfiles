@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# github-identity-check — whether anything on this machine that a coding
+# agent could pick up acts on GitHub as sbfnk.
+#
+# Only sbfnk-bot (and read-only deploy keys) should be reachable without a
+# person at the keyboard: gh's keyring, SSH keys on disk, the ssh-agent, and
+# tokens in the environment, ~/.Renviron or ~/.netrc. sbfnk's own token and
+# key live in 1Password, which this never asks. Prints one line per check,
+# never a token, and exits 1 if any check fails. Runs on macOS and Linux.
+#
+# Usage: github-identity-check
+set -uo pipefail
+
+personal=${GITHUB_IDENTITY_PERSONAL:-sbfnk}
+failed=0
+ok() { printf 'ok    %s\n' "$*"; }
+bad() { printf 'FAIL  %s\n' "$*"; failed=1; }
+note() { printf 'note  %s\n' "$*"; }
+
+# The account a token belongs to, or nothing if GitHub refuses it.
+token_login() {
+  env -u GITHUB_TOKEN GH_TOKEN="$1" gh api user --jq .login 2>/dev/null
+}
+
+# The account (or owner/repo, for a deploy key) an SSH key logs in as.
+ssh_login() {
+  ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+    -F /dev/null "$@" git@github.com 2>&1 \
+    | sed -n 's/^Hi \([^!]*\)!.*/\1/p'
+}
+
+if command -v gh >/dev/null 2>&1; then
+  accounts=$(env -u GH_TOKEN -u GITHUB_TOKEN gh auth status 2>&1 \
+    | sed -n 's/.*Logged in to github.com account \([^ ]*\) (keyring).*/\1/p' | sort -u)
+  if grep -qx "$personal" <<< "$accounts"; then
+    bad "gh keyring holds $personal: gh auth logout -h github.com -u $personal"
+  else
+    ok "gh keyring: $(echo ${accounts:-no accounts})"
+  fi
+else
+  note "gh not installed"
+fi
+
+for var in GITHUB_TOKEN GH_TOKEN GITHUB_PAT; do
+  value=${!var:-}
+  [ -n "$value" ] || continue
+  login=$(token_login "$value")
+  if [ "$login" = "$personal" ]; then
+    bad "\$$var is $personal's token"
+  else
+    ok "\$$var: ${login:-not a valid token}"
+  fi
+done
+
+if [ -f "$HOME/.Renviron" ]; then
+  while IFS='=' read -r var value; do
+    value=${value%\"}; value=${value#\"}; value=${value%\'}; value=${value#\'}
+    [ -n "$value" ] || continue
+    login=$(token_login "$value")
+    if [ "$login" = "$personal" ]; then
+      bad "~/.Renviron $var is $personal's token"
+    else
+      ok "~/.Renviron $var: ${login:-not a valid token}"
+    fi
+  done < <(grep -E '^\s*(GITHUB_PAT|GITHUB_TOKEN|GH_TOKEN)\s*=' "$HOME/.Renviron" | tr -d ' ')
+fi
+
+if [ -f "$HOME/.netrc" ] && grep -q 'github.com' "$HOME/.netrc"; then
+  bad "~/.netrc has a github.com entry: check whose it is and remove it"
+fi
+
+# Every private key on disk, whatever ~/.ssh/config says about it.
+for pub in "$HOME"/.ssh/*.pub; do
+  [ -f "$pub" ] || continue
+  key=${pub%.pub}
+  [ -f "$key" ] || continue
+  login=$(ssh_login -o IdentityAgent=none -o IdentitiesOnly=yes -i "$key")
+  name=${key/#$HOME/\~}
+  if [ "$login" = "$personal" ]; then
+    bad "$name logs in to GitHub as $personal: remove it from github.com/settings/keys"
+  elif [ -n "$login" ]; then
+    ok "$name: $login"
+  fi
+done
+
+# The agent in the environment, which the shells of agents share. 1Password's
+# agent is configured in ~/.ssh/config instead, and asks before each use.
+if [ -n "${SSH_AUTH_SOCK:-}" ] && ssh-add -l >/dev/null 2>&1; then
+  login=$(ssh_login -o IdentityAgent="$SSH_AUTH_SOCK" -o IdentityFile=none)
+  if [ "$login" = "$personal" ]; then
+    bad "the ssh-agent at \$SSH_AUTH_SOCK holds a key for $personal: ssh-add -D"
+  else
+    ok "ssh-agent: ${login:-no GitHub key}"
+  fi
+fi
+
+exit "$failed"

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# gh-me — run gh as sbfnk, with the token read from 1Password for this one
+# command.
+#
+# The personal token lives only in 1Password, behind Touch ID, so nothing
+# that runs unattended or inside a coding agent can act as sbfnk: gh's
+# keyring holds sbfnk-bot alone. In an interactive shell outside Claude Code,
+# zshrc makes plain `gh` call this. See docs/github-identity.md in dotfiles_private.
+#
+# Usage:
+#   gh-me <gh arguments>
+#   token=$(gh-me auth token)     # for a script that needs the raw token
+#
+# The 1Password item is "GitHub Personal Access Token" in the Private vault,
+# field "token" (what `op plugin init gh` creates); set GH_ME_TOKEN_REF to
+# an op:// reference to use another.
+set -euo pipefail
+
+if [[ -n ${CLAUDECODE:-} || -n ${CODEX_SANDBOX:-} || -n ${CODEX_THREAD_ID:-} ]]; then
+  echo "gh-me: refusing inside a coding agent; it acts as sbfnk-bot" >&2
+  exit 1
+fi
+command -v op >/dev/null 2>&1 || { echo "gh-me: needs the 1Password CLI (op)" >&2; exit 1; }
+
+ref=${GH_ME_TOKEN_REF:-"op://Private/GitHub Personal Access Token/token"}
+token=$(op read --no-newline "$ref") || {
+  echo "gh-me: could not read $ref from 1Password" >&2
+  exit 1
+}
+GH_TOKEN=$token GITHUB_TOKEN=$token exec gh "$@"

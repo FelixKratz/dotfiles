@@ -67,8 +67,17 @@ for repo in "${REPOS[@]}"; do
   # as humanizer tracks the project it was forked from.
   remote="origin/$default"
 
+  # Fetch with a key that cannot act as sbfnk, and never through an agent:
+  # his own key sits behind a 1Password prompt nobody is there to answer.
+  # A repository sbfnk-bot cannot read (sbfnk-bot itself) has a read-only
+  # deploy key, ~/.ssh/id_deploy_<name>. See docs/github-identity.md in dotfiles_private.
+  key="$HOME/.ssh/id_deploy_${repo##*/}"
+  [ -f "$key" ] || key="$HOME/.ssh/id_ed25519_sbfnk_bot"
+  ssh_cmd="ssh -o BatchMode=yes -o IdentityAgent=none -o IdentitiesOnly=yes"
+  [ -f "$key" ] && ssh_cmd="$ssh_cmd -i $key"
+
   # Network trouble is routine on a laptop; the next run will catch up.
-  g fetch --quiet origin 2>/dev/null \
+  GIT_SSH_COMMAND="$ssh_cmd" g fetch --quiet origin 2>/dev/null \
     || { log "$repo: fetch failed"; continue; }
 
   before=$(g rev-parse HEAD)
