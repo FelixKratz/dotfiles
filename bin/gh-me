@@ -12,8 +12,7 @@
 #   token=$(gh-me auth token)     # for a script that needs the raw token
 #
 # The 1Password item is "GitHub Personal Access Token" in the Private vault,
-# field "token" (what `op plugin init gh` creates); set GH_ME_TOKEN_REF to
-# an op:// reference to use another.
+# field "token"; set GH_ME_TOKEN_REF to an op:// reference to use another.
 set -euo pipefail
 
 if [[ -n ${CLAUDECODE:-} || -n ${CODEX_SANDBOX:-} || -n ${CODEX_THREAD_ID:-} ]]; then
