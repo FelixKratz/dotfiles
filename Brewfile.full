@@ -32,6 +32,7 @@ brew "yq"
 brew "goimapnotify"
 brew "rclone"
 brew "terminal-notifier"
+brew "pipx"  # install.sh: pipx install m365auth (work mail's refresh-token)
 brew "emacs-plus"
 
 # Email xoauth2 stack — see docs/email-xoauth2.md
