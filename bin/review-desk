@@ -35,8 +35,10 @@ tool_of() {
   esac
 }
 
+# The profile is read as link.sh reads it: # comments and whitespace dropped.
 front_line() {
-  grep -qx 'desktop' "$CONFIG/profile" 2>/dev/null && [ -s "$CONFIG/bot-host" ]
+  sed -e 's/#.*//' -e 's/[[:space:]]//g' "$CONFIG/profile" 2>/dev/null \
+    | grep -qx 'desktop' && [ -s "$CONFIG/bot-host" ]
 }
 
 run() {
