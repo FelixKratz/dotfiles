@@ -46,6 +46,7 @@ accounts:
   #   # oauth_authority: https://login.microsoftonline.com/<tenant-id>/
   #   # Redirect registered for the app (m365auth defaults to https://localhost:7598/)
   #   # oauth_redirect_uri: http://localhost:4999/getToken
+  #   # Port and HTTPS follow the URI; set these only to override it
   #   # oauth_redirect_port: 4999
   #   # oauth_use_https: false
 

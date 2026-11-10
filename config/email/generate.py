@@ -14,6 +14,7 @@ this file.
 import argparse
 import os
 import sys
+import urllib.parse
 import yaml
 from pathlib import Path
 
@@ -311,12 +312,16 @@ def generate_m365auth_config(config):
     acc = accounts[0]
     authority = acc.get("oauth_authority")
     # the redirect must match the app registration; m365auth's own default
-    # (https://localhost:7598/) is used when none is given
+    # (https://localhost:7598/) is used when none is given. m365auth's callback
+    # server listens on RedirectPort, so port and scheme follow the URI.
     redirect = ""
     if acc.get("oauth_redirect_uri"):
+        uri = urllib.parse.urlsplit(acc["oauth_redirect_uri"])
+        https = acc.get("oauth_use_https", uri.scheme == "https")
+        port = acc.get("oauth_redirect_port", uri.port or (443 if https else 80))
         redirect = (f'\nRedirectUri = "{acc["oauth_redirect_uri"]}"\n'
-                    f'RedirectPort = {acc.get("oauth_redirect_port", 7598)}\n'
-                    f'UseHttps = {bool(acc.get("oauth_use_https", True))}\n')
+                    f'RedirectPort = {port}\n'
+                    f'UseHttps = {bool(https)}\n')
     return f'''# Auto-generated from accounts.yaml by generate.py — do not edit directly
 
 ClientId = "{acc["oauth_client_id"]}"
