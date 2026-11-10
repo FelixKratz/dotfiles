@@ -11,7 +11,8 @@
 # Each tool runs in a loop and starts again when it exits, so quitting gh-dash
 # is how to reload its config. One that exits within a few seconds waits for
 # Enter instead, so a failure (Touch ID declined, the bot machine unreachable)
-# does not retry in a tight loop. Ctrl-C ends the loop and closes the tab.
+# does not retry in a tight loop. Close a tab with cmd+w: the tools take
+# Ctrl-C for themselves, and the loop starts them again.
 #
 # Usage:
 #   review-desk              the kitty config line that opens the tabs here,
