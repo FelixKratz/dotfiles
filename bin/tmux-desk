@@ -66,9 +66,18 @@ ensure() {
     target="=$SESSION:$name"
     if ! tmux list-windows -t "=$SESSION" -F '#{window_name}' | grep -qx "$name"; then
       tmux new-window -d -t "=$SESSION:" -n "$name" "$SELF run $name"
-    elif [[ "$(tmux display-message -p -t "$target" '#{pane_start_command}')" \
-      != *"tmux-desk run $name"* ]]; then
-      tmux respawn-pane -k -t "$target" "$SELF run $name"
+    elif ! tmux list-panes -t "$target" -F '#{pane_start_command}' \
+      | grep -qF "tmux-desk run $name"; then
+      # A window tmux-resurrect restored is one idle shell, which the tool
+      # replaces. Anything else is a pane of the user's own, so the tool gets
+      # a pane beside it and nothing is killed.
+      if [ "$(tmux list-panes -t "$target" | wc -l)" -eq 1 ] && [[ \
+        "$(tmux display-message -p -t "$target" '#{pane_current_command}')" \
+        =~ ^-?(zsh|bash|sh|fish)$ ]]; then
+        tmux respawn-pane -k -t "$target" "$SELF run $name"
+      else
+        tmux split-window -d -t "$target" "$SELF run $name"
+      fi
     fi
     tmux set-window-option -t "$target" automatic-rename off >/dev/null
   done
