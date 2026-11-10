@@ -40,3 +40,13 @@ accounts:
   #   auth: xoauth2
   #   password_cmd: ~/.local/bin/refresh-token
   #   msmtp_password_cmd: refresh-token --profile mail
+  #   # Azure app registration that m365auth signs in through; generate.py
+  #   # writes m365auth's config from it (see docs/email-xoauth2.md)
+  #   oauth_client_id: 00000000-0000-0000-0000-000000000000
+  #   # oauth_authority: https://login.microsoftonline.com/<tenant-id>/
+
+# Optional overrides for the generated ~/.notmuch-config (defaults shown)
+# notmuch:
+#   new_tags: [unread, inbox]
+#   exclude_tags: [deleted, spam, junk]
+#   ignore: ["/.*[.]mbsyncstate.*$/", .uidvalidity]

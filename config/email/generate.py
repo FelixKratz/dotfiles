@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Generate mbsyncrc, msmtprc and Emacs email-accounts.el from accounts.yaml.
+"""Generate the mail configuration from accounts.yaml.
+
+Writes mbsyncrc, msmtprc, notmuch-config, the m365auth config for XOAUTH2
+accounts, Emacs email-accounts.el and the per-account launch agents, so a new
+machine needs nothing beyond the two dotfiles repos and a sign-in per account.
 
 The Emacs output is intentionally small — only the bits that genuinely depend
 on accounts.yaml (identities, Fcc dirs, alternative-emails, per-account saved
@@ -9,6 +13,7 @@ this file.
 
 import argparse
 import os
+import sys
 import yaml
 from pathlib import Path
 
@@ -20,6 +25,12 @@ BREW_PREFIX = os.environ.get("HOMEBREW_PREFIX") or (
 CONFIG = Path.home() / ".config" / "email" / "accounts.yaml"
 MBSYNCRC = Path.home() / ".mbsyncrc"
 MSMTPRC = Path.home() / ".msmtprc"
+NOTMUCH_CONFIG = Path.home() / ".notmuch-config"
+# m365auth reads platformdirs' user_config_dir, which is not ~/.config on macOS
+M365AUTH_CONFIG = (
+    Path.home() / "Library" / "Application Support" if sys.platform == "darwin"
+    else Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+) / "m365auth" / "config.py"
 EMACS_ACCOUNTS = Path.home() / ".config" / "doom-private" / "email-accounts.el"
 LAUNCHAGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
 
@@ -254,6 +265,77 @@ def _mu4e_bookmark_lines(acc):
     ]
 
 
+def generate_notmuch_config(config):
+    """notmuch reply picks the From by matching the original recipients
+    against primary_email and other_email, so every address that can receive
+    mail belongs here, SMTP-only ones included."""
+    defaults = config.get("defaults", {})
+    default = _default_account(config)
+    others = [a["email"] for a in config["accounts"] if a is not default]
+    nm = config.get("notmuch", {})
+    return "\n".join([
+        GENERATED_HEADER,
+        "[database]",
+        f"path={Path.home() / 'Maildir'}",
+        "",
+        "[user]",
+        f"name={defaults.get('name', '')}",
+        f"primary_email={default['email']}",
+        f"other_email={';'.join(others)}",
+        "",
+        "[new]",
+        f"tags={';'.join(nm.get('new_tags', ['unread', 'inbox']))}",
+        # mbsync keeps its sync state beside the mail
+        f"ignore={';'.join(nm.get('ignore', ['/.*[.]mbsyncstate.*$/', '.uidvalidity']))}",
+        "",
+        "[search]",
+        # matches notmuch-excluded-tags in email.el
+        f"exclude_tags={';'.join(nm.get('exclude_tags', ['deleted', 'spam', 'junk']))}",
+        "",
+        "[maildir]",
+        # flags round-trip to Outlook and the phone over IMAP (docs/mail-workflow.md)
+        "synchronize_flags=true",
+        "",
+    ])
+
+
+def generate_m365auth_config(config):
+    """m365auth's own first-run setup asks for the client ID interactively and
+    keeps it only on that machine; writing it from accounts.yaml means a new
+    machine needs only the sign-in (`get-token --profile mail`). The refresh
+    token itself stays in the login Keychain."""
+    accounts = [a for a in config["accounts"]
+                if a.get("auth") == "xoauth2" and a.get("oauth_client_id")]
+    if not accounts:
+        return None
+    acc = accounts[0]
+    authority = acc.get("oauth_authority")
+    return f'''# Auto-generated from accounts.yaml by generate.py — do not edit directly
+
+ClientId = "{acc["oauth_client_id"]}"
+ClientSecret = "{acc.get("oauth_client_secret", "")}"
+Authority = {f'"{authority}"' if authority else "None"}
+
+Profiles = {{
+    'mail': {{
+        'scopes': [
+            'https://outlook.office.com/IMAP.AccessAsUser.All',
+            'https://outlook.office.com/SMTP.Send'
+        ]
+    }},
+    'calendar': {{
+        'scopes': [
+            'https://graph.microsoft.com/Calendars.ReadWrite'
+        ]
+    }}
+}}
+
+Scopes = Profiles['mail']['scopes']
+
+Timeout = 30
+'''
+
+
 def generate_mail_launchagents(config):
     """Return {filename: plist content} for each non-smtp-only account.
 
@@ -401,6 +483,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--mbsync", action="store_true", help="Print mbsyncrc to stdout")
     parser.add_argument("--msmtp", action="store_true", help="Print msmtprc to stdout")
+    parser.add_argument("--notmuch", action="store_true", help="Print notmuch-config to stdout")
     parser.add_argument("--emacs", action="store_true", help="Print email-accounts.el to stdout")
     parser.add_argument("--launchagents", action="store_true",
                         help="Print per-account launchagent plists to stdout")
@@ -414,6 +497,8 @@ def main():
         print(generate_mbsyncrc(config)); return
     if args.msmtp:
         print(generate_msmtprc(config)); return
+    if args.notmuch:
+        print(generate_notmuch_config(config)); return
     if args.emacs:
         print(generate_email_accounts(config)); return
     if args.launchagents:
@@ -425,8 +510,14 @@ def main():
     outputs = {
         MBSYNCRC: generate_mbsyncrc(config),
         MSMTPRC: generate_msmtprc(config),
+        NOTMUCH_CONFIG: generate_notmuch_config(config),
         EMACS_ACCOUNTS: generate_email_accounts(config),
     }
+    m365auth = generate_m365auth_config(config)
+    if m365auth:
+        outputs[M365AUTH_CONFIG] = m365auth
+    else:
+        print("No oauth_client_id in accounts.yaml; leaving the m365auth config alone.")
     for filename, content in generate_mail_launchagents(config).items():
         outputs[LAUNCHAGENTS_DIR / filename] = content
 
@@ -439,7 +530,7 @@ def main():
         if target.is_symlink():
             target.unlink()
         target.write_text(content)
-        if path in (MBSYNCRC, MSMTPRC):
+        if path in (MBSYNCRC, MSMTPRC, NOTMUCH_CONFIG, M365AUTH_CONFIG):
             target.chmod(0o600)
         print(f"{'Wrote' if args.write else 'Generated'} {target}")
 

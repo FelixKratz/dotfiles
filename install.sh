@@ -255,6 +255,17 @@ if (( ${GROUPS[(Ie)desktop]} )); then
     python3 -m pip install --quiet --user --break-system-packages -r "$PDF_SKILL_REQS"
 fi
 
+# Mail configuration (mbsyncrc, msmtprc, notmuch-config, m365auth, launch
+# agents) is generated from accounts.yaml in the private repo, so it exists
+# only where that repo does. pyyaml goes in the user site for the same PEP 668
+# reason as above.
+if (( ${GROUPS[(Ie)mail]} )) && [ -f "$HOME/.config/email/accounts.yaml" ]; then
+  python3 -c 'import yaml' 2>/dev/null || \
+    python3 -m pip install --quiet --user --break-system-packages pyyaml
+  echo "Generating mail configuration..."
+  python3 "$HOME/.config/email/generate.py" --write
+fi
+
 # Doom Emacs, on every machine — the config gates its optional modules on the
 # groups declared above. Installed after link.sh so ~/.config/doom is already
 # the symlink into this repo and `doom install` picks up the real config

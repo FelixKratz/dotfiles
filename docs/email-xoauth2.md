@@ -18,6 +18,8 @@ unaffected by any of this.
 
 `install.sh --full` installs all three.
 
+m365auth signs in through an Azure app registration. Its client ID goes in the work account's `oauth_client_id` in `accounts.yaml`, and `generate.py` writes m365auth's config from it (`~/Library/Application Support/m365auth/config.py` on macOS). That leaves one step per machine: sign in with `get-token --profile mail` in a terminal, which stores the refresh token in the login Keychain.
+
 ## The plugin directory
 
 The xoauth2 plugin lives in the cyrus-sasl-xoauth2 keg, but libsasl2 only
