@@ -1,10 +1,12 @@
 #!/bin/bash
 # Wrapper for msmtpq with correct paths
-export MSMTP=/opt/homebrew/bin/msmtp
+# Apple Silicon or Intel Homebrew; launchd sets no HOMEBREW_PREFIX.
+BREW_PREFIX="${HOMEBREW_PREFIX:-$([ -d /opt/homebrew ] && echo /opt/homebrew || echo /usr/local)}"
+export MSMTP=$BREW_PREFIX/bin/msmtp
 export MSMTPQ_Q=~/.msmtpq
 # launchd runs the queue flush with a bare PATH; passwordeval needs
 # refresh-token from ~/.local/bin.
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.local/bin:$BREW_PREFIX/bin:$PATH"
 export MSMTPQ_LOG=~/.log/msmtpq.log
 export EMAIL_QUEUE_QUIET=${EMAIL_QUEUE_QUIET-t}
 
@@ -14,7 +16,7 @@ export EMAIL_QUEUE_QUIET=${EMAIL_QUEUE_QUIET-t}
 # empty, and after each successful send the leftover empty pair makes the
 # queue flush (and thus msmtpq) exit 64. Patch to ${INC:+-}, which expands
 # empty for an empty INC, in a cached copy and run that.
-SRC=/opt/homebrew/share/msmtp/scripts/msmtpq/msmtpq
+SRC=$BREW_PREFIX/share/msmtp/scripts/msmtpq/msmtpq
 CACHE=~/.cache/msmtpq/msmtpq-patched
 if [ ! -f "$CACHE" ] || [ "$SRC" -nt "$CACHE" ]; then
   mkdir -p "$(dirname "$CACHE")"

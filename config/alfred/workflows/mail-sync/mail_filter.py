@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 ACCOUNTS_YAML = os.path.expanduser("~/.config/email/accounts.yaml")
-YQ = "/opt/homebrew/bin/yq"
+YQ = next((p for p in ("/opt/homebrew/bin/yq", "/usr/local/bin/yq") if os.path.exists(p)), "yq")
 FILTER = (
     '[.accounts[] | select(.smtp_only != true) '
     '| {name: .name, email: .email, key: (.search_key // "")}]'

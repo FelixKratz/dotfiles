@@ -372,7 +372,7 @@ def notify(title: str, message: str, sound: bool = True):
     title = title.replace('"', '\\"')
 
     # Try terminal-notifier first (more reliable in Alfred context)
-    terminal_notifier = '/opt/homebrew/bin/terminal-notifier'
+    terminal_notifier = next((p for p in ('/opt/homebrew/bin/terminal-notifier', '/usr/local/bin/terminal-notifier') if os.path.exists(p)), '')
     if os.path.exists(terminal_notifier):
         args = [terminal_notifier, '-title', title, '-message', message, '-group', 'alfred-cal']
         if sound:

@@ -12,9 +12,11 @@
 
 ACCOUNTS_YAML="$HOME/.config/email/accounts.yaml"
 STATE_DIR="$HOME/.cache/mail-sync"
-YQ=/opt/homebrew/bin/yq
-MBSYNC=/opt/homebrew/bin/mbsync
-NOTMUCH=/opt/homebrew/bin/notmuch
+# Apple Silicon or Intel Homebrew; launchd sets no HOMEBREW_PREFIX.
+BREW_PREFIX="${HOMEBREW_PREFIX:-$([ -d /opt/homebrew ] && echo /opt/homebrew || echo /usr/local)}"
+YQ=$BREW_PREFIX/bin/yq
+MBSYNC=$BREW_PREFIX/bin/mbsync
+NOTMUCH=$BREW_PREFIX/bin/notmuch
 SYNC_TIMEOUT=600
 SYNC_GRACE=20
 NOTMUCH_ERR="$HOME/.log/getmail-notmuch.err"
@@ -33,7 +35,7 @@ FAIL_AFTER=1800
 # The XOAUTH2 plugin lives in its own keg, but libsasl2 only looks in the
 # cyrus-sasl keg, and any rebuild of that keg wipes a copied-in plugin. Point
 # libsasl2 at both directories instead.
-export SASL_PATH=/opt/homebrew/opt/cyrus-sasl/lib/sasl2:/opt/homebrew/opt/cyrus-sasl-xoauth2/lib/sasl2
+export SASL_PATH=$BREW_PREFIX/opt/cyrus-sasl/lib/sasl2:$BREW_PREFIX/opt/cyrus-sasl-xoauth2/lib/sasl2
 
 usage() {
   sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'

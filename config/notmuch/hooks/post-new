@@ -10,7 +10,8 @@
 # getmail.sh does, and fall back to PATH for an interactive run.
 set -eu
 
-NOTMUCH=/opt/homebrew/bin/notmuch
+BREW_PREFIX="${HOMEBREW_PREFIX:-$([ -d /opt/homebrew ] && echo /opt/homebrew || echo /usr/local)}"
+NOTMUCH=$BREW_PREFIX/bin/notmuch
 [ -x "$NOTMUCH" ] || NOTMUCH=notmuch
 
 "$NOTMUCH" tag +sent -inbox -unread -- \

@@ -189,7 +189,7 @@ sst() {
 
 alias kssh="kitty +kitten ssh"  # For ad-hoc servers
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/homebrew/lib
+[[ -n $HOMEBREW_PREFIX ]] && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOMEBREW_PREFIX/lib
 
 
 eval "$(zoxide init zsh)"

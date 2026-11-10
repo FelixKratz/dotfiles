@@ -31,7 +31,7 @@ from pathlib import Path
 MBSYNCRC = Path.home() / ".mbsyncrc"
 MAILDIR = Path.home() / "Maildir"
 STATE_DIR = Path.home() / ".local" / "state" / "archive-unsynced-mail"
-NOTMUCH = shutil.which("notmuch", path="/opt/homebrew/bin") or "notmuch"
+NOTMUCH = shutil.which("notmuch", path="/opt/homebrew/bin:/usr/local/bin") or "notmuch"
 
 # Folders with nothing worth keeping: mail already thrown away, and the
 # calendar, contacts and sync bookkeeping that Exchange exposes over IMAP.

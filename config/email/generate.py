@@ -8,8 +8,14 @@ this file.
 """
 
 import argparse
+import os
 import yaml
 from pathlib import Path
+
+# Apple Silicon or Intel Homebrew. Launch agents need absolute paths, and
+# launchd sets no HOMEBREW_PREFIX, so resolve it here.
+BREW_PREFIX = os.environ.get("HOMEBREW_PREFIX") or (
+    "/opt/homebrew" if Path("/opt/homebrew").is_dir() else "/usr/local")
 
 CONFIG = Path.home() / ".config" / "email" / "accounts.yaml"
 MBSYNCRC = Path.home() / ".mbsyncrc"
@@ -58,7 +64,7 @@ def _inbox_folder(name):
 def generate_mbsyncrc(config):
     lines = [GENERATED_HEADER]
     defaults = config.get("defaults", {})
-    cert_file = defaults.get("certificate_file", "/opt/homebrew/share/ca-certificates/cacert.pem")
+    cert_file = defaults.get("certificate_file", f"{BREW_PREFIX}/share/ca-certificates/cacert.pem")
     accounts = _mail_accounts(config)
 
     for acc in accounts:
@@ -270,7 +276,7 @@ def generate_mail_launchagents(config):
     <string>{label}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/bin/timelimit</string>
+        <string>{BREW_PREFIX}/bin/timelimit</string>
         <string>-t</string>
         <string>600</string>
         <string>{home}/.local/bin/getmail.sh</string>
@@ -427,7 +433,14 @@ def main():
     for path, content in outputs.items():
         target = path if args.write else path.with_suffix(path.suffix + ".generated")
         target.parent.mkdir(parents=True, exist_ok=True)
+        # A leftover symlink (e.g. ~/.mbsyncrc from an older layout that linked
+        # it into a dotfiles repo) would be written through, dropping account
+        # details into a repo. Replace the link with a real file instead.
+        if target.is_symlink():
+            target.unlink()
         target.write_text(content)
+        if path in (MBSYNCRC, MSMTPRC):
+            target.chmod(0o600)
         print(f"{'Wrote' if args.write else 'Generated'} {target}")
 
     if not args.write:

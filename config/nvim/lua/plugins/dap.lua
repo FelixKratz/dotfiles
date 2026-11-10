@@ -2,7 +2,16 @@ local dap = require('dap')
 
 dap.adapters.lldb = {
   type = 'executable',
-  command = '/opt/homebrew/opt/llvm/bin/lldb-vscode', -- adjust as needed
+  -- Homebrew llvm on Apple Silicon or Intel; lldb-vscode became lldb-dap in LLVM 18
+  command = (function()
+    for _, p in ipairs({
+      '/opt/homebrew/opt/llvm/bin/lldb-dap', '/usr/local/opt/llvm/bin/lldb-dap',
+      '/opt/homebrew/opt/llvm/bin/lldb-vscode', '/usr/local/opt/llvm/bin/lldb-vscode',
+    }) do
+      if vim.fn.executable(p) == 1 then return p end
+    end
+    return 'lldb-dap'
+  end)(),
   name = "lldb"
 }
 

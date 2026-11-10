@@ -27,6 +27,11 @@ brew "svim"
 brew "mu"
 brew "msmtp"
 brew "timelimit"
+brew "notmuch"
+brew "yq"
+brew "goimapnotify"
+brew "rclone"
+brew "terminal-notifier"
 brew "emacs-plus"
 
 # Email xoauth2 stack — see docs/email-xoauth2.md

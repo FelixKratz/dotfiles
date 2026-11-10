@@ -94,5 +94,5 @@ done 2>&1 | tee -a "$LOG"
 log "Archive complete"
 
 # Update notmuch index to reflect moved files
-/opt/homebrew/bin/notmuch new 2>> "$LOG"
+"${HOMEBREW_PREFIX:-$([ -d /opt/homebrew ] && echo /opt/homebrew || echo /usr/local)}"/bin/notmuch new 2>> "$LOG"
 log "Notmuch index updated"

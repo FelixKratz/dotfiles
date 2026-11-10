@@ -10,7 +10,8 @@ defaults:
   tls_type: IMAPS
   auth: plain
   imap_timeout: 120  # seconds; mbsync's own default is 20
-  certificate_file: /opt/homebrew/share/ca-certificates/cacert.pem
+  # certificate_file defaults to Homebrew's ca-certificates bundle
+  # (<brew prefix>/share/ca-certificates/cacert.pem); set it only to override.
   msmtp_port: 587
   msmtp_tls_starttls: true
 

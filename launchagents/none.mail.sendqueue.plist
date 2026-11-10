@@ -6,7 +6,7 @@
 	<string>none.mail.sendqueue</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/opt/homebrew/bin/timelimit</string>
+		<string>__BREW__/bin/timelimit</string>
 		<string>-t</string>
 		<string>45</string>
 		<string>__HOME__/.local/bin/msmtp-queue</string>

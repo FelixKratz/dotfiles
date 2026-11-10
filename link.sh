@@ -352,6 +352,7 @@ AGENT_MANIFEST="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/launchagents"
 
 if [[ "$OS" == "Darwin" ]]; then
   mkdir -p $HOME/Library/LaunchAgents ${AGENT_MANIFEST:h}
+  BREW_PREFIX="${HOMEBREW_PREFIX:-$([[ -d /opt/homebrew ]] && echo /opt/homebrew || echo /usr/local)}"
   domain="gui/$(id -u)"
   typeset -a installed_agents
   for file in $CODE_DIR/dotfiles/launchagents/*; do
@@ -364,11 +365,12 @@ if [[ "$OS" == "Darwin" ]]; then
     dest=$HOME/Library/LaunchAgents/$base
     label=${base%.plist}
     installed_agents+=($label)
-    # Plists can't expand $HOME at runtime, so we substitute it at install
-    # time. Remove any legacy symlink first to avoid writing through it
+    # Plists can't expand $HOME at runtime, so we substitute it (and the
+    # Homebrew prefix, which differs between Apple Silicon and Intel) at
+    # install time. Remove any legacy symlink first to avoid writing through it
     # back into the repo.
     [ -L "$dest" ] && rm "$dest"
-    rendered="$(sed "s|__HOME__|$HOME|g" "$file")"
+    rendered="$(sed -e "s|__HOME__|$HOME|g" -e "s|__BREW__|$BREW_PREFIX|g" "$file")"
     if [[ -f "$dest" && "$(<$dest)" == "$rendered" ]] \
       && launchctl print "$domain/$label" >/dev/null 2>&1; then
       continue

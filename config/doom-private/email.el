@@ -9,8 +9,14 @@
 
 (setq auth-sources '(macos-keychain-internet macos-keychain-generic "~/.authinfo.gpg"))
 
+(defconst sf/msmtp-binary
+  (or (seq-find #'file-executable-p
+                '("/opt/homebrew/bin/msmtp" "/usr/local/bin/msmtp"))
+      "msmtp")
+  "msmtp from Apple Silicon or Intel Homebrew, else whatever is on PATH.")
+
 (after! message
-  (setenv "MSMTP" "/opt/homebrew/bin/msmtp")
+  (setenv "MSMTP" sf/msmtp-binary)
   (setq sendmail-program (expand-file-name "~/.local/bin/msmtpq")
         message-sendmail-f-is-evil t
         message-sendmail-extra-arguments '("--read-envelope-from")
@@ -31,7 +37,7 @@
       (unless message-sendmail-f-is-evil
         (push from args)
         (push "-f" args))
-      (let* ((process-environment (cons "MSMTP=/opt/homebrew/bin/msmtp"
+      (let* ((process-environment (cons (concat "MSMTP=" sf/msmtp-binary)
                                         process-environment))
              (proc (apply #'start-process "msmtpq" buf sendmail-program args)))
         (process-send-region proc (point-min) (point-max))

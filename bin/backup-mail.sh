@@ -28,7 +28,7 @@ EXCLUDES=(
 log "Starting Maildir backup"
 
 # Sync mirror with versioned backup of deleted/changed files
-/opt/homebrew/bin/rclone sync \
+"${HOMEBREW_PREFIX:-$([ -d /opt/homebrew ] && echo /opt/homebrew || echo /usr/local)}"/bin/rclone sync \
   "${EXCLUDES[@]}" \
   --backup-dir="pcloud-crypt:versions/$TODAY" \
   --exclude='versions/**' \
