@@ -44,11 +44,14 @@ front_line() {
 run() {
   local tool start
   tool="$(tool_of "$1")" || { echo "review-desk: no tab '$1'" >&2; exit 2; }
+  # Ctrl-C goes to the whole process group. A handler, unlike ignoring the
+  # signal, is reset in the tool, so the tool still stops while the loop lives.
+  trap : INT
   while :; do
     start=$SECONDS
     $tool || true
     if (( SECONDS - start < 10 )); then
-      read -rp "$tool exited straight away; press Enter to start it again " _
+      read -rp "$tool exited straight away; press Enter to start it again " _ || true
     fi
   done
 }
