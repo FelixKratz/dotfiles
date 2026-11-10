@@ -310,12 +310,19 @@ def generate_m365auth_config(config):
         return None
     acc = accounts[0]
     authority = acc.get("oauth_authority")
+    # the redirect must match the app registration; m365auth's own default
+    # (https://localhost:7598/) is used when none is given
+    redirect = ""
+    if acc.get("oauth_redirect_uri"):
+        redirect = (f'\nRedirectUri = "{acc["oauth_redirect_uri"]}"\n'
+                    f'RedirectPort = {acc.get("oauth_redirect_port", 7598)}\n'
+                    f'UseHttps = {bool(acc.get("oauth_use_https", True))}\n')
     return f'''# Auto-generated from accounts.yaml by generate.py — do not edit directly
 
 ClientId = "{acc["oauth_client_id"]}"
 ClientSecret = "{acc.get("oauth_client_secret", "")}"
 Authority = {f'"{authority}"' if authority else "None"}
-
+{redirect}
 Profiles = {{
     'mail': {{
         'scopes': [
