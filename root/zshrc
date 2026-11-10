@@ -273,3 +273,10 @@ export PATH="$HOME/.local/bin:$PATH"
 # overdue backup, a pending restart. Each clears itself once it resolves; `nudge
 # snooze` buys quiet, and `nudge list` shows what is set aside.
 command -v nudge >/dev/null && nudge shell
+
+# The review desk (gh-dash and the bot's activity, in tmux session "desk") on
+# the machines you review from; tmux-desk checks which those are. Not over ssh,
+# where nobody is at the keyboard for Touch ID, nor inside a coding agent.
+if [[ -z $CLAUDECODE && -z $SSH_CONNECTION ]] && (( $+commands[tmux-desk] )); then
+  tmux-desk
+fi
