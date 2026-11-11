@@ -1,0 +1,38 @@
+prSections:
+  - title: To review
+    filters: is:open review-requested:@me status:success draft:false
+  - title: Unreviewed in epiforecasts
+    filters: is:open org:epiforecasts review:none -author:@me -author:sbfnk-bot -status:failure draft:false
+  - title: Unreviewed in mine
+    filters: is:open user:sbfnk review:none -author:@me -author:sbfnk-bot -status:failure draft:false
+pager:
+  diff: delta   # or "less -R" without delta
+
+keybindings:
+  prs:
+    - key: V
+      name: approve and merge
+      command: >
+        [ "$(gh pr view -R {{.RepoName}} {{.PrNumber}} --json mergeable -q .mergeable)" = MERGEABLE ] &&
+        gh pr review --approve -R {{.RepoName}} {{.PrNumber}} &&
+        gh pr merge --merge --delete-branch -R {{.RepoName}} {{.PrNumber}}
+    - key: ctrl+v
+      name: approve, no message
+      command: gh pr review --approve -R {{.RepoName}} {{.PrNumber}}
+    - key: ctrl+a
+      builtin: approveWorkflows
+    - key: I
+      name: review with line comments in the editor
+      command: gh-line-review {{.RepoName}} {{.PrNumber}}
+    - key: K
+      name: all comments, tables included
+      command: GH_FORCE_TTY=100% gh pr view --comments -R {{.RepoName}} {{.PrNumber}} | less -R
+    - key: F
+      name: re-run failed jobs
+      command: >
+        gh run list -R {{.RepoName}} --status failure --json databaseId -q '.[].databaseId'
+        --commit "$(gh pr view -R {{.RepoName}} {{.PrNumber}} --json headRefOid -q .headRefOid)" |
+        xargs -n1 gh run rerun --failed -R {{.RepoName}}
+
+defaults:
+  prApproveComment: ""

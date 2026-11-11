@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+# gh-line-review — review a pull request in $EDITOR, with comments on lines.
+#
+# Opens the PR's description and diff in the editor. Write a comment on a new
+# line starting with ">>" straight below the diff line it is about; several
+# ">>" lines in a row make one comment. ">>del" under a line suggests deleting
+# it and ">>=new text" suggests replacing it, as GitHub suggestions the author
+# can apply with a click. ">>{" under a line makes the next comment, deletion
+# or replacement cover everything from there down. ">>" lines above the
+# first file go
+# into the review's own text. Save and quit, then choose to approve, request
+# changes or just comment, and everything goes out as one review.
+#
+# Runs gh as whoever gh is logged in as; from gh-dash started through gh-me
+# that is sbfnk. The edited file is kept if posting fails, so nothing typed
+# is lost.
+#
+# Usage: gh-line-review owner/repo NUMBER
+set -euo pipefail
+
+repo=${1:?usage: gh-line-review owner/repo NUMBER}
+n=${2:?usage: gh-line-review owner/repo NUMBER}
+
+dir=$(mktemp -d "${TMPDIR:-/tmp}/gh-line-review.XXXXXX")
+file="$dir/review-$n.diff"
+
+pr=$(gh pr view "$n" -R "$repo" --json title,body,url,headRefOid)
+head=$(jq -r .headRefOid <<< "$pr")
+
+{
+  jq -r '"# \(.title)\n# \(.url)\n#"' <<< "$pr"
+  jq -r '.body // "" | split("\n")[] | "# " + .' <<< "$pr"
+  echo "#"
+  echo "# Comment with \">>\" lines below the diff line they are about."
+  echo "# \">>del\" under a line suggests deleting it; \">>=new text\" suggests"
+  echo "# replacing it (several \">>=\" lines for several lines). \">>{\" under a"
+  echo "# line makes the next comment, deletion or replacement cover a range."
+  echo "# In nvim: <leader>rc comment, <leader>rd delete, <leader>re edit (copies"
+  echo "# the line, or the selection, into \">>=\" lines); visual mode for ranges."
+  echo "# \">>\" lines above the first file go into the review's own text."
+  echo "# Lines starting with \"#\" above the diff are ignored."
+  echo
+  gh pr diff "$n" -R "$repo" --color=never
+} > "$file"
+
+# In nvim, keys for this buffer alone insert the markers: on the current line
+# or, in visual mode, on the selected range.
+cat > "$dir/keys.lua" <<'LUA'
+local function range()
+  local m = vim.fn.mode()
+  if m == "v" or m == "V" or m == "\22" then
+    local a, b = vim.fn.line("v"), vim.fn.line(".")
+    vim.cmd("normal! \27")
+    if a > b then a, b = b, a end
+    return a, b
+  end
+  local l = vim.fn.line(".")
+  return l, l
+end
+-- Inserts lines below b, and ">>{" below a when the range spans lines;
+-- returns the row of the last inserted line.
+local function mark(a, b, lines)
+  vim.api.nvim_buf_set_lines(0, b, b, false, lines)
+  if a < b then
+    vim.api.nvim_buf_set_lines(0, a, a, false, { ">>{" })
+    b = b + 1
+  end
+  return b + #lines
+end
+local function write(lines)
+  local a, b = range()
+  local row = mark(a, b, lines)
+  vim.api.nvim_win_set_cursor(0, { row, 0 })
+  vim.cmd("startinsert!")
+end
+local opts = { buffer = true }
+vim.keymap.set({ "n", "x" }, "<leader>rc", function() write({ ">> " }) end, opts)
+vim.keymap.set({ "n", "x" }, "<leader>rd", function()
+  local a, b = range()
+  mark(a, b, { ">>del" })
+end, opts)
+vim.keymap.set({ "n", "x" }, "<leader>re", function()
+  local a, b = range()
+  local out = {}
+  for _, l in ipairs(vim.api.nvim_buf_get_lines(0, a - 1, b, false)) do
+    local c = l:sub(1, 1)
+    if c == "+" or c == " " then table.insert(out, ">>=" .. l:sub(2)) end
+  end
+  if #out == 0 then return end
+  local row = mark(a, b, out)
+  vim.api.nvim_win_set_cursor(0, { row, 0 })
+  vim.cmd("startinsert!")
+end, opts)
+LUA
+editor=${VISUAL:-${EDITOR:-vi}}
+case $(basename "${editor%% *}") in
+  nvim) $editor -c "luafile $dir/keys.lua" "$file" ;;
+  *) $editor "$file" ;;
+esac
+
+# Walk the diff, tracking the file and the line each ">>" comment follows.
+# A comment on an added or unchanged line goes on the new file's line (RIGHT);
+# on a removed line, on the old file's line (LEFT). ">>del" and ">>=" become
+# GitHub suggestions, which only lines of the new file can take; deletions on
+# consecutive lines merge into one suggestion over the range.
+# Each comment comes out as path, first line (empty for one line), line, side
+# and body, tab-separated, with \037 for the body's newlines.
+comments=$(awk '
+  function emit(p, first, last, sd, b) {
+    print p "\t" (first == last ? "" : first) "\t" last "\t" sd "\t" b
+  }
+  function emit_del() {
+    if (dpath != "") emit(dpath, dfirst, dlast, "RIGHT", "```suggestion\037```")
+    dpath = ""
+  }
+  function flush(   b) {
+    if (text == "" && !hasrepl && !del) return
+    if (path == "") {
+      # Only lines above the first file are review text; under the header
+      # of a later file (or of a rename or binary file, which have no +++
+      # line) a comment has no line to go on.
+      if (hasrepl || del || infile) bad++
+      else body = body (body == "" ? "" : "\037") text
+    } else if (side == "") {
+      bad++
+    } else if ((hasrepl || del) && side != "RIGHT") {
+      bad++
+    } else if (del && text == "" && !hasrepl && rpath == "") {
+      if (dpath == path && dlast == line - 1) dlast = line
+      else { emit_del(); dpath = path; dfirst = line; dlast = line }
+    } else {
+      emit_del()
+      b = text
+      if (hasrepl || del)
+        b = b (b == "" ? "" : "\037") "```suggestion" (hasrepl ? "\037" repl : "") "\037```"
+      first = line
+      # rline is a new-file line, so the range must end on one too
+      if (rpath != "") {
+        if (side == "RIGHT" && rpath == path && rline <= line) first = rline; else bad++
+      }
+      emit(path, first, line, side, b)
+    }
+    text = ""; repl = ""; hasrepl = 0; del = 0; rpath = ""
+  }
+  # ">>{" under a line starts a range that the next comment covers.
+  /^>>\{[ \t]*$/ {
+    flush()
+    if (side == "RIGHT") { rpath = path; rline = line } else bad++
+    next
+  }
+  /^>>del[ \t]*$/ { del = 1; next }
+  # hasrepl, not repl == "", says a ">>=" was seen: a replacement line can
+  # itself be empty.
+  /^>>=/ {
+    t = substr($0, 4)
+    repl = repl (hasrepl ? "\037" : "") t
+    hasrepl = 1
+    next
+  }
+  /^>>/ {
+    t = substr($0, 3); sub(/^ /, "", t)
+    text = text (text == "" ? "" : "\037") t
+    next
+  }
+  { flush() }
+  # A deletion range continues only across the very next diff line.
+  dpath != "" && !/^[+ ]/ { emit_del() }
+  /^diff --git / {
+    if (rpath != "") bad++
+    infile = 1; inhunk = 0; side = ""; path = ""; old = ""; rpath = ""; next
+  }
+  # Git ends these header lines with a tab when the path has a space in it
+  !inhunk && /^--- / {
+    old = substr($0, 5); sub(/\t$/, "", old); sub(/^a\//, "", old); next
+  }
+  !inhunk && /^\+\+\+ / {
+    path = substr($0, 5); sub(/\t$/, "", path)
+    if (path == "/dev/null") path = old; else sub(/^b\//, "", path)
+    next
+  }
+  /^@@ / {
+    split($0, h, " ")
+    o = h[2]; sub(/^-/, "", o); split(o, oo, ","); oline = oo[1]
+    nn = h[3]; sub(/^\+/, "", nn); split(nn, np, ","); nline = np[1]
+    # GitHub takes a range only within one hunk
+    if (rpath != "") bad++
+    inhunk = 1; side = ""; rpath = ""; next
+  }
+  inhunk && /^\+/ { line = nline++; side = "RIGHT"; next }
+  inhunk && /^-/  { line = oline++; side = "LEFT"; next }
+  inhunk && /^ /  { line = nline++; oline++; side = "RIGHT"; next }
+  END {
+    flush(); emit_del()
+    if (rpath != "") bad++
+    # Marker rows start with a tab, which no path in a diff can start with
+    if (body != "") print "\tBODY\t" body
+    if (bad) print "\tBAD\t" bad
+  }
+' "$file")
+
+# gh-dash redraws as soon as this exits, so on every path that keeps the
+# review file, wait for a key; otherwise the message saying where it is
+# vanishes before it can be read.
+leave() {
+  printf '%s\n' "$2" >&2
+  read -rsn1 -p "Press any key to return " _ < /dev/tty || true
+  echo >&2
+  exit "$1"
+}
+
+if grep -q $'^\tBAD\t' <<< "$comments"; then
+  leave 1 "Some \">>\" lines are not below a diff line, a \">>del\", \">>=\" or \">>{\"
+is under a removed line, or a \">>{\" range has no end in its hunk; fix them in $file"
+fi
+
+body=$(grep $'^\tBODY\t' <<< "$comments" | cut -f3- || true)
+json=$({ grep -v $'^\tBODY\t' <<< "$comments" || true; } | jq -R -s '
+  split("\n") | map(select(length > 0) | split("\t")
+    | {path: .[0], line: (.[2] | tonumber), side: .[3],
+       body: (.[4:] | join("\t") | gsub("\u001f"; "\n"))}
+      + (if .[1] == "" then {} else {start_line: (.[1] | tonumber), start_side: .[3]} end))')
+count=$(jq length <<< "$json")
+body=$(printf '%s' "$body" | tr '\037' '\n')
+
+echo "$count line comment(s)${body:+, plus review text}."
+read -rp "[a]pprove  [r]equest changes  [c]omment  [q]uit without posting: " k
+case $k in
+  a) event=APPROVE ;;
+  r) event=REQUEST_CHANGES ;;
+  c) event=COMMENT ;;
+  *) leave 0 "Nothing posted; your review is in $file" ;;
+esac
+if [[ $event != APPROVE && $count -eq 0 && -z $body ]]; then
+  leave 1 "Nothing to say: add comments or review text. Your file is $file"
+fi
+
+jq -n --arg c "$head" --arg e "$event" --arg b "$body" --argjson cs "$json" \
+  '{commit_id: $c, event: $e, comments: $cs} + (if $b == "" then {} else {body: $b} end)' \
+  | gh api "repos/$repo/pulls/$n/reviews" --input - --jq '"Posted: \(.html_url)"' \
+  || leave 1 "Posting failed; your review is in $file"
+rm -rf "$dir"
