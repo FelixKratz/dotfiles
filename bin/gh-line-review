@@ -116,7 +116,10 @@ comments=$(awk '
   function flush(   b) {
     if (text == "" && repl == "" && !del) return
     if (path == "") {
-      if (repl != "" || del) bad++
+      # Only lines above the first file are review text; under the header
+      # of a later file (or of a rename or binary file, which have no +++
+      # line) a comment has no line to go on.
+      if (repl != "" || del || infile) bad++
       else body = body (body == "" ? "" : "\037") text
     } else if (side == "") {
       bad++
@@ -161,7 +164,7 @@ comments=$(awk '
   dpath != "" && !/^[+ ]/ { emit_del() }
   /^diff --git / {
     if (rpath != "") bad++
-    inhunk = 0; side = ""; path = ""; old = ""; rpath = ""; next
+    infile = 1; inhunk = 0; side = ""; path = ""; old = ""; rpath = ""; next
   }
   !inhunk && /^--- / { old = substr($0, 5); sub(/^a\//, "", old); next }
   !inhunk && /^\+\+\+ / {
