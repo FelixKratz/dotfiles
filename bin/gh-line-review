@@ -131,8 +131,9 @@ comments=$(awk '
       if (repl != "" || del)
         b = b (b == "" ? "" : "\037") "```suggestion" (repl == "" ? "" : "\037" repl) "\037```"
       first = line
+      # rline is a new-file line, so the range must end on one too
       if (rpath != "") {
-        if (rpath == path && rline <= line) first = rline; else bad++
+        if (side == "RIGHT" && rpath == path && rline <= line) first = rline; else bad++
       }
       emit(path, first, line, side, b)
     }
