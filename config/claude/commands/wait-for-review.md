@@ -110,7 +110,8 @@ reason about: a new commit simply has no check yet.
 
 Then:
 
-- **`SUCCESS`** — reviewed and clean at this head. Hand the PR to the human
+- **`SUCCESS`** — reviewed and clean at this head, perhaps with threads pushed
+  back on for the human (the title names them). Hand the PR to the human
   (below), then go on to Step 3.
 - **`FAILURE`, title naming open findings** — `/review-loop` stopped at its round
   cap. Do not re-run it; those findings are inline comments awaiting the human.
@@ -129,7 +130,9 @@ Then:
 
 **Handing the PR to the human.** A green `bot-review` is the signal that the
 PR is worth sbfnk's time, so PRs are opened as drafts with no reviewer and wait
-for it. On `SUCCESS`, on a PR you authored:
+for it. On `SUCCESS`, on a PR you authored, once every other check on the head
+has finished (while any still runs, wait for it as in Step 2, and fix a failure
+first as in Step 3b):
 
 - If `isDraft` is true, mark it ready: `gh pr ready <PR>`.
 - Request review from sbfnk (`gh pr edit <PR> --add-reviewer sbfnk`) unless

@@ -188,7 +188,11 @@ because neither has verified anything yet — and it is the safe resting state i
 the loop dies partway, where a yellow spinner would read as still working when
 nothing is.
 - **When a full pass comes back clean** — update it to `conclusion=success`,
-  title `No findings`.
+  title `No findings`. Threads you pushed back on, left open for the human, do
+  not keep it red: the open thread and the review request already show the
+  human there is a point to decide, and a red check would only hide the PR
+  from anything filtering on status. Name them in the title instead, as in
+  `No findings; 1 pushed back, for the maintainers`.
 - **When you stop at the round cap** — leave it red, title naming the count of
   findings still open.
 
