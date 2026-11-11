@@ -192,12 +192,11 @@ if grep -q '^BAD' <<< "$comments"; then
 fi
 
 body=$(grep '^BODY' <<< "$comments" | cut -f2- || true)
-json=$(grep -v '^BODY' <<< "$comments" | grep . | jq -R -s '
+json=$({ grep -v '^BODY' <<< "$comments" || true; } | jq -R -s '
   split("\n") | map(select(length > 0) | split("\t")
     | {path: .[0], line: (.[2] | tonumber), side: .[3],
        body: (.[4:] | join("\t") | gsub("\u001f"; "\n"))}
-      + (if .[1] == "" then {} else {start_line: (.[1] | tonumber), start_side: .[3]} end))' \
-  || echo '[]')
+      + (if .[1] == "" then {} else {start_line: (.[1] | tonumber), start_side: .[3]} end))')
 count=$(jq length <<< "$json")
 body=$(printf '%s' "$body" | tr '\037' '\n')
 
