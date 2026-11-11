@@ -169,9 +169,12 @@ comments=$(awk '
     if (rpath != "") bad++
     infile = 1; inhunk = 0; side = ""; path = ""; old = ""; rpath = ""; next
   }
-  !inhunk && /^--- / { old = substr($0, 5); sub(/^a\//, "", old); next }
+  # Git ends these header lines with a tab when the path has a space in it
+  !inhunk && /^--- / {
+    old = substr($0, 5); sub(/\t$/, "", old); sub(/^a\//, "", old); next
+  }
   !inhunk && /^\+\+\+ / {
-    path = substr($0, 5)
+    path = substr($0, 5); sub(/\t$/, "", path)
     if (path == "/dev/null") path = old; else sub(/^b\//, "", path)
     next
   }
