@@ -132,7 +132,9 @@ Then:
 PR is worth sbfnk's time, so PRs are opened as drafts with no reviewer and wait
 for it. On `SUCCESS`, on a PR you authored, once every other check on the head
 has finished (while any still runs, wait for it as in Step 2, and fix a failure
-first as in Step 3b):
+first as in Step 3b; a failure Step 3b leaves in place, out of scope or already
+attempted on this head, does not hold the handover, so hand over anyway and
+name the failing check in the summary):
 
 - If `isDraft` is true, mark it ready: `gh pr ready <PR>`.
 - Request review from sbfnk (`gh pr edit <PR> --add-reviewer sbfnk`) unless
