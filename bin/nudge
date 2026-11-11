@@ -318,6 +318,53 @@ check_sbfnk_bot() {
   fi
 }
 
+# Microsoft 365 sign-ins expire a fixed time after the interactive login, however
+# often the token is refreshed (LSHTM's conditional access sets 60 days), and
+# then mail sync and calblock stop until `get-token` runs again. m365auth keeps
+# the login time per profile in signed_in_<profile>; warn in the last week and
+# keep warning once it has passed. The phase is part of the key, so expiry
+# notifies afresh instead of decaying with the week-old warning.
+check_m365_signin() {
+  local dir lifetime warn file profile expires left name seen=" "
+  if [ "$(uname -s)" = Darwin ]; then
+    dir="$HOME/Library/Caches/m365auth"
+  else
+    dir="${XDG_CACHE_HOME:-$HOME/.cache}/m365auth"
+  fi
+  lifetime="${NUDGE_M365_SIGNIN_DAYS:-60}"
+  warn="${NUDGE_M365_WARN_DAYS:-7}"
+  for file in "$dir"/signed_in_*; do
+    [ -f "$file" ] || continue
+    profile="${file##*/signed_in_}"
+    name="m365-$profile"
+    valid_name "$name" 2>/dev/null || continue
+    seen="$seen$name "
+    expires=$(python3 -c '
+import datetime, sys
+when = datetime.datetime.fromisoformat(open(sys.argv[1]).read().strip())
+if when.tzinfo is None:
+    when = when.replace(tzinfo=datetime.timezone.utc)
+print(int(when.timestamp()) + int(sys.argv[2]) * 86400)
+' "$file" "$lifetime" 2>/dev/null) || continue
+    left=$(( expires - NOW ))
+    if [ "$left" -le 0 ]; then
+      cmd_raise "$name" -p 15 -k "$name:$expires:expired" \
+        "$profile sign-in expired — get-token --profile $profile"
+    elif [ "$left" -le $(( warn * 86400 )) ]; then
+      cmd_raise "$name" -p 25 -k "$name:$expires:expiring" \
+        "$profile sign-in expires in $(( (left + 86399) / 86400 ))d — get-token --profile $profile"
+    else
+      cmd_clear "$name"
+    fi
+  done
+  # A profile whose record has gone has nothing left to warn about.
+  for file in "$STATE_DIR"/m365-*.nudge; do
+    [ -f "$file" ] || continue
+    name="${file##*/}"; name="${name%.nudge}"
+    case "$seen" in *" $name "*) ;; *) cmd_clear "$name" ;; esac
+  done
+}
+
 # The home-network checks (DNS, the mini and its SSH log) live in the private
 # repo and are sourced from there when present.
 check_home() {
@@ -335,6 +382,7 @@ cmd_check() {
   check_reboot
   check_claude_backup
   check_sbfnk_bot
+  check_m365_signin
 }
 
 case "${1:-shell}" in
