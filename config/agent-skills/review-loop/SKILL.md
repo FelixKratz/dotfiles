@@ -166,7 +166,9 @@ pass that just ran read the whole diff and found nothing, so there is nothing
 left for them to be about. Left open they look like outstanding findings.
 
 Only on a clean pass. While findings still stand, an outdated thread may just be
-a fix that moved code around, and resolving it would bury a live point.
+a fix that moved code around, and resolving it would bury a live point. Never
+resolve a thread you pushed back on, outdated or not: it is the point left for
+the human, and the verdict's title sends them to it.
 
 ## The verdict check
 
