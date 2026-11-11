@@ -170,7 +170,7 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   that expires early if the condition changes, and anything standing for a week
   drops out of the bar into `nudge list`. Polled checks run hourly from
   `launchagents/none.nudge.check.plist` or `systemd/nudge-check.timer`.
-- **review desk** - on the machines you review from (the profile lists `desktop` and `~/.config/dotfiles/bot-host` is set), kitty opens two tabs beside the first shell at startup: `prs` runs gh-dash through `gh-me`, so it acts as you, and `bot` runs `sbr watch`. `config/kitty/kitty.conf` asks `bin/review-desk` whether this is such a machine, and `config/kitty/review-desk.session` lays out the tabs. Each tool starts again when it exits, so quitting gh-dash is how to reload its config.
+- **review desk** - on the machines you review from (the profile lists `desktop` and `~/.config/dotfiles/bot-host` is set), kitty opens two tabs at startup, ahead of the shell: `prs` runs gh-dash through `gh-me`, so it acts as you, and `bot` runs `sbr watch`. `config/kitty/kitty.conf` asks `bin/review-desk` whether this is such a machine, and `config/kitty/review-desk.session` lays out the tabs. Each tool starts again when it exits, so quitting gh-dash is how to reload its config.
 - **sbfnk-bot issues** - assign an issue to `sbfnk-bot` and it works on it,
   publishing nothing until you approve with `sbr`. It lives in the private
   repository `sbfnk/sbfnk-bot`, cloned to `~/code/sbfnk-bot`, whose `bin/`

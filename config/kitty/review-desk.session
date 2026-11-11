@@ -1,11 +1,12 @@
 # Opened at startup on the machines you review from (see bin/review-desk):
-# a shell, then gh-dash and the bot's activity in tabs of their own.
-new_tab
-launch
-focus
-
+# gh-dash and the bot's activity as the first two tabs, then a shell, which
+# has the focus.
 new_tab prs
 launch --title prs sh -c 'exec "$HOME/.local/bin/review-desk" run prs'
 
 new_tab bot
 launch --title bot sh -c 'exec "$HOME/.local/bin/review-desk" run bot'
+
+new_tab
+launch
+focus
