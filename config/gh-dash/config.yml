@@ -22,20 +22,23 @@ keybindings:
   prs:
     # V and M run in the background (gh-bg) and report in a notification, so
     # gh-dash does not freeze while gh works and a failure still shows.
+    # gh-pr-merge deletes the branch where there is no merge queue. With
+    # --auto, gh merges (or queues) at once when the PR can merge and otherwise
+    # enables auto-merge, which needs "Allow auto-merge" in the repository.
     - key: V
-      name: approve and merge
+      name: approve and merge, or auto-merge
       command: >
         gh-bg "{{.RepoName}}#{{.PrNumber}}: approve and merge" sh -c '
         [ "$(gh pr view -R "$0" "$1" --json mergeable -q .mergeable)" = MERGEABLE ]
         || { echo "not mergeable"; exit 1; };
         gh pr review --approve -R "$0" "$1" &&
-        gh pr merge --merge --delete-branch -R "$0" "$1"'
+        gh-pr-merge "$0" "$1" --merge --auto'
         {{.RepoName}} {{.PrNumber}}
     - key: M
       name: squash merge
       command: >
         gh-bg "{{.RepoName}}#{{.PrNumber}}: squash merge"
-        gh pr merge --squash --delete-branch -R {{.RepoName}} {{.PrNumber}}
+        gh-pr-merge {{.RepoName}} {{.PrNumber}} --squash
     - key: ctrl+v
       name: approve, no message
       command: gh pr review --approve -R {{.RepoName}} {{.PrNumber}}
