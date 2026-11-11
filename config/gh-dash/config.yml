@@ -1,10 +1,13 @@
 prSections:
+  # No status: filters. GitHub search keeps the status a PR had at its last
+  # update, so one whose checks finished afterwards stays "pending" there
+  # until it next changes. The checks column shows the live state.
   - title: To review
-    filters: is:open review-requested:@me status:success draft:false
+    filters: is:open review-requested:@me draft:false
   - title: Unreviewed in epiforecasts
-    filters: is:open org:epiforecasts review:none -author:@me -author:sbfnk-bot -status:failure draft:false
+    filters: is:open org:epiforecasts review:none -author:@me -author:sbfnk-bot draft:false
   - title: Unreviewed in mine
-    filters: is:open user:sbfnk review:none -author:@me -author:sbfnk-bot -status:failure draft:false
+    filters: is:open user:sbfnk review:none -author:@me -author:sbfnk-bot draft:false
   # Approved and waiting for a merge. GitHub search cannot say who should
   # merge, so PRs by me or the bot come first, then others' PRs I approved
   # (bots, outside contributors, colleagues who may merge their own).
