@@ -162,7 +162,9 @@ cd ~/code/dotfiles_private && git pull  # if using private configs
   whenever the folder changes. Log: `~/.log/phone-inbox.log`.
 - **nudges** - `bin/nudge` collects the standing conditions a machine wants you
   to know about: a stalled sync, an overdue Claude memory backup, a pending
-  restart (`/var/run/reboot-required` on Linux, macOS's own pending-update list).
+  restart (`/var/run/reboot-required` on Linux, macOS's own pending-update list),
+  a Microsoft 365 sign-in within a week of its 60-day expiry (from the sign-in
+  times m365auth records; `NUDGE_M365_SIGNIN_DAYS` changes the limit).
   Producers raise a condition and clear it when it resolves, so nothing needs
   dismissing by hand. It surfaces in the tmux status bar (`nudge bar`, wired in
   by `bin/tmux-theme-sync` — this is what reaches you over `ssht`) and in new
