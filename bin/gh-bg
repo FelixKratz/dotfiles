@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# gh-bg — run a command in the background and say how it went in a desktop
+# notification: done, or failed with the last line of its output.
+#
+# For gh-dash keys whose command takes a few seconds (approve and merge, say):
+# gh-dash returns straight away instead of freezing until gh is done, and a
+# failure still shows. Where there is no way to notify (over SSH, or with
+# neither osascript nor notify-send and a display), the command runs in the
+# foreground, so gh-dash shows its failure as before.
+#
+# Usage: gh-bg LABEL COMMAND [ARGS...]
+set -uo pipefail
+
+[ $# -ge 2 ] || { echo "usage: gh-bg LABEL COMMAND [ARGS...]" >&2; exit 2; }
+label="$1"
+shift
+
+# Over SSH a notification would show on the far machine's screen, if at all.
+if [ -n "${SSH_CONNECTION:-}" ]; then
+  exec "$@"
+elif command -v osascript >/dev/null 2>&1; then
+  notify() {
+    # Passed as arguments, so quotes in the text cannot break the AppleScript.
+    osascript - "$1" "$2" <<'EOF' >/dev/null 2>&1
+on run argv
+  display notification (item 2 of argv) with title (item 1 of argv)
+end run
+EOF
+  }
+elif command -v notify-send >/dev/null 2>&1 \
+  && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  notify() { notify-send "$1" "$2" >/dev/null 2>&1; }
+else
+  exec "$@"
+fi
+
+(
+  if out="$("$@" 2>&1)"; then
+    notify "$label" "done"
+  else
+    notify "$label: failed" "$(printf '%s\n' "$out" | grep . | tail -1)"
+  fi
+) </dev/null >/dev/null 2>&1 &
+disown

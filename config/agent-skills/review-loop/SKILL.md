@@ -87,7 +87,10 @@ Repeat until a round comes back clean or you hit the cap:
    before believing it. A delta only sees the lines a fix touched, so it cannot
    see that the fix broke something elsewhere, or that several rounds of small
    changes have compounded. Skip this on round one, which already read
-   everything. If the full pass is also clean, stop — the PR is done.
+   everything. If the full pass is also clean, stop — the PR is done. A pass
+   whose only findings repeat points you already pushed back on counts as
+   clean: the reviewer has no memory of the threads, and the code under them
+   has not changed, so it will raise them again on every pass.
 
 3. **Post every finding** as an inline comment on the line it concerns, before
    fixing anything. Post them as **`sbfnk-review-bot[bot]`**, not as the account
@@ -163,7 +166,9 @@ pass that just ran read the whole diff and found nothing, so there is nothing
 left for them to be about. Left open they look like outstanding findings.
 
 Only on a clean pass. While findings still stand, an outdated thread may just be
-a fix that moved code around, and resolving it would bury a live point.
+a fix that moved code around, and resolving it would bury a live point. Never
+resolve a thread you pushed back on, outdated or not: it is the point left for
+the human, and the verdict's title sends them to it.
 
 ## The verdict check
 
@@ -188,9 +193,14 @@ because neither has verified anything yet — and it is the safe resting state i
 the loop dies partway, where a yellow spinner would read as still working when
 nothing is.
 - **When a full pass comes back clean** — update it to `conclusion=success`,
-  title `No findings`.
+  title `No findings`. Threads you pushed back on, left open for the human, do
+  not keep it red: the open thread and the review request already show the
+  human there is a point to decide, and a red check would only hide the PR
+  from anything filtering on status. Name them in the title instead, as in
+  `No findings; 1 pushed back, for the maintainers`.
 - **When you stop at the round cap** — leave it red, title naming the count of
-  findings still open.
+  findings still open and, separately, those you pushed back on, as in
+  `2 findings open; 1 pushed back, for the maintainers`.
 
 Red by default is the point. An absent check is invisible, and "nobody has
 reviewed this commit" is exactly the state worth noticing; a green tick among a
