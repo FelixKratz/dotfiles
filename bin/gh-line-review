@@ -181,8 +181,9 @@ comments=$(awk '
   END {
     flush(); emit_del()
     if (rpath != "") bad++
-    if (body != "") print "BODY\t" body
-    if (bad) print "BAD\t" bad
+    # Marker rows start with a tab, which no path in a diff can start with
+    if (body != "") print "\tBODY\t" body
+    if (bad) print "\tBAD\t" bad
   }
 ' "$file")
 
@@ -196,13 +197,13 @@ leave() {
   exit "$1"
 }
 
-if grep -q '^BAD' <<< "$comments"; then
+if grep -q $'^\tBAD\t' <<< "$comments"; then
   leave 1 "Some \">>\" lines are not below a diff line, a \">>del\", \">>=\" or \">>{\"
 is under a removed line, or a \">>{\" range has no end; fix them in $file"
 fi
 
-body=$(grep '^BODY' <<< "$comments" | cut -f2- || true)
-json=$({ grep -v '^BODY' <<< "$comments" || true; } | jq -R -s '
+body=$(grep $'^\tBODY\t' <<< "$comments" | cut -f3- || true)
+json=$({ grep -v $'^\tBODY\t' <<< "$comments" || true; } | jq -R -s '
   split("\n") | map(select(length > 0) | split("\t")
     | {path: .[0], line: (.[2] | tonumber), side: .[3],
        body: (.[4:] | join("\t") | gsub("\u001f"; "\n"))}
