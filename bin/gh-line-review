@@ -179,7 +179,9 @@ comments=$(awk '
     split($0, h, " ")
     o = h[2]; sub(/^-/, "", o); split(o, oo, ","); oline = oo[1]
     nn = h[3]; sub(/^\+/, "", nn); split(nn, np, ","); nline = np[1]
-    inhunk = 1; side = ""; next
+    # GitHub takes a range only within one hunk
+    if (rpath != "") bad++
+    inhunk = 1; side = ""; rpath = ""; next
   }
   inhunk && /^\+/ { line = nline++; side = "RIGHT"; next }
   inhunk && /^-/  { line = oline++; side = "LEFT"; next }
@@ -205,7 +207,7 @@ leave() {
 
 if grep -q $'^\tBAD\t' <<< "$comments"; then
   leave 1 "Some \">>\" lines are not below a diff line, a \">>del\", \">>=\" or \">>{\"
-is under a removed line, or a \">>{\" range has no end; fix them in $file"
+is under a removed line, or a \">>{\" range has no end in its hunk; fix them in $file"
 fi
 
 body=$(grep $'^\tBODY\t' <<< "$comments" | cut -f3- || true)
