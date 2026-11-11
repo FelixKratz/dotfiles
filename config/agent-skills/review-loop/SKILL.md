@@ -199,7 +199,8 @@ nothing is.
   from anything filtering on status. Name them in the title instead, as in
   `No findings; 1 pushed back, for the maintainers`.
 - **When you stop at the round cap** — leave it red, title naming the count of
-  findings still open, not counting those you pushed back on.
+  findings still open and, separately, those you pushed back on, as in
+  `2 findings open; 1 pushed back, for the maintainers`.
 
 Red by default is the point. An absent check is invisible, and "nobody has
 reviewed this commit" is exactly the state worth noticing; a green tick among a
