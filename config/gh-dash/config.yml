@@ -20,15 +20,22 @@ pager:
 
 keybindings:
   prs:
+    # V and M run in the background (gh-bg) and report in a notification, so
+    # gh-dash does not freeze while gh works and a failure still shows.
     - key: V
       name: approve and merge
       command: >
-        [ "$(gh pr view -R {{.RepoName}} {{.PrNumber}} --json mergeable -q .mergeable)" = MERGEABLE ] &&
-        gh pr review --approve -R {{.RepoName}} {{.PrNumber}} &&
-        gh pr merge --merge --delete-branch -R {{.RepoName}} {{.PrNumber}}
+        gh-bg "{{.RepoName}}#{{.PrNumber}}: approve and merge" sh -c '
+        [ "$(gh pr view -R "$0" "$1" --json mergeable -q .mergeable)" = MERGEABLE ]
+        || { echo "not mergeable"; exit 1; };
+        gh pr review --approve -R "$0" "$1" &&
+        gh pr merge --merge --delete-branch -R "$0" "$1"'
+        {{.RepoName}} {{.PrNumber}}
     - key: M
       name: squash merge
-      command: gh pr merge --squash --delete-branch -R {{.RepoName}} {{.PrNumber}}
+      command: >
+        gh-bg "{{.RepoName}}#{{.PrNumber}}: squash merge"
+        gh pr merge --squash --delete-branch -R {{.RepoName}} {{.PrNumber}}
     - key: ctrl+v
       name: approve, no message
       command: gh pr review --approve -R {{.RepoName}} {{.PrNumber}}
