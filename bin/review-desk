@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# review-desk — the review tools kitty opens as tabs on the machines you review
+# from: gh-dash for the PRs waiting on your review, and the bot's activity as
+# it happens.
+#
+# A machine you review from is a desktop (the profile lists `desktop`) that
+# reaches the bot over ssh (~/.config/dotfiles/bot-host is set). kitty.conf
+# runs `review-desk` to learn whether to open the tabs, so the bot's own
+# machine never gets them.
+#
+# Each tool runs in a loop and starts again when it exits, so quitting gh-dash
+# is how to reload its config. One that exits within a few seconds waits for
+# Enter instead, so a failure (Touch ID declined, the bot machine unreachable)
+# does not retry in a tight loop. Close a tab with cmd+w: the tools take
+# Ctrl-C for themselves, and the loop starts them again.
+#
+# Usage:
+#   review-desk              the kitty config line that opens the tabs here,
+#                            or nothing on other machines (kitty's
+#                            geninclude passes no arguments)
+#   review-desk run NAME     the loop one tab runs (prs or bot)
+set -euo pipefail
+
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles"
+# kitty started from the Dock passes a bare PATH.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# gh-dash goes through gh-me so it acts as you: gh's keyring holds only
+# sbfnk-bot.
+tool_of() {
+  case "$1" in
+    prs) echo "gh-me dash" ;;
+    bot) echo "sbr watch" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The profile is read as link.sh reads it: # comments and whitespace dropped.
+front_line() {
+  sed -e 's/#.*//' -e 's/[[:space:]]//g' "$CONFIG/profile" 2>/dev/null \
+    | grep -qx 'desktop' && [ -s "$CONFIG/bot-host" ]
+}
+
+run() {
+  local tool start
+  tool="$(tool_of "$1")" || { echo "review-desk: no tab '$1'" >&2; exit 2; }
+  # Ctrl-C goes to the whole process group. A handler, unlike ignoring the
+  # signal, is reset in the tool, so the tool still stops while the loop lives.
+  trap : INT
+  while :; do
+    start=$SECONDS
+    $tool || true
+    if (( SECONDS - start < 10 )); then
+      read -rp "$tool exited straight away; press Enter to start it again " _ || true
+    fi
+  done
+}
+
+case "${1:-}" in
+  "")
+    if front_line; then
+      echo "startup_session ${XDG_CONFIG_HOME:-$HOME/.config}/kitty/review-desk.session"
+    fi ;;
+  run)
+    run "${2:?review-desk run needs a tab name}" ;;
+  *)
+    sed -n '2,/^set -euo/{/^#/s/^# \{0,1\}//p;}' "$0" >&2
+    exit 2 ;;
+esac
