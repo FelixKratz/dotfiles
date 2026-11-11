@@ -87,7 +87,10 @@ Repeat until a round comes back clean or you hit the cap:
    before believing it. A delta only sees the lines a fix touched, so it cannot
    see that the fix broke something elsewhere, or that several rounds of small
    changes have compounded. Skip this on round one, which already read
-   everything. If the full pass is also clean, stop — the PR is done.
+   everything. If the full pass is also clean, stop — the PR is done. A pass
+   whose only findings repeat points you already pushed back on counts as
+   clean: the reviewer has no memory of the threads, and the code under them
+   has not changed, so it will raise them again on every pass.
 
 3. **Post every finding** as an inline comment on the line it concerns, before
    fixing anything. Post them as **`sbfnk-review-bot[bot]`**, not as the account
@@ -194,7 +197,7 @@ nothing is.
   from anything filtering on status. Name them in the title instead, as in
   `No findings; 1 pushed back, for the maintainers`.
 - **When you stop at the round cap** — leave it red, title naming the count of
-  findings still open.
+  findings still open, not counting those you pushed back on.
 
 Red by default is the point. An absent check is invisible, and "nobody has
 reviewed this commit" is exactly the state worth noticing; a green tick among a
