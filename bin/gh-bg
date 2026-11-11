@@ -4,9 +4,9 @@
 #
 # For gh-dash keys whose command takes a few seconds (approve and merge, say):
 # gh-dash returns straight away instead of freezing until gh is done, and a
-# failure still shows. Where there is no way to notify (neither osascript nor
-# notify-send), the command runs in the foreground, so gh-dash shows its
-# failure as before.
+# failure still shows. Where there is no way to notify (over SSH, or with
+# neither osascript nor notify-send and a display), the command runs in the
+# foreground, so gh-dash shows its failure as before.
 #
 # Usage: gh-bg LABEL COMMAND [ARGS...]
 set -uo pipefail
@@ -15,7 +15,10 @@ set -uo pipefail
 label="$1"
 shift
 
-if command -v osascript >/dev/null 2>&1; then
+# Over SSH a notification would show on the far machine's screen, if at all.
+if [ -n "${SSH_CONNECTION:-}" ]; then
+  exec "$@"
+elif command -v osascript >/dev/null 2>&1; then
   notify() {
     # Passed as arguments, so quotes in the text cannot break the AppleScript.
     osascript - "$1" "$2" <<'EOF' >/dev/null 2>&1
@@ -24,7 +27,8 @@ on run argv
 end run
 EOF
   }
-elif command -v notify-send >/dev/null 2>&1; then
+elif command -v notify-send >/dev/null 2>&1 \
+  && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
   notify() { notify-send "$1" "$2" >/dev/null 2>&1; }
 else
   exec "$@"
