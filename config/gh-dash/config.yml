@@ -26,6 +26,9 @@ keybindings:
         [ "$(gh pr view -R {{.RepoName}} {{.PrNumber}} --json mergeable -q .mergeable)" = MERGEABLE ] &&
         gh pr review --approve -R {{.RepoName}} {{.PrNumber}} &&
         gh pr merge --merge --delete-branch -R {{.RepoName}} {{.PrNumber}}
+    - key: M
+      name: squash merge
+      command: gh pr merge --squash --delete-branch -R {{.RepoName}} {{.PrNumber}}
     - key: ctrl+v
       name: approve, no message
       command: gh pr review --approve -R {{.RepoName}} {{.PrNumber}}
