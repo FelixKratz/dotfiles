@@ -186,10 +186,19 @@ comments=$(awk '
   }
 ' "$file")
 
+# gh-dash redraws as soon as this exits, so on every path that keeps the
+# review file, wait for a key; otherwise the message saying where it is
+# vanishes before it can be read.
+leave() {
+  printf '%s\n' "$2" >&2
+  read -rsn1 -p "Press any key to return " _ < /dev/tty || true
+  echo >&2
+  exit "$1"
+}
+
 if grep -q '^BAD' <<< "$comments"; then
-  echo "Some \">>\" lines are not below a diff line, a \">>del\", \">>=\" or \">>{\"" >&2
-  echo "is under a removed line, or a \">>{\" range has no end; fix them in $file" >&2
-  exit 1
+  leave 1 "Some \">>\" lines are not below a diff line, a \">>del\", \">>=\" or \">>{\"
+is under a removed line, or a \">>{\" range has no end; fix them in $file"
 fi
 
 body=$(grep '^BODY' <<< "$comments" | cut -f2- || true)
@@ -207,15 +216,14 @@ case $k in
   a) event=APPROVE ;;
   r) event=REQUEST_CHANGES ;;
   c) event=COMMENT ;;
-  *) echo "Nothing posted; your review is in $file"; exit 0 ;;
+  *) leave 0 "Nothing posted; your review is in $file" ;;
 esac
 if [[ $event != APPROVE && $count -eq 0 && -z $body ]]; then
-  echo "Nothing to say: add comments or review text. Your file is $file" >&2
-  exit 1
+  leave 1 "Nothing to say: add comments or review text. Your file is $file"
 fi
 
 jq -n --arg c "$head" --arg e "$event" --arg b "$body" --argjson cs "$json" \
   '{commit_id: $c, event: $e, comments: $cs} + (if $b == "" then {} else {body: $b} end)' \
   | gh api "repos/$repo/pulls/$n/reviews" --input - --jq '"Posted: \(.html_url)"' \
-  || { echo "Posting failed; your review is in $file" >&2; exit 1; }
+  || leave 1 "Posting failed; your review is in $file"
 rm -rf "$dir"
